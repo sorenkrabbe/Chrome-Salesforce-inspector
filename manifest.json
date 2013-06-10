@@ -1,0 +1,16 @@
+{
+  "name": "Salesforce inspector",
+  "description": "Adds a button to show field details on a Salesforce page to the browser.",
+  "version": "0.1",
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "permissions": [
+    "tabs", "https://*.salesforce.com/*"
+  ],
+  "browser_action": {
+      "default_title": "Show Salesforce details",
+      "default_icon": "print_16x16.png"
+  },
+  "manifest_version": 2
+}
