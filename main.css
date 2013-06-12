@@ -1,6 +1,6 @@
 .salesforce-inspector-details.sticky {
 	background: -webkit-gradient(linear, left top, right top, color-stop(0%,#eeeeee), color-stop(100%,#dddddd)); 
-	border: solid 3px grey; 
+	border: solid 1px grey; 
 }
 .salesforce-inspector-details.salesforce-inspector-error {
 	background: -webkit-gradient(linear, left top, right top, color-stop(0%,#dddddd), color-stop(100%,#cccccc)); 

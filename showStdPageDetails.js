@@ -73,7 +73,8 @@ function fieldDetailsReady() {
 *	extracts and returns the label string from a labelElement.
 */
 function getLabelFromLabelElement(labelElement) {
-	return labelElement.querySelector('span').innerHTML;
+	//return labelElement.querySelector('span').innerHTML;
+	return labelElement.firstChild.firstChild.textContent
 }
 
 function showFieldDetails(labelElement) {
