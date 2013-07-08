@@ -14,6 +14,7 @@ Installation
 ------------
 ...
 
+
 Task list
 ---------
 *Known issues*
@@ -22,6 +23,9 @@ Task list
 *Improvements*
 - [ ] Activate by keyboard shortcut (http://developer.chrome.com/extensions/commands.html)
 
+Notes
+-----
+- It's not possible to generate field or object level metadata edit links as edit urls require the Salesforce id of field or object. These ids are not exposed via the API. (https://success.salesforce.com/ideaView?id=08730000000gM7mAAE and https://success.salesforce.com/ideaView?id=087300000007quP). Though tooling API is almost there.
 
 About
 -----
