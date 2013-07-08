@@ -10,7 +10,7 @@ function showStdPageDetails(){
 
 function showAllData(){
     chrome.windows.create({
-        url: 'dialog.html',
+        url: 'showSObjectDataPopup',
         width: 200,
         height: 120,
         type: 'popup'
