@@ -9,13 +9,10 @@ function showStdPageDetails(){
 }
 
 function showAllData(){
-    chrome.windows.create({
-        url: 'showSObjectDataPopup',
-        width: 200,
-        height: 120,
-        type: 'popup'
+    chrome.tabs.executeScript(null, {
+        file: "showAllDataForRecord.js"
     });
-    
+    window.close();
 }
 
 function init(){

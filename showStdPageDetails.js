@@ -159,9 +159,7 @@ function showFieldDetails(labelElement){
     }, false);
     
     labelElement.appendChild(output);
-    
 }
-
 
 function hideFieldDetails(detailsElement){
     if (detailsElement != null) {
@@ -190,8 +188,6 @@ function makeFieldDetailsSticky(e){
         detailsElement.classList.add('sticky');
     }
 }
-
-
 
 function askSalesforce(url, callback){
     var session = document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
