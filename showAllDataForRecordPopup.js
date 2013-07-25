@@ -1,25 +1,52 @@
+var test;
 function init(){
 	var recordId = QueryString.recordId;
 	
-	//Find objecttype and query field values
+	//Query metadata for all objects and identify relevant relevant object (as generalMetadataResponse)
 	askSalesforce('/sobjects/', function(responseText){
 	    var currentObjKeyPrefix = QueryString.recordId.substring(0, 3);
 	    var matchFound = false;
-	    var metadataResponse = JSON.parse(responseText);
-	    for (var i = 0; i < metadataResponse.sobjects.length; i++) {
-	        if (metadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
-				askSalesforce(metadataResponse.sobjects[i].urls.rowTemplate.replace("{ID}", recordId), function(responseText){
-				    var dataResponse = JSON.parse(responseText);
-				    this.setHeading(dataResponse.attributes.type + ' (' + dataResponse.Name + ' / ' + dataResponse.Id + ')');
-				    var objectValues = sortObject(dataResponse); //Sort attributes by name
-				    for(var index in objectValues) {
-				    	if(objectValues[index].key != 'attributes') {
-					    	this.addRowToDataTable(
-					    		[metadataResponse.sobjects[i].keyPrefix,	objectValues[index].key,	objectValues[index].value,	''], 
-					    		['left',									'left',						'right',					'left']);
-						}
+	    var generalMetadataResponse = JSON.parse(responseText);
+	    for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
+	        if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
+	        	
+				//Query metadata for the relevant object (as objectMetadataResponse)
+				askSalesforce(generalMetadataResponse.sobjects[i].urls.describe, function(responseText){
+					var objectMetadataResponse = JSON.parse(responseText);
+
+					//Sort the field objects and struture as hash map
+					//TODO: Sort fields alphabetically (rewrite sortObject())
+					var fields = {};
+					for(var index in objectMetadataResponse.fields) {
+						fields[objectMetadataResponse.fields[index].name] = objectMetadataResponse.fields[index];
 					}
-				});            
+
+		        	//Query data for the relevant object (as objectDataResponse) and merge it with objectMetadataResponse in the fields array 
+					askSalesforce(objectMetadataResponse.urls.rowTemplate.replace("{ID}", recordId), function(responseText){
+					    var objectDataResponse = JSON.parse(responseText);
+					    //var objectValues = sortObject(objectDataResponse); //Sort attributes by name
+					    for(var fieldName in objectDataResponse) {
+					    	if(fieldName != 'attributes') {
+						    	if(!fields.hasOwnProperty(fieldName)) {
+						    		fields[fieldName] = {};
+						    	}
+						    	fields[fieldName].dataValue = objectDataResponse[fieldName];
+						    }
+						}
+
+						//Add to layout
+					    this.setHeading(objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')');
+					    for(var index in fields) {
+					    	this.addRowToDataTable(
+					    		[fields[index].label,	fields[index].name,			fields[index].dataValue,		fields[index].type + ' (' + fields[index].length + ')'], 
+					    		['left',				'left',						'right',						'right']
+					    	);
+						}
+
+					});
+
+				});
+
 				matchFound = true;
 	            break;
 	        }
@@ -31,7 +58,6 @@ function init(){
 }
 
 function addRowToDataTable(cellData, cellClasses){
-
     var tableRow = document.createElement('tr');
     for (var i = 0; i < cellData.length; i++) {
         var tableCell = document.createElement('td');
@@ -39,6 +65,7 @@ function addRowToDataTable(cellData, cellClasses){
         tableCell.innerHTML = cellData[i];
         tableRow.appendChild(tableCell);
     }
+
     document.querySelector('#dataTableBody').appendChild(tableRow);
 }
 
@@ -49,12 +76,10 @@ function setHeading(label) {
 /**
  * Refactor: Also implemented (diff on how the session token is located) in showStdPageDetails.js.
  */
- var test;
 function askSalesforce(url, callback){
     var session = QueryString.sessionToken; //document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
     var salesforceHostname = QueryString.salesforceHostname; //document.location.hostname;
     var xhr = new XMLHttpRequest();
-    console.log(url);
     if(url.substring(0,10) != '/services/') {
     	url  = '/services/data/v28.0' + url;
     }
@@ -64,8 +89,7 @@ function askSalesforce(url, callback){
     xhr.onreadystatechange = function(){
         if (xhr.readyState == 4) {
             callback(xhr.responseText);
-            console.log(JSON.parse(xhr.responseText));
-            //console.log((xhr.responseText));
+            //console.log(JSON.parse(xhr.responseText));
         }
     }
     xhr.send();
