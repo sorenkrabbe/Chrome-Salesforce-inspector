@@ -15,8 +15,6 @@ function showAllData(){
     },
     function(result) {
         result = result[0];
-        console.log("Done injecting script showAllDataForRecord.js");     
-        console.log(result);   
         chrome.windows.create({
             'url': 'showAllDataForRecordPopup.html?sessionToken=' + result.sessionToken + '&salesforceHostname=' + result.salesforceHostname + '&recordId=' + result.recordId + '&objectTypeName=' + result.objectTypeName, 
             'type': 'popup'}, 
@@ -29,6 +27,9 @@ function showAllData(){
 function init(){
     document.querySelector('#showStdPageDetailsBtn').addEventListener('click', showStdPageDetails, false);
     document.querySelector('#showAllDataBtn').addEventListener('click', showAllData, false);
+    document.querySelector('#aboutLnk').addEventListener('click', function(){ 
+        chrome.tabs.create({url: 'https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'}); 
+    }, false);
 }
 
 document.addEventListener('DOMContentLoaded', init);

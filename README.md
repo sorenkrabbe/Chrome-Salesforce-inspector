@@ -2,7 +2,7 @@ Chrome-Salesforce-inspector
 ===========================
 Chrome extension to add a metadata layout on top of the standard Salesforce UI to improve the productivity and joy of Salesforce configuration, development, and integration.
 
-Currently experimental and very raw and limited feature set. Created as an excuse to get to play with chrome extensions and Salesforce REST API.
+Currently experimental and very raw and limited feature set. Created as an excuse to get to play with chrome extensions and Salesforce REST API and to explore the potential for Salesforce dev/admin tools.
 
 
 Usage
@@ -22,7 +22,7 @@ Task list
 
 *Improvements*
 - [ ] Activate by keyboard shortcut (http://developer.chrome.com/extensions/commands.html)
-- [ ] Refactor code to more componentized structure
+- [ ] Refactor code to more componentized structure. Introduce template UI framework
 
 Notes
 -----

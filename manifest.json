@@ -1,7 +1,7 @@
 {
   "name": "Salesforce inspector",
   "description": "Adds a buttons to show data and metadata details on Salesforce standard details pages.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "permissions": [
     "https://*.salesforce.com/*"
   ],
