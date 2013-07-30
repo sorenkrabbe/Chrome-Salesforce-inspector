@@ -1,17 +1,15 @@
 {
   "name": "Salesforce inspector",
-  "description": "Adds a button to show field details on a Salesforce page to the browser.",
-  "version": "0.1",
-  "background": {
-    //"scripts": ["background.js"]
-  },
+  "description": "Adds a buttons to show data and metadata details on Salesforce standard details pages.",
+  "version": "0.2.1",
   "permissions": [
-    "tabs", "https://*.salesforce.com/*"
+    "https://*.salesforce.com/*"
   ],
   "browser_action": {
-      "default_title": "Show Salesforce details",
-      "default_icon": "print_16x16.png",
-      "default_popup": "chromePopup.html"
+    "default_title": "Show Salesforce details",
+    "default_icon": "print_16x16.png",
+    "default_popup": "chromePopup.html"
   },
   "manifest_version": 2
 }
+

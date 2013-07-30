@@ -12,7 +12,7 @@ Usage
 
 Installation
 ------------
-...
+Install from Chrome Web Store: https://chrome.google.com/webstore/detail/salesforce-inspector/aodjmnfhjibkcdimpodiifdjnnncaafh
 
 
 Task list
@@ -22,6 +22,7 @@ Task list
 
 *Improvements*
 - [ ] Activate by keyboard shortcut (http://developer.chrome.com/extensions/commands.html)
+- [ ] Refactor code to more componentized structure
 
 Notes
 -----
