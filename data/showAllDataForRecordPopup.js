@@ -1,13 +1,39 @@
-function init(){
+function showAllData(){
+    var f = document.createElement('div');
+    f.innerHTML = '<div class="insext-alldata-popup">\
+        <div class="insext-alldata-close" tabindex="0">Close</div>\
+        <h1 id="insext-heading"></h1>\
+        <table class="insext-table">\
+            <thead>\
+                <th class="insext-left">Field Label</th>\
+                <th class="insext-left">API Name</th>\
+                <th class="insext-right">Value</th>\
+                <th class="insext-right">Type</th>\
+            </thead>\
+            <tbody id="insext-dataTableBody">\
+            </tbody>\
+        </table>\
+        <div id="insext-fieldDetailsView">\
+            <div class="insext-container">\
+                <a href="#" class="insext-closeLnk">X</a>\
+                <div class="insext-mainContent"></div>\
+            </div>\
+        </div>\
+    </div>';
+    f = f.firstChild;
+    document.body.appendChild(f);
+    document.querySelector('.insext-alldata-close').addEventListener('click', function() {
+        document.body.removeChild(f);
+    });
 	//Setup eventlisteners for static content
-	document.querySelector('#fieldDetailsView .closeLnk').addEventListener('click', function(event){
+	document.querySelector('#insext-fieldDetailsView .insext-closeLnk').addEventListener('click', function(event){
 		hideAllFieldMetadataView();
 	});
 
 	//Query metadata for all objects and identify relevant relevant object (as generalMetadataResponse)
-	var recordId = QueryString.recordId;
+	var recordId = document.location.pathname.substring(1);
 	askSalesforce('/sobjects/', function(responseText){
-	    var currentObjKeyPrefix = QueryString.recordId.substring(0, 3);
+	    var currentObjKeyPrefix = recordId.substring(0, 3);
 	    var matchFound = false;
 	    var generalMetadataResponse = JSON.parse(responseText);
 	    for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
@@ -46,10 +72,10 @@ function init(){
 					    			fields[index].dataValue,	
 					    			fields[index].type + ' (' + fields[index].length + ')'
 					    		], 
-					    		[	{ class: 'left' },
-					    			{ class: 'left, detailLink', 'data-all-sfdc-metadata': JSON.stringify(fields[index]) },
-					    			{ class: 'right' },
-					    			{ class: 'right' }
+					    		[	{ class: 'insext-left' },
+					    			{ class: 'insext-left, insext-detailLink', 'data-all-sfdc-metadata': JSON.stringify(fields[index]) },
+					    			{ class: 'insext-right' },
+					    			{ class: 'insext-right' }
 					    		],
 					    		[	null,
 					    			function(event){
@@ -76,7 +102,7 @@ function init(){
 }
 
 function showAllFieldMetadata(allFieldMetadata) {
-	var fieldDetailsView = document.querySelector('#fieldDetailsView');
+	var fieldDetailsView = document.querySelector('#insext-fieldDetailsView');
 	
 	var heading = document.createElement('h3');
 	heading.innerHTML = 'All available metadata for "' + allFieldMetadata.name + '"'; 
@@ -88,9 +114,9 @@ function showAllFieldMetadata(allFieldMetadata) {
 	var thKey = document.createElement('th');
 	var thValue = document.createElement('th');
 	thKey.innerHTML = 'Key';
-	thKey.setAttribute('class', 'left');
+	thKey.setAttribute('class', 'insext-left');
 	thValue.innerHTML = 'Value';
-	thValue.setAttribute('class', 'left');
+	thValue.setAttribute('class', 'insext-left');
 	tr.appendChild(thKey);
 	tr.appendChild(thValue);
 	thead.appendChild(tr);
@@ -108,7 +134,7 @@ function showAllFieldMetadata(allFieldMetadata) {
 		tbody.appendChild(tr);
 	}
 	table.appendChild(tbody);
-	var mainContentElm = fieldDetailsView.querySelector('.mainContent');
+	var mainContentElm = fieldDetailsView.querySelector('.insext-mainContent');
 	mainContentElm.innerHTML = '';
 	mainContentElm.appendChild(heading);
 	mainContentElm.appendChild(table);
@@ -116,7 +142,7 @@ function showAllFieldMetadata(allFieldMetadata) {
 }
 
 function hideAllFieldMetadataView() {
-	var fieldDetailsView = document.querySelector('#fieldDetailsView');
+	var fieldDetailsView = document.querySelector('#insext-fieldDetailsView');
 	fieldDetailsView.style.display = 'none';
 }
 
@@ -134,33 +160,11 @@ function addRowToDataTable(cellData, cellAttributes, onClickFunctions){
         tableRow.appendChild(tableCell);
     }
 
-    document.querySelector('#dataTableBody').appendChild(tableRow);
+    document.querySelector('#insext-dataTableBody').appendChild(tableRow);
 }
 
 function setHeading(label) {
-	document.querySelector('#heading').innerHTML = label;
-}
-
-/**
- * Refactor: Also implemented (diff on how the session token is located) in showStdPageDetails.js.
- */
-function askSalesforce(url, callback){
-    var session = QueryString.sessionToken; //document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
-    var salesforceHostname = QueryString.salesforceHostname; //document.location.hostname;
-    var xhr = new XMLHttpRequest();
-    if(url.substring(0,10) != '/services/') {
-    	url  = '/services/data/v28.0' + url;
-    }
-    xhr.open("GET", "https://" + salesforceHostname + url, true);
-    xhr.setRequestHeader('Authorization', "OAuth " + session);
-    xhr.setRequestHeader('Accept', "application/json");
-    xhr.onreadystatechange = function(){
-        if (xhr.readyState == 4) {
-            callback(xhr.responseText);
-            //console.log(JSON.parse(xhr.responseText));
-        }
-    }
-    xhr.send();
+	document.querySelector('#insext-heading').innerHTML = label;
 }
 
 /**
@@ -181,34 +185,3 @@ function sortObject(obj) {
     });
     return arr;
 }
-
-/**
- * Refactor: move to general utility file?
- * credits: http://stackoverflow.com/questions/979975/how-to-get-the-value-from-url-parameter
- */
-var QueryString = function () {
-	// This function is anonymous, is executed immediately and 
-	// the return value is assigned to QueryString!
-	var query_string = {};
-	var query = window.location.search.substring(1);
-	var vars = query.split("&");
-	for (var i=0;i<vars.length;i++) {
-		var pair = vars[i].split("=");
-		// If first entry with this name
-		if (typeof query_string[pair[0]] === "undefined") {
-			query_string[pair[0]] = pair[1];
-			// If second entry with this name
-		} else if (typeof query_string[pair[0]] === "string") {
-			var arr = [ query_string[pair[0]], pair[1] ];
-			query_string[pair[0]] = arr;
-			// If third or later entry with this name
-		} else {
-			query_string[pair[0]].push(pair[1]);
-		}
-	} 
-	return query_string;
-} ();
-
-
-document.addEventListener('DOMContentLoaded', init);
-

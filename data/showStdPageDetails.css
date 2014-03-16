@@ -1,9 +1,9 @@
 .salesforce-inspector-details.sticky {
-	background: -webkit-gradient(linear, left top, right top, color-stop(0%,#eeeeee), color-stop(100%,#dddddd)); 
+	background: linear-gradient(to right, #eee, #ddd);
 	border: solid 1px grey; 
 }
 .salesforce-inspector-details.salesforce-inspector-error {
-	background: -webkit-gradient(linear, left top, right top, color-stop(0%,#dddddd), color-stop(100%,#cccccc)); 
+	background: linear-gradient(to right, #ddd, #ccc);
 	border: solid 1px grey; 
 }
 .salesforce-inspector-details table {
@@ -22,20 +22,15 @@
 .salesforce-inspector-details {
 	color: #333333;
 	z-index:1; 
-	background: -webkit-gradient(linear, left top, right top, color-stop(0%,#dddddd), color-stop(100%,#cccccc)); 
+	background: linear-gradient(to right, #ddd, #ccc); 
 	position:absolute; 
 	border: solid 1px grey; 
 	width: 200px; 
 	padding-top: 10px; 
 	margin-top: 10px; 
-	-webkit-border-radius: 10px; 
+	border-radius: 10px; 
 	padding: 4px;
-	-webkit-animation: fadein 0.5s;
 	text-align: center;
-}
-@-webkit-keyframes fadein {
-    from{	opacity:0;	}
-    to 	{	opacity:1;	}
 }
 .salesforce-inspector-details .name {
 	font-weight: bold;
