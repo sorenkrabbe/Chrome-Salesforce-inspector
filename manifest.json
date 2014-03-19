@@ -8,7 +8,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.salesforce.com/*"],
-      "css": ["data/chromePopup.css", "data/showAllDataForRecordPopup.css", "data/showStdPageDetails.css"],
+      "css": ["data/chromePopup.css", "data/showStdPageDetails.css"],
       "js": ["data/chromePopup.js", "data/showAllDataForRecordPopup.js", "data/showStdPageDetails.js"]
     }
   ],
