@@ -1,15 +1,17 @@
 {
   "name": "Salesforce inspector",
   "description": "Adds a buttons to show data and metadata details on Salesforce standard details pages.",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "permissions": [
     "https://*.salesforce.com/*"
   ],
-  "browser_action": {
-    "default_title": "Show Salesforce details",
-    "default_icon": "print_16x16.png",
-    "default_popup": "chromePopup.html"
-  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.salesforce.com/*"],
+      "css": ["data/chromePopup.css", "data/showStdPageDetails.css"],
+      "js": ["data/chromePopup.js", "data/showAllDataForRecordPopup.js", "data/showStdPageDetails.js"]
+    }
+  ],
   "manifest_version": 2
 }
 

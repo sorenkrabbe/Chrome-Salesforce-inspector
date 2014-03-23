@@ -3,25 +3,27 @@ var fieldDetailsByLabel = {};
 var metadataResponse = {};
 var describeAllObjects = {};
 
-createOutputElement();
+function showStdPageDetails() {
+    createOutputElement();
 
-//Identifying the object type and then querying describe details for that object
-askSalesforce('/sobjects/', function(responseText){
-    var currentObjKeyPrefix = document.location.pathname.substring(1, 4);
-    var matchFound = false;
-    var response = JSON.parse(responseText);
-    for (var i = 0; i < response.sobjects.length; i++) {
-        console.log(response.sobjects[i].keyPrefix);
-        if (response.sobjects[i].keyPrefix == currentObjKeyPrefix) {
-            askSalesforce('/sobjects/' + response.sobjects[i].name + '/describe/', parseSalesforceFieldMetadata);
-            matchFound = true;
-            break;
+    //Identifying the object type and then querying describe details for that object
+    askSalesforce('/sobjects/', function(responseText){
+        var currentObjKeyPrefix = document.location.pathname.substring(1, 4);
+        var matchFound = false;
+        var response = JSON.parse(responseText);
+        for (var i = 0; i < response.sobjects.length; i++) {
+            console.log(response.sobjects[i].keyPrefix);
+            if (response.sobjects[i].keyPrefix == currentObjKeyPrefix) {
+                askSalesforce('/sobjects/' + response.sobjects[i].name + '/describe/', parseSalesforceFieldMetadata);
+                matchFound = true;
+                break;
+            }
         }
-    }
-    if (!matchFound) {
-        alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
-    }
-})
+        if (!matchFound) {
+            alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
+        }
+    });
+}
 
 /*******************
  * Helper functions *
@@ -152,10 +154,10 @@ function showFieldDetails(labelElement){
     output.addEventListener("mouseout", function(e){
         //Only do mouse-out if the mouse actually leaves the element and not just hovers a child element (http://stackoverflow.com/questions/4697758/prevent-onmouseout-when-hovering-child-element-of-the-parent-absolute-div)
         //Not that only 1 level of content elements is supported
-        if (e.toElement == this || e.toElement.parentNode == this || e.toElement.parentNode.parentNode == this || e.toElement.parentNode.parentNode.parentNode == this || e.toElement.parentNode.parentNode.parentNode.parentNode == this) {
+        if (e.relatedTarget == this || e.relatedTarget.parentNode == this || e.relatedTarget.parentNode.parentNode == this || e.relatedTarget.parentNode.parentNode.parentNode == this || e.relatedTarget.parentNode.parentNode.parentNode.parentNode == this) {
             return;
         }
-        hideFieldDetails(e.fromElement);
+        hideFieldDetails(e.target);
     }, false);
     
     labelElement.appendChild(output);
@@ -168,7 +170,7 @@ function hideFieldDetails(detailsElement){
 }
 
 function softShowFieldDetails(e){
-    var labelElement = e.toElement.parentElement;
+    var labelElement = e.target.parentElement;
     
     if (labelElement.querySelector('.salesforce-inspector-details') == null) {
         showFieldDetails(labelElement);
@@ -176,7 +178,7 @@ function softShowFieldDetails(e){
 }
 
 function softHideFieldDetails(e){
-    var detailsElement = e.fromElement.parentElement.querySelector('.salesforce-inspector-details');
+    var detailsElement = e.target.parentElement.querySelector('.salesforce-inspector-details');
     if (detailsElement != null && !detailsElement.classList.contains('sticky')) {
         hideFieldDetails(detailsElement);
     }
@@ -187,22 +189,6 @@ function makeFieldDetailsSticky(e){
     if (detailsElement != null) {
         detailsElement.classList.add('sticky');
     }
-}
-
-function askSalesforce(url, callback){
-    var session = document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", "https://" + document.location.hostname + "/services/data/v28.0" + url, true);
-    xhr.setRequestHeader('Authorization', "OAuth " + session);
-    xhr.setRequestHeader('Accept', "application/json");
-    xhr.onreadystatechange = function(){
-        if (xhr.readyState == 4) {
-            callback(xhr.responseText);
-            console.log(JSON.parse(xhr.responseText));
-            //console.log((xhr.responseText));
-        }
-    }
-    xhr.send();
 }
 
 /**

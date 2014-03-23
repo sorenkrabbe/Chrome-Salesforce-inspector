@@ -1,0 +1,41 @@
+#insext {
+    display: inline-block;
+    position: relative;
+    vertical-align: middle;
+}
+#insext .insext-popup {
+    width: 200px;
+    white-space: normal;
+    position:absolute;
+    background-color: white;
+    right: 0;
+    border-radius: 11px;
+    border-top-right-radius: 0;
+    z-index: 1;
+    box-shadow: 1px 1px 5px;
+    padding: 11px;
+    display: none;
+}
+#insext.insext-active .insext-popup {
+    display: block;
+}
+#insext .insext-btn {
+    height: 22px;
+    border-radius: 8px 8px 0 0;
+    text-align: center;
+    padding: 2px 5px 0;
+}
+#insext.insext-active .insext-btn {
+    background-color: white;
+}
+#insext .insext-btn img {
+    width: 19px;
+    height: 19px;
+}
+#insext button {
+    width: 100%;
+}
+#insext div.meta {
+    font-size: 12px;
+    text-align: right;
+}
