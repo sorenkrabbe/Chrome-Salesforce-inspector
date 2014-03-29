@@ -15,6 +15,11 @@ function showAllData() {
   tr:hover {\
     background-color: lightblue;\
   }\
+  tr.calculated, tr.calculated a {\
+    color: #777777;\
+    background-color: #CCCCCC;\
+    font-style: italic;\
+  }\
   .right {\
     text-align: right;\
   }\
@@ -130,11 +135,14 @@ function showAllData() {
             document.title = 'ALL DATA: ' + objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
             setHeading(objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')');
             for (var index in fields) {
+              var fieldTypeDesc = fields[index].type + ' (' + fields[index].length + ')';
+              fieldTypeDesc += (fields[index].calculated) ? '*' : '';
+
               addRowToDataTable(
                 [fields[index].label,
                   fields[index].name,
                   fields[index].dataValue,
-                  fields[index].type + ' (' + fields[index].length + ')'
+                  fieldTypeDesc
                 ], [{
                   class: 'left'
                 }, {
@@ -150,7 +158,8 @@ function showAllData() {
                   },
                   null,
                   null
-                ]
+                ],
+                (fields[index].calculated) ? 'calculated' : null
               );
             }
           });
@@ -212,8 +221,10 @@ function showAllData() {
     fieldDetailsView.style.display = 'none';
   }
 
-  function addRowToDataTable(cellData, cellAttributes, onClickFunctions) {
+  function addRowToDataTable(cellData, cellAttributes, onClickFunctions, rowClass) {
     var tableRow = document.createElement('tr');
+    tableRow.setAttribute('class', rowClass);
+
     for (var i = 0; i < cellData.length; i++) {
       var tableCell = document.createElement('td');
       for (var attributeName in cellAttributes[i]) {
