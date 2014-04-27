@@ -4,17 +4,14 @@ var metadataResponse = {};
 var describeAllObjects = {};
 
 function showStdPageDetails() {
-    createOutputElement();
-
     //Identifying the object type and then querying describe details for that object
-    askSalesforce('/sobjects/', function(responseText){
+    askSalesforce('/services/data/v28.0/sobjects/', function(responseText){
         var currentObjKeyPrefix = document.location.pathname.substring(1, 4);
         var matchFound = false;
         var response = JSON.parse(responseText);
         for (var i = 0; i < response.sobjects.length; i++) {
-            console.log(response.sobjects[i].keyPrefix);
             if (response.sobjects[i].keyPrefix == currentObjKeyPrefix) {
-                askSalesforce('/sobjects/' + response.sobjects[i].name + '/describe/', parseSalesforceFieldMetadata);
+                askSalesforce(response.sobjects[i].urls.describe, parseSalesforceFieldMetadata);
                 matchFound = true;
                 break;
             }
@@ -46,25 +43,16 @@ function parseSalesforceFieldMetadata(responseText){
 
 
 /**
- * Loop through all label elements, add event listeners, and put the label text inside <span> tags if it's not inside an element.
+ * Loop through all label elements, add event listeners
  */
 function fieldDetailsReady(){
     var labelElements = document.querySelectorAll("td.labelCol")
     for (var i = 0; i < labelElements.length; i++) {
-        if (!isBlankHtml(labelElements[i].innerHTML)) {
-            var fieldLabel = labelElements[i].innerHTML
-            
-            if (labelElements[i].childNodes[0].nodeType == Node.TEXT_NODE) {
-                //First element of labelElement is text. I.e. it should be put into an element
-                var newElement = document.createElement("span");
-                newElement.innerHTML = labelElements[i].innerHTML;
-                labelElements[i].replaceChild(newElement, labelElements[i].childNodes[0]);
-            }
-            
-            var labelEventElement = labelElements[i].querySelector('span');
-            labelEventElement.addEventListener("mouseover", softShowFieldDetails, false);
+        if (labelElements[i].textContent.trim() != '') {
+            var labelEventElement = labelElements[i];
+            labelEventElement.addEventListener("mouseenter", softShowFieldDetails, false);
             labelEventElement.addEventListener("click", makeFieldDetailsSticky, false);
-            labelEventElement.addEventListener("mouseout", softHideFieldDetails, false);
+            labelEventElement.addEventListener("mouseleave", softHideFieldDetails, false);
         }
     }
 }
@@ -74,8 +62,8 @@ function fieldDetailsReady(){
  *	extracts and returns the label string from a labelElement.
  */
 function getLabelFromLabelElement(labelElement){
-    //return labelElement.querySelector('span').innerHTML;
-    return labelElement.firstChild.firstChild.textContent
+    // if there is a Help Text or not
+    return labelElement.firstElementChild ? labelElement.firstElementChild.firstChild.textContent : labelElement.textContent;
 }
 
 function showFieldDetails(labelElement){
@@ -109,54 +97,51 @@ function showFieldDetails(labelElement){
         guessIndex++;
     }
     
+    function E(name, children) {
+        var e = document.createElement(name);
+        for (var i = 0; i < children.length; i++) {
+          e.appendChild(children[i]);
+        }
+        return e;
+    }
+    function T(text) {
+        return document.createTextNode(text);
+    }
     
     if (fieldDetails == null || fieldDetails.length == 0) {
         output.classList.add('salesforce-inspector-error');
-        output.innerHTML += '<p>No fields with matching label?!</p>';
-    }
-    else 
-        if (fieldDetails.length == 1) {
-            output.innerHTML += '<div>' + fieldDetails[0].name + '</div>';
+        output.appendChild(E('p', [T('No fields with matching label?!')]));
+    } else {
+        if (fieldDetails.length > 1) {
+            output.classList.add('inaccurate');
+            output.appendChild(E('p', [T('Multiple fields with same label')]));
+        }
+        for (var i = 0; i < fieldDetails.length; i++) {
+            var fieldDetail = fieldDetails[i];
+            output.appendChild(E('div', [T(fieldDetail.name)]));
             // /p/setup/layout/LayoutFieldList?type=Account and /01I20000000Mnwf?setupid=CustomObjects
-            //output.innerHTML += '<a href="/p/setup/field/StandardFieldAttributes/d?retURL=' + retUrlEncoded + '&id=' + fieldDetails[0].name + '&type=' + metadataResponse.name + '" class="name" target="_top">' + fieldDetails[0].name + '</a> ';
-            //output.innerHTML += '<a href="/_ui/common/lookupFilters/FieldAttributesUi/e?retURL=' + retUrlEncoded + '&Table='+ metadataResponse.name +'&FieldOrColumn=' + fieldDetails[0].name + '" class="salesforce-inspector-minor">[edit]</a>';
-            var detailsTable = '';
-            detailsTable += '<table>';
-            detailsTable += '<tr>';
-            detailsTable += '	<td>Type:</td>';
-            if (fieldDetails[0].type == 'reference') {
-                detailsTable += '	<td>[' + fieldDetails[0].referenceTo + ']</td>';
-            }
-            else {
-                detailsTable += '	<td>' + fieldDetails[0].type + ' (' + fieldDetails[0].length + ')</td>';
-            }
-            detailsTable += '</tr>';
-            //detailsTable += '<tr>';
-            //detailsTable += '	<td>SOAP type:</td>';
-            //detailsTable += '	<td>' + fieldDetails[0].soapType + '(' + fieldDetails[0].byteLength + ' bytes)</td>';
-            //detailsTable += '</tr>';
-            detailsTable += '<tr>';
-            detailsTable += '	<td>ExtId/Auto/Unique</td>';
-            detailsTable += '	<td>' + fieldDetails[0].externalId + '/' + fieldDetails[0].autoNumber + '/' + fieldDetails[0].unique + '</td>';
-            detailsTable += '</tr>';
-            detailsTable += '</table>';
-            output.innerHTML += detailsTable;
+            //output.inner HTML += '<a href="/p/setup/field/StandardFieldAttributes/d?retURL=' + retUrlEncoded + '&id=' + fieldDetail.name + '&type=' + metadataResponse.name + '" class="name" target="_top">' + fieldDetail.name + '</a> ';
+            //output.inner HTML += '<a href="/_ui/common/lookupFilters/FieldAttributesUi/e?retURL=' + retUrlEncoded + '&Table='+ metadataResponse.name +'&FieldOrColumn=' + fieldDetail.name + '" class="salesforce-inspector-minor">[edit]</a>';
+            output.appendChild(
+                E('table', [
+                    E('tr', [
+                        E('td', [T('Type:')]),
+                        E('td', [T(fieldDetail.type == 'reference' ? '[' + fieldDetail.referenceTo + ']' : fieldDetail.type + ' (' + fieldDetail.length + ')')])
+                    ]),
+                    //E('tr', [
+                    //    E('td', [T('SOAP type:')]),
+                    //    E('td', [T(fieldDetail.soapType + '(' + fieldDetail.byteLength + ' bytes)')])
+                    //]),
+                    E('tr', [
+                        E('td', [T('ExtId/Auto/Unique')]),
+                        E('td', [T(fieldDetail.externalId + '/' + fieldDetail.autoNumber + '/' + fieldDetail.unique)])
+                    ])
+                ])
+            );
         }
-        else {
-            for (var i = 0; fieldDetails.length < i; i++) {
-                output.classList.add('inaccurate');
-                output.innerHTML += '<p>' + fieldDetails[i].name + '</p>';
-                output.innerHTML += '<p>' + fieldDetails[i].type + '</p>';
-            }
-            output.innerHTML += '<p>Multiple fields with same label</p>';
-        }
+    }
     
-    output.addEventListener("mouseout", function(e){
-        //Only do mouse-out if the mouse actually leaves the element and not just hovers a child element (http://stackoverflow.com/questions/4697758/prevent-onmouseout-when-hovering-child-element-of-the-parent-absolute-div)
-        //Not that only 1 level of content elements is supported
-        if (e.relatedTarget == this || e.relatedTarget.parentNode == this || e.relatedTarget.parentNode.parentNode == this || e.relatedTarget.parentNode.parentNode.parentNode == this || e.relatedTarget.parentNode.parentNode.parentNode.parentNode == this) {
-            return;
-        }
+    output.addEventListener("mouseleave", function(e){
         hideFieldDetails(e.target);
     }, false);
     
@@ -170,7 +155,7 @@ function hideFieldDetails(detailsElement){
 }
 
 function softShowFieldDetails(e){
-    var labelElement = e.target.parentElement;
+    var labelElement = e.currentTarget;
     
     if (labelElement.querySelector('.salesforce-inspector-details') == null) {
         showFieldDetails(labelElement);
@@ -178,35 +163,15 @@ function softShowFieldDetails(e){
 }
 
 function softHideFieldDetails(e){
-    var detailsElement = e.target.parentElement.querySelector('.salesforce-inspector-details');
+    var detailsElement = e.currentTarget.querySelector('.salesforce-inspector-details');
     if (detailsElement != null && !detailsElement.classList.contains('sticky')) {
         hideFieldDetails(detailsElement);
     }
 }
 
 function makeFieldDetailsSticky(e){
-    var detailsElement = e.target.parentElement.querySelector('.salesforce-inspector-details');
+    var detailsElement = e.currentTarget.querySelector('.salesforce-inspector-details');
     if (detailsElement != null) {
-        detailsElement.classList.add('sticky');
+      detailsElement.classList.add('sticky');
     }
-}
-
-/**
- * creates and appends an output element for ad-hoc/debug outputs.
- */
-function createOutputElement(){
-    /*outputElement = document.createElement('div');
-    outputElement.setAttribute('id', 'salesforce-inspector-output')
-    outputElement.setAttribute('style', 'z-index:1; position: absolute; top: 60px; right: 20px; background-color: #ffffff; border: solid 3px grey;');    
-    document.getElementsByTagName('body')[0].appendChild(outputElement)*/
-}
-
-function print(msg){
-    var msgElement = document.createElement('div');
-    msgElement.innerHTML = msg;
-    outputElement.appendChild(msgElement);
-}
-
-function isBlankHtml(html){
-    return (html == null || html == '&nbsp;' || html == '');
 }
