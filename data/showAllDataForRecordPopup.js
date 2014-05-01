@@ -11,6 +11,7 @@ function showAllData() {
   table {\
     width: 100%;\
     border-spacing: 0px;\
+    font-size: 11px;\
   }\
   tr:hover {\
     background-color: lightblue;\
