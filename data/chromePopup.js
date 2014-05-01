@@ -38,17 +38,13 @@ function init() {
 function askSalesforce(url, callback){
     var session = document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
     var xhr = new XMLHttpRequest();
-    if(url.substring(0,10) != '/services/') {
-    	url  = '/services/data/v28.0' + url;
-    }
     xhr.open("GET", "https://" + document.location.hostname + url, true);
     xhr.setRequestHeader('Authorization', "OAuth " + session);
     xhr.setRequestHeader('Accept', "application/json");
     xhr.onreadystatechange = function(){
         if (xhr.readyState == 4) {
             callback(xhr.responseText);
-            console.log(JSON.parse(xhr.responseText));
-            //console.log((xhr.responseText));
+            //console.log(JSON.parse(xhr.responseText));
         }
     }
     xhr.send();

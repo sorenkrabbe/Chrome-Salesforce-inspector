@@ -101,7 +101,7 @@ function showAllData() {
 
   //Query metadata for all objects and identify relevant relevant object (as generalMetadataResponse)
   var recordId = window.document.location.pathname.substring(1);
-  askSalesforce('/sobjects/', function(responseText) {
+  askSalesforce('/services/data/v28.0/sobjects/', function(responseText) {
     var currentObjKeyPrefix = recordId.substring(0, 3);
     var matchFound = false;
     var generalMetadataResponse = JSON.parse(responseText);
@@ -181,7 +181,7 @@ function showAllData() {
     var fieldDetailsView = document.querySelector('#fieldDetailsView');
 
     var heading = document.createElement('h3');
-    heading.innerHTML = 'All available metadata for "' + allFieldMetadata.name + '"';
+    heading.textContent = 'All available metadata for "' + allFieldMetadata.name + '"';
 
     var table = document.createElement('table');
 
@@ -189,9 +189,9 @@ function showAllData() {
     var tr = document.createElement('tr');
     var thKey = document.createElement('th');
     var thValue = document.createElement('th');
-    thKey.innerHTML = 'Key';
+    thKey.textContent = 'Key';
     thKey.setAttribute('class', 'left');
-    thValue.innerHTML = 'Value';
+    thValue.textContent = 'Value';
     thValue.setAttribute('class', 'left');
     tr.appendChild(thKey);
     tr.appendChild(thValue);
@@ -203,15 +203,15 @@ function showAllData() {
       var tr = document.createElement('tr');
       var tdKey = document.createElement('td');
       var tdValue = document.createElement('td');
-      tdKey.innerHTML = fieldMetadataAttribute;
-      tdValue.innerHTML = JSON.stringify(allFieldMetadata[fieldMetadataAttribute]);
+      tdKey.textContent = fieldMetadataAttribute;
+      tdValue.textContent = JSON.stringify(allFieldMetadata[fieldMetadataAttribute]);
       tr.appendChild(tdKey);
       tr.appendChild(tdValue)
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
     var mainContentElm = fieldDetailsView.querySelector('.mainContent');
-    mainContentElm.innerHTML = '';
+    mainContentElm.textContent = '';
     mainContentElm.appendChild(heading);
     mainContentElm.appendChild(table);
     fieldDetailsView.style.display = 'block';
@@ -234,7 +234,7 @@ function showAllData() {
       if (onClickFunctions[i] != null) {
         tableCell.addEventListener('click', onClickFunctions[i]);
       }
-      tableCell.innerHTML = cellData[i];
+      tableCell.textContent = cellData[i];
       tableRow.appendChild(tableCell);
     }
 
@@ -242,7 +242,7 @@ function showAllData() {
   }
 
   function setHeading(label) {
-    document.querySelector('#heading').innerHTML = label;
+    document.querySelector('#heading').textContent = label;
   }
 
   /**
