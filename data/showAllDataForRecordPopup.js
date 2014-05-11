@@ -1,6 +1,16 @@
 function showAllData() {
-  var w = open('', '', 'width=850,height=800'); //An empty string loads about:blank synchronously
-  var document = w.document;
+  // Load a blank page and then inject the HTML to work around https://bugzilla.mozilla.org/show_bug.cgi?id=792479
+  // An empty string as URL loads about:blank synchronously
+  var popupWin;
+  if (window.unsafeWindow && window.XPCNativeWrapper) {
+    // Firefox
+    // Use unsafeWindow to work around https://bugzilla.mozilla.org/show_bug.cgi?id=996069
+    popupWin = new XPCNativeWrapper(unsafeWindow.open('', '', 'width=850,height=800'));
+  } else {
+    // Chrome
+    popupWin = open('', '', 'width=850,height=800');
+  }
+  var document = popupWin.document;
   document.head.innerHTML = '\
   <title>Loading all data...</title>\
   <style>\
@@ -172,7 +182,7 @@ function showAllData() {
       }
     }
     if (!matchFound) {
-      w.alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
+      popupWin.alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
       return;
     }
   });
