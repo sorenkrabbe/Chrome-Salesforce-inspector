@@ -22,6 +22,7 @@ function showAllData() {
     width: 100%;\
     border-spacing: 0px;\
     font-size: 11px;\
+    overflow-wrap: break-word;\
   }\
   tr:hover {\
     background-color: lightblue;\
@@ -244,7 +245,9 @@ function showAllData() {
       if (onClickFunctions[i] != null) {
         tableCell.addEventListener('click', onClickFunctions[i]);
       }
-      tableCell.textContent = cellData[i];
+      var tableCellDataContainer = tableCell.appendChild(document.createElement('div'));
+      tableCellDataContainer.style.maxWidth = "500px";
+      tableCellDataContainer.textContent = cellData[i];
       tableRow.appendChild(tableCell);
     }
 
