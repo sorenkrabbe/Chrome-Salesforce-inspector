@@ -1,6 +1,5 @@
-var buttonParent = document.querySelector('.multiforce .navLinks .linkElements');
+var buttonParent = document.querySelector('body');
 if (buttonParent) {
-    // We are in a Salesforce org
     init();
 }
 
@@ -8,7 +7,7 @@ function init() {
     var f = document.createElement('div');
     f.innerHTML = '<div id="insext">\
         <div class="insext-btn" tabindex="0" title="Show Salesforce details">\
-            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAB0klEQVQ4T6WS3U4aQRTH5wH6EPYJjC9kihcYIalKXfCTrVBoYnAX0AswJgY/cNsABqiiNcpi44UlNtr2ZkUvVHbRC0UvTGuM/J2ZRKKlKsZJfjmZmd85ZzIzBAB5CfcmXe9MqIdHC+xoOayufObxLrdrNQXWckrDJyV4Fg55MBZ+GuaFQx+gzAbOcqrymkRn5POZaQnl8iEuLo4ox09whNOTA0xGfKB552Qk6MTvX/M43lvC9dtXgJmgZKw/jL4Og/JzO41gwAkiDfegsPMVu4Vl7NUB8xgFbQnDvm6Qj14btn/MYWU5Qm+E1AVzt2iO12MDcQ5Y8C03iS+pEOyCGd83MrBarXC5XPei2+2me4sQuszcVVcnMNBvAbELLVCiQxgf86Kv14psdgHJZBKpVIqTTqerqGoGvT0W7k5FPPxJSX9f6x+HvQWjQRGi2IF8fgOSJCEWi0GWZcTjcfj9fiQSCWxu5iE62zFCXVtnM21o/kuUaKDRIZguXYM2+r4+FItF6LpexTCMKqVSiTvMtQtvLqPTclP1R70XO8vZbAaVSoUfXdM0fuy7kQ1VXQRza75yt6PtStcPuPTY0Iv7YC7+LdDRbqrp+FBk7n8LPIfbvBuXk+n0UFcoZAAAAABJRU5ErkJggg==">\
+            <img src="/s.gif" class="menuArrow" />\
         </div>\
         <div class="insext-popup">\
             <h3>Salesforce inspector</h3>\
