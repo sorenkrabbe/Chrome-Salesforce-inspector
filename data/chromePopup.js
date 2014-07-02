@@ -1,5 +1,6 @@
-var buttonParent = document.querySelector('body');
+var buttonParent = document.querySelector('body.sfdcBody');
 if (buttonParent) {
+    // We are in a Salesforce org
     init();
 }
 
