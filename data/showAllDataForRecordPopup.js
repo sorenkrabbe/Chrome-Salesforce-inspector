@@ -166,7 +166,7 @@ function showAllData() {
                   class: 'right'
                 }], [null,
                   function(event) {
-                    showAllFieldMetadata(JSON.parse(event.target.getAttribute('data-all-sfdc-metadata')));
+                    showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
                   },
                   null,
                   null
