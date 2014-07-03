@@ -22,7 +22,8 @@ function showAllData() {
     width: 100%;\
     border-spacing: 0px;\
     font-size: 11px;\
-    overflow-wrap: break-word;\
+    word-wrap: break-word;\
+    white-space: pre-wrap;\
   }\
   tr:hover {\
     background-color: lightblue;\
