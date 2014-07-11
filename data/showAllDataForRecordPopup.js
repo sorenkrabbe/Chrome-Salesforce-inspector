@@ -112,7 +112,7 @@ function showAllData() {
   });
 
   //Query metadata for all objects and identify relevant relevant object (as generalMetadataResponse)
-  var recordId = window.document.location.pathname.substring(1);
+  var recordId = getRecordIdFromUrl();
   askSalesforce('/services/data/v28.0/sobjects/', function(responseText) {
     var currentObjKeyPrefix = recordId.substring(0, 3);
     var matchFound = false;

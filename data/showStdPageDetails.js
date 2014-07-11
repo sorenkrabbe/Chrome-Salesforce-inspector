@@ -6,7 +6,7 @@ var describeAllObjects = {};
 function showStdPageDetails() {
     //Identifying the object type and then querying describe details for that object
     askSalesforce('/services/data/v28.0/sobjects/', function(responseText){
-        var currentObjKeyPrefix = document.location.pathname.substring(1, 4);
+        var currentObjKeyPrefix = getRecordIdFromUrl().substring(0, 3);
         var matchFound = false;
         var response = JSON.parse(responseText);
         for (var i = 0; i < response.sobjects.length; i++) {
@@ -67,7 +67,7 @@ function getLabelFromLabelElement(labelElement){
 }
 
 function showFieldDetails(labelElement){
-    var retUrlEncoded = encodeURIComponent(document.location.pathname);
+    //var retUrlEncoded = encodeURIComponent(document.location.pathname);
     var output = document.createElement('div');
     
     output.classList.add('salesforce-inspector-details');

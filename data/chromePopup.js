@@ -4,7 +4,40 @@ if (buttonParent) {
     init();
 }
 
+var session;
+
 function init() {
+    // When on a *.visual.force.com page, the session in the cookie does not have API access,
+    // so we read the session from a cache stored in memory.
+    // When visiting a *.salesforce.com page, we store the session cookie in the cache.
+    // The first part of the session cookie is the OrgID,
+    // which we use as key to support being logged in to multiple orgs at once.
+    // http://salesforce.stackexchange.com/questions/23277/different-session-ids-in-different-contexts
+    var orgId = document.cookie.match(/(^|;\s*)sid=(.+?)!/)[2];
+    if (location.hostname.indexOf(".salesforce.com") > -1) {
+        session = document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
+        if (this.self && self.port) {
+            // Firefox
+            self.port.emit("putSession", orgId, session);
+        } else {
+            // Chrome
+            chrome.runtime.sendMessage({message: "putSession", orgId: orgId, session: session});
+        }
+    } else if (location.hostname.indexOf(".visual.force.com") > -1) {
+        if (this.self && self.port) {
+            // Firefox
+            self.port.emit("getSession", orgId);
+            self.port.on("getSession", function(message) {
+                session = message;
+            });
+        } else {
+            // Chrome
+            chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+                session = message;
+            });
+        }
+    }
+    
     var f = document.createElement('div');
     f.innerHTML = '<div id="insext">\
         <div class="insext-btn" tabindex="0" title="Show Salesforce details">\
@@ -35,8 +68,23 @@ function init() {
     });
 }
 
+function getRecordIdFromUrl() {
+    var urlSearch = document.location.search;
+    var recordId = urlSearch.indexOf('?id=') > -1 ? urlSearch.substring(urlSearch.indexOf('?id=') + '?id='.length)
+        : urlSearch.indexOf('&id=') > -1 ? urlSearch.substring(urlSearch.indexOf('&id=') + '&id='.length)
+        : document.location.pathname.substring(1);
+    if (recordId.indexOf('&') > -1) {
+        recordId = recordId.substring(0, recordId.indexOf('&'));
+    }
+    return recordId;
+}
+
 function askSalesforce(url, callback){
-    var session = document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
+    if (!session) {
+        alert("Session not found");
+        callback();
+        return;
+    }
     var xhr = new XMLHttpRequest();
     xhr.open("GET", "https://" + document.location.hostname + url, true);
     xhr.setRequestHeader('Authorization', "OAuth " + session);
