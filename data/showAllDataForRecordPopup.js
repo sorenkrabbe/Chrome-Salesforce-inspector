@@ -24,23 +24,32 @@ function showAllData() {
     font-size: 11px;\
     word-wrap: break-word;\
     white-space: pre-wrap;\
+    table-layout: fixed;\
   }\
-  tr:hover {\
-    background-color: lightblue;\
-  }\
-  tr.calculated, tr.calculated a {\
+  tr.calculated {\
     color: #777777;\
     background-color: #CCCCCC;\
     font-style: italic;\
   }\
-  .right {\
-    text-align: right;\
+  tr:hover, tr.calculated:hover {\
+    background-color: lightblue;\
   }\
-  .left {\
+  th {\
     text-align: left;\
   }\
-  .detailLink {\
+  .field-label {\
+    width: 20em;\
+  }\
+  .field-name {\
     text-decoration: underline;\
+    width: 20em;\
+  }\
+  .field-value {\
+    text-align: right;\
+  }\
+  .field-type {\
+    text-align: right;\
+    width: 9em;\
   }\
   #fieldDetailsView {\
     display: none;\
@@ -90,10 +99,10 @@ function showAllData() {
   <h1 id="heading"></h1>\
   <table>\
   <thead>\
-  <th class="left">Field Label</th>\
-  <th class="left">API Name</th>\
-  <th class="right">Value</th>\
-  <th class="right">Type</th>\
+  <th class="field-label">Field Label</th>\
+  <th class="field-name">API Name</th>\
+  <th class="field-value">Value</th>\
+  <th class="field-type">Type</th>\
   </thead>\
   <tbody id="dataTableBody">\
   </tbody>\
@@ -157,14 +166,14 @@ function showAllData() {
                   fields[index].dataValue,
                   fieldTypeDesc
                 ], [{
-                  class: 'left'
+                  class: 'field-label'
                 }, {
-                  class: 'left, detailLink',
+                  class: 'field-name',
                   'data-all-sfdc-metadata': JSON.stringify(fields[index])
                 }, {
-                  class: 'right'
+                  class: 'field-value'
                 }, {
-                  class: 'right'
+                  class: 'field-type'
                 }], [null,
                   function(event) {
                     showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
@@ -202,9 +211,7 @@ function showAllData() {
     var thKey = document.createElement('th');
     var thValue = document.createElement('th');
     thKey.textContent = 'Key';
-    thKey.setAttribute('class', 'left');
     thValue.textContent = 'Value';
-    thValue.setAttribute('class', 'left');
     tr.appendChild(thKey);
     tr.appendChild(thValue);
     thead.appendChild(tr);
@@ -246,9 +253,7 @@ function showAllData() {
       if (onClickFunctions[i] != null) {
         tableCell.addEventListener('click', onClickFunctions[i]);
       }
-      var tableCellDataContainer = tableCell.appendChild(document.createElement('div'));
-      tableCellDataContainer.style.maxWidth = "500px";
-      tableCellDataContainer.textContent = cellData[i];
+      tableCell.textContent = cellData[i];
       tableRow.appendChild(tableCell);
     }
 
