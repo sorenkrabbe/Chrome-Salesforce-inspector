@@ -2,24 +2,58 @@ var outputElement;
 var fieldDetailsByLabel = {};
 var metadataResponse = {};
 var describeAllObjects = {};
+var fieldSetupData = null;
 
 function showStdPageDetails() {
-    //Identifying the object type and then querying describe details for that object
-    askSalesforce('/services/data/v28.0/sobjects/', function(responseText){
-        var currentObjKeyPrefix = getRecordIdFromUrl().substring(0, 3);
-        var matchFound = false;
-        var response = JSON.parse(responseText);
-        for (var i = 0; i < response.sobjects.length; i++) {
-            if (response.sobjects[i].keyPrefix == currentObjKeyPrefix) {
-                askSalesforce(response.sobjects[i].urls.describe, parseSalesforceFieldMetadata);
-                matchFound = true;
-                break;
+    loadFieldSetupData(function(data) {
+        fieldSetupData = data;
+        //Identifying the object type and then querying describe details for that object
+        askSalesforce('/services/data/v28.0/sobjects/', function(responseText){
+            var currentObjKeyPrefix = getRecordIdFromUrl().substring(0, 3);
+            var matchFound = false;
+            var response = JSON.parse(responseText);
+            for (var i = 0; i < response.sobjects.length; i++) {
+                if (response.sobjects[i].keyPrefix == currentObjKeyPrefix) {
+                    askSalesforce(response.sobjects[i].urls.describe, parseSalesforceFieldMetadata);
+                    matchFound = true;
+                    break;
+                }
             }
-        }
-        if (!matchFound) {
-            alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
-        }
+            if (!matchFound) {
+                alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
+            }
+        });
     });
+}
+
+function loadFieldSetupData(callback) {
+  askSalesforceMetadata('<listMetadata><queries><type>CustomField</type></queries><asOfVersion>30.0</asOfVersion></listMetadata>', function(res) {
+    var fields = {};
+    for (var fieldEl = res.firstChild; fieldEl; fieldEl = fieldEl.nextSibling) {
+      var field = {};
+      for (var el = fieldEl.firstChild; el; el = el.nextSibling) {
+        field[el.nodeName] = el.textContent;
+      }
+      fields[field.fullName] = field;
+    }
+    callback(fields);
+  });
+}
+
+function getFieldSetupLink(fields, objectDescribe, fieldDescribe) {
+  if (!fieldDescribe.custom) {
+    var name = fieldDescribe.name;
+    if (name.substr(-2) == "Id") {
+      name = name.slice(0, -2);
+    }
+    return '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + objectDescribe.name;
+  } else {
+    var field = fields[objectDescribe.name + '.' + fieldDescribe.name];
+    if (!field) {
+      return '#';
+    }
+    return '/' + field.id;
+  }
 }
 
 /*******************
@@ -138,6 +172,9 @@ function showFieldDetails(labelElement){
                     ])
                 ])
             );
+            var a = E('a', [T('Setup')]);
+            a.setAttribute('href', getFieldSetupLink(fieldSetupData, metadataResponse, fieldDetail));
+            output.appendChild(a);
         }
     }
     

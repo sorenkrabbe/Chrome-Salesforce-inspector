@@ -16,9 +16,6 @@
 .salesforce-inspector-details .salesforce-inspector-minor {
 	font-size: 0.7em;
 }
-.salesforce-inspector-details a {
-	text-decoration: none;
-}
 .salesforce-inspector-details {
 	color: #333333;
 	z-index:1; 

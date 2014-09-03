@@ -97,3 +97,22 @@ function askSalesforce(url, callback){
     }
     xhr.send();
 }
+
+function askSalesforceMetadata(request, callback) {
+    if (!session) {
+        alert("Session not found");
+        callback();
+        return;
+    }
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/30.0', true);
+    xhr.setRequestHeader('Content-Type', "text/xml");
+    xhr.setRequestHeader('SOAPAction', '""');
+    xhr.onreadystatechange = function(){
+        if (xhr.readyState == 4) {
+            callback(xhr.responseXML.documentElement.firstChild.firstChild);
+        }
+    }
+    xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="http://soap.sforce.com/2006/04/metadata"><SessionHeader><sessionId>' + session + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="http://soap.sforce.com/2006/04/metadata">' + request + '</soapenv:Body></soapenv:Envelope>');
+}
+
