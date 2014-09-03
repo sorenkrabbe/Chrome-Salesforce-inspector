@@ -133,8 +133,6 @@ function showAllData() {
         askSalesforce(generalMetadataResponse.sobjects[i].urls.describe, function(responseText) {
           var objectMetadataResponse = JSON.parse(responseText);
 
-          //Sort the field objects and struture as hash map
-          //TODO: Sort fields alphabetically (rewrite sortObject())
           var fields = {};
           for (var index in objectMetadataResponse.fields) {
             fields[objectMetadataResponse.fields[index].name] = objectMetadataResponse.fields[index];
@@ -143,7 +141,6 @@ function showAllData() {
           //Query data for the relevant object (as objectDataResponse) and merge it with objectMetadataResponse in the fields array 
           askSalesforce(objectMetadataResponse.urls.rowTemplate.replace("{ID}", recordId), function(responseText) {
             var objectDataResponse = JSON.parse(responseText);
-            //var objectValues = sortObject(objectDataResponse); //Sort attributes by name
             for (var fieldName in objectDataResponse) {
               if (fieldName != 'attributes') {
                 if (!fields.hasOwnProperty(fieldName)) {
@@ -184,6 +181,7 @@ function showAllData() {
                 (fields[index].calculated) ? 'calculated' : null
               );
             }
+            makeSortable(document.querySelector('#dataTableBody').parentNode);
           });
 
         });
@@ -264,22 +262,33 @@ function showAllData() {
     document.querySelector('#heading').textContent = label;
   }
 
-  /**
-   * Refactor: move to general utility file? Currently not used.
-   */
-  function sortObject(obj) {
-    var arr = [];
-    for (var propertyName in obj) {
-      if (obj.hasOwnProperty(propertyName)) {
-        arr.push({
-          'key': propertyName,
-          'value': obj[propertyName]
-        });
-      }
-    }
-    arr.sort(function(a, b) {
-      return a.key.toLowerCase().localeCompare(b.key.toLowerCase());
+  function sortTable(table, col, dir) {
+    var tbody = table.tBodies[0];
+    var rows = Array.prototype.slice.call(tbody.rows, 0);
+    rows = rows.sort(function (a, b) {
+      return dir * (a.cells[col].textContent.trim().localeCompare(b.cells[col].textContent.trim()));
     });
-    return arr;
+    for (var i = 0; i < rows.length; ++i) {
+      tbody.appendChild(rows[i]);
+    }
   }
+
+  function makeSortable(table) {
+    var thead = table.tHead.rows[0].cells;
+    var sortCol = 0;
+    var sortDir = -1;
+    for (var col = 0; col < thead.length; col++) {
+      thead[col].tabIndex = 0;
+      (function (col) {
+        thead[col].addEventListener("click", function () {
+          thead[sortCol].style.background = '';
+          sortDir = col == sortCol ? -sortDir : 1;
+          sortCol = col;
+          thead[sortCol].style.backgroundImage = sortDir > 0 ? 'url(/img/colTitle_downarrow.gif)' : 'url(/img/colTitle_uparrow.gif)';
+          sortTable(table, sortCol, sortDir);
+        });
+      }(col));
+    }
+  }
+
 }
