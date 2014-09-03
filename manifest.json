@@ -16,6 +16,7 @@
   "background": {
     "scripts": ["lib/main.js"]
   },
+  "incognito": "split",
   "manifest_version": 2
 }
 
