@@ -122,7 +122,7 @@ function showAllData() {
 
   //Query metadata for all objects and identify relevant relevant object (as generalMetadataResponse)
   var recordId = getRecordIdFromUrl();
-  askSalesforce('/services/data/v28.0/sobjects/', function(responseText) {
+  askSalesforce('/services/data/v31.0/sobjects/', function(responseText) {
     var currentObjKeyPrefix = recordId.substring(0, 3);
     var matchFound = false;
     var generalMetadataResponse = JSON.parse(responseText);
