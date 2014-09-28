@@ -5,29 +5,22 @@ var describeAllObjects = {};
 var fieldSetupData = null;
 
 function showStdPageDetails() {
-    loadFieldSetupData(function(data) {
-        fieldSetupData = data;
-        //Identifying the object type and then querying describe details for that object
-        askSalesforce('/services/data/v28.0/sobjects/', function(responseText){
-            var currentObjKeyPrefix = getRecordIdFromUrl().substring(0, 3);
-            var matchFound = false;
-            var response = JSON.parse(responseText);
-            for (var i = 0; i < response.sobjects.length; i++) {
-                if (response.sobjects[i].keyPrefix == currentObjKeyPrefix) {
-                    askSalesforce(response.sobjects[i].urls.describe, parseSalesforceFieldMetadata);
-                    matchFound = true;
-                    break;
-                }
-            }
-            if (!matchFound) {
-                alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
-            }
-        });
-    });
+  var recordId = getRecordIdFromUrl();
+  Promise.all([
+    loadFieldSetupData(),
+    loadMetadataForRecordId(recordId)
+  ])
+  .then(function(results) {
+    fieldSetupData = results[0];
+    parseSalesforceFieldMetadata(results[1]);
+  })
+  .catch(function(error) {
+      alert(error);
+  });
 }
 
-function loadFieldSetupData(callback) {
-  askSalesforceMetadata('<listMetadata><queries><type>CustomField</type></queries><asOfVersion>30.0</asOfVersion></listMetadata>', function(res) {
+function loadFieldSetupData() {
+  return askSalesforceMetadata('<listMetadata><queries><type>CustomField</type></queries><asOfVersion>30.0</asOfVersion></listMetadata>').then(function(res) {
     var fields = {};
     for (var fieldEl = res.firstChild; fieldEl; fieldEl = fieldEl.nextSibling) {
       var field = {};
@@ -36,7 +29,7 @@ function loadFieldSetupData(callback) {
       }
       fields[field.fullName] = field;
     }
-    callback(fields);
+    return fields;
   });
 }
 

@@ -120,80 +120,63 @@ function showAllData() {
     hideAllFieldMetadataView();
   });
 
-  //Query metadata for all objects and identify relevant relevant object (as generalMetadataResponse)
   var recordId = getRecordIdFromUrl();
-  askSalesforce('/services/data/v31.0/sobjects/', function(responseText) {
-    var currentObjKeyPrefix = recordId.substring(0, 3);
-    var matchFound = false;
-    var generalMetadataResponse = JSON.parse(responseText);
-    for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
-      if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
+  var fields = {};
+  loadMetadataForRecordId(recordId).then(function(responseText) {
+    var objectMetadataResponse = JSON.parse(responseText);
 
-        //Query metadata for the relevant object (as objectMetadataResponse)
-        askSalesforce(generalMetadataResponse.sobjects[i].urls.describe, function(responseText) {
-          var objectMetadataResponse = JSON.parse(responseText);
+    for (var index in objectMetadataResponse.fields) {
+      fields[objectMetadataResponse.fields[index].name] = objectMetadataResponse.fields[index];
+    }
 
-          var fields = {};
-          for (var index in objectMetadataResponse.fields) {
-            fields[objectMetadataResponse.fields[index].name] = objectMetadataResponse.fields[index];
-          }
+    //Query data for the relevant object (as objectDataResponse) and merge it with objectMetadataResponse in the fields array 
+    return askSalesforce(objectMetadataResponse.urls.rowTemplate.replace("{ID}", recordId));
 
-          //Query data for the relevant object (as objectDataResponse) and merge it with objectMetadataResponse in the fields array 
-          askSalesforce(objectMetadataResponse.urls.rowTemplate.replace("{ID}", recordId), function(responseText) {
-            var objectDataResponse = JSON.parse(responseText);
-            for (var fieldName in objectDataResponse) {
-              if (fieldName != 'attributes') {
-                if (!fields.hasOwnProperty(fieldName)) {
-                  fields[fieldName] = {};
-                }
-                fields[fieldName].dataValue = objectDataResponse[fieldName];
-              }
-            }
-
-            //Add to layout
-            document.title = 'ALL DATA: ' + objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
-            setHeading(objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')');
-            for (var index in fields) {
-              var fieldTypeDesc = fields[index].type + ' (' + fields[index].length + ')';
-              fieldTypeDesc += (fields[index].calculated) ? '*' : '';
-
-              addRowToDataTable(
-                [fields[index].label,
-                  fields[index].name,
-                  fields[index].dataValue,
-                  fieldTypeDesc
-                ], [{
-                  class: 'field-label'
-                }, {
-                  class: 'field-name',
-                  'data-all-sfdc-metadata': JSON.stringify(fields[index])
-                }, {
-                  class: 'field-value'
-                }, {
-                  class: 'field-type'
-                }], [null,
-                  function(event) {
-                    showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
-                  },
-                  null,
-                  null
-                ],
-                (fields[index].calculated) ? 'calculated' : null
-              );
-            }
-            makeSortable(document.querySelector('#dataTableBody').parentNode);
-          });
-
-        });
-
-        matchFound = true;
-        break;
+  }).then(function(responseText) {
+    var objectDataResponse = JSON.parse(responseText);
+    for (var fieldName in objectDataResponse) {
+      if (fieldName != 'attributes') {
+        if (!fields.hasOwnProperty(fieldName)) {
+          fields[fieldName] = {};
+        }
+        fields[fieldName].dataValue = objectDataResponse[fieldName];
       }
     }
-    if (!matchFound) {
-      popupWin.alert('Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix)
-      return;
+
+    //Add to layout
+    document.title = 'ALL DATA: ' + objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
+    setHeading(objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')');
+    for (var index in fields) {
+      var fieldTypeDesc = fields[index].type + ' (' + fields[index].length + ')';
+      fieldTypeDesc += (fields[index].calculated) ? '*' : '';
+
+      addRowToDataTable(
+        [fields[index].label,
+          fields[index].name,
+          fields[index].dataValue,
+          fieldTypeDesc
+        ], [{
+          class: 'field-label'
+        }, {
+          class: 'field-name',
+          'data-all-sfdc-metadata': JSON.stringify(fields[index])
+        }, {
+          class: 'field-value'
+        }, {
+          class: 'field-type'
+        }], [null,
+          function(event) {
+            showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
+          },
+          null,
+          null
+        ],
+        (fields[index].calculated) ? 'calculated' : null
+      );
     }
+    makeSortable(document.querySelector('#dataTableBody').parentNode);
+  }).then(null, function(error) {
+    popupWin.alert(error);
   });
 
   function showAllFieldMetadata(allFieldMetadata) {

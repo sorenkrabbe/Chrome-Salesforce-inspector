@@ -79,40 +79,62 @@ function getRecordIdFromUrl() {
     return recordId;
 }
 
-function askSalesforce(url, callback){
-    if (!session) {
-        alert("Session not found");
-        callback();
-        return;
-    }
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", "https://" + document.location.hostname + url, true);
-    xhr.setRequestHeader('Authorization', "OAuth " + session);
-    xhr.setRequestHeader('Accept', "application/json");
-    xhr.onreadystatechange = function(){
-        if (xhr.readyState == 4) {
-            callback(xhr.responseText);
-            //console.log(JSON.parse(xhr.responseText));
+function loadMetadataForRecordId(recordId) {
+    return askSalesforce('/services/data/v31.0/sobjects/').then(function(responseText) {
+        var currentObjKeyPrefix = recordId.substring(0, 3);
+        var generalMetadataResponse = JSON.parse(responseText);
+        for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
+            if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
+                return askSalesforce(generalMetadataResponse.sobjects[i].urls.describe);
+            }
         }
-    }
-    xhr.send();
+        throw 'Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix;
+    });
 }
 
-function askSalesforceMetadata(request, callback) {
-    if (!session) {
-        alert("Session not found");
-        callback();
-        return;
-    }
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/30.0', true);
-    xhr.setRequestHeader('Content-Type', "text/xml");
-    xhr.setRequestHeader('SOAPAction', '""');
-    xhr.onreadystatechange = function(){
-        if (xhr.readyState == 4) {
-            callback(xhr.responseXML.documentElement.firstChild.firstChild);
+function askSalesforce(url) {
+    return new Promise(function(resolve, reject) {
+        if (!session) {
+            reject(new Error("Session not found"));
+            return;
         }
-    }
-    xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="http://soap.sforce.com/2006/04/metadata"><SessionHeader><sessionId>' + session + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="http://soap.sforce.com/2006/04/metadata">' + request + '</soapenv:Body></soapenv:Envelope>');
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "https://" + document.location.hostname + url, true);
+        xhr.setRequestHeader('Authorization', "OAuth " + session);
+        xhr.setRequestHeader('Accept', "application/json");
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4) {
+                if (xhr.status == 200) {
+                    resolve(xhr.responseText);
+                } else {
+                    reject(xhr);
+                }
+            }
+        }
+        xhr.send();
+    });
+}
+
+function askSalesforceMetadata(request) {
+    return new Promise(function(resolve, reject) {
+        if (!session) {
+            reject(new Error("Session not found"));
+            return;
+        }
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/30.0', true);
+        xhr.setRequestHeader('Content-Type', "text/xml");
+        xhr.setRequestHeader('SOAPAction', '""');
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4) {
+                if (xhr.status == 200) {
+                    resolve(xhr.responseXML.documentElement.firstChild.firstChild);
+                } else {
+                    reject(xhr);
+                }
+            }
+        }
+        xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="http://soap.sforce.com/2006/04/metadata"><SessionHeader><sessionId>' + session + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="http://soap.sforce.com/2006/04/metadata">' + request + '</soapenv:Body></soapenv:Envelope>');
+    });
 }
 
