@@ -29,17 +29,54 @@ function dataLoader() {
   #data {\
     height:10em;\
   }\
+  .area {\
+    background-color: #F8F8F8;\
+    padding: 3px;\
+    margin: 5px 0px;\
+    border-radius: 5px;\
+    border: 1px solid #E0E3E5;\
+    border-top: 3px solid #1797C0;\
+  }\
+  h1 {\
+    font-size: 1.2em;\
+    margin: 0px;\
+    display: inline;\
+  }\
+  .action-arrow {\
+    text-align: center;\
+  }\
+  .arrow-body {\
+    background-color: green;\
+    width: 80px;\
+    margin: 0 auto -10px;\
+    padding: 5px;\
+    padding-bottom: 0;\
+  }\
+  .arrow-head{\
+    border-left: 70px solid transparent;\
+    border-right: 70px solid transparent;\
+    border-top: 30px solid green;\
+    width: 0;\
+    margin: 0 auto;\
+  }\
   </style>\
   ';
 
   document.body.innerHTML = '\
-  <h1>Query</h1>\
-  <textarea id="query">select Id from Account</textarea>\
-  <button id="export-btn">Export</button>\
-  <h1>Data</h1>\
-  <input type=radio name="data-format" checked id="data-format-excel"> Excel\
-  <input type=radio name="data-format"> CSV\
-  <textarea id="data"></textarea>\
+  <div class="area">\
+    <h1>Query</h1>\
+    <textarea id="query">select Id from Account</textarea>\
+  </div>\
+  <div class="action-arrow">\
+    <div class="arrow-body"><button id="export-btn">Export</button></div>\
+    <div class="arrow-head"></div>\
+  </div>\
+  <div class="area">\
+    <h1>Data</h1>\
+    <input type=radio name="data-format" checked id="data-format-excel"> Excel\
+    <input type=radio name="data-format"> CSV\
+    <textarea id="data"></textarea>\
+  </div>\
   ';
   function csvEncode(text) {
     return "\"" + text.replace("\"", "\"\"") + "\"";
