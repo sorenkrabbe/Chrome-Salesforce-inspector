@@ -122,7 +122,7 @@ function askSalesforceMetadata(request) {
             return;
         }
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/30.0', true);
+        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/31.0', true);
         xhr.setRequestHeader('Content-Type', "text/xml");
         xhr.setRequestHeader('SOAPAction', '""');
         xhr.onreadystatechange = function() {
