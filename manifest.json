@@ -9,8 +9,16 @@
   "content_scripts": [
     {
       "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*"],
-      "css": ["data/chromePopup.css", "data/showStdPageDetails.css"],
-      "js": ["data/chromePopup.js", "data/showAllDataForRecordPopup.js", "data/showStdPageDetails.js"]
+      "css": [
+        "data/chromePopup.css",
+        "data/showStdPageDetails.css"
+      ],
+      "js": [
+        "data/chromePopup.js",
+        "data/showAllDataForRecordPopup.js",
+        "data/dataLoader.js",
+        "data/showStdPageDetails.js"
+      ]
     }
   ],
   "background": {

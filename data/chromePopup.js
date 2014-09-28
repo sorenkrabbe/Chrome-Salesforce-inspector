@@ -47,6 +47,7 @@ function init() {
             <h3>Salesforce inspector</h3>\
             <button id="showStdPageDetailsBtn">Show field metadata</button>\
             <button id="showAllDataBtn">Show all data</button>\
+            <button id="dataLoaderBtn">Data Loader</button>\
             <div class="meta"><a href="#" id="aboutLnk">About</a></div>\
         </div>\
     </div>';
@@ -61,6 +62,10 @@ function init() {
     });
     document.querySelector('#showAllDataBtn').addEventListener('click', function() {
         showAllData();
+        document.querySelector('#insext').classList.remove('insext-active');
+    });
+    document.querySelector('#dataLoaderBtn').addEventListener('click', function() {
+        dataLoader();
         document.querySelector('#insext').classList.remove('insext-active');
     });
     document.querySelector('#aboutLnk').addEventListener('click', function(){ 
