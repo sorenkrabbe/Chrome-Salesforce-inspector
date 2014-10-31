@@ -36,7 +36,6 @@ function dataLoader() {
   .area {\
     background-color: #F8F8F8;\
     padding: 3px;\
-    margin: 5px 0px;\
     border-radius: 5px;\
     border: 1px solid #E0E3E5;\
     border-top: 3px solid #1797C0;\
@@ -51,24 +50,32 @@ function dataLoader() {
   }\
   .arrow-body {\
     background-color: green;\
-    width: 80px;\
-    margin: 0 auto -10px;\
-    padding: 5px;\
-    padding-bottom: 0;\
+    width: 100px;\
+    margin: 0 auto;\
+    padding-top: 5px;\
   }\
   .arrow-head{\
-    border-left: 70px solid transparent;\
-    border-right: 70px solid transparent;\
-    border-top: 30px solid green;\
+    border-left: 50px solid transparent;\
+    border-right: 50px solid transparent;\
+    border-top: 15px solid green;\
     width: 0;\
-    margin: 0 auto;\
+    margin: 0 auto -8px;\
+    position: relative;\
+  }\
+  .area input[type="radio"], .area input[type="checkbox"] {\
+    vertical-align: middle;\
+    margin: 0 2px 0 0;\
+  }\
+  .area label {\
+    padding-left: 10px;\
   }\
   </style>\
   ';
 
   document.body.innerHTML = '\
   <div class="area">\
-    <h1>Query</h1>\
+    <h1>Export query</h1>\
+    <label><input type="checkbox" id="query-all"> Include deleted records?</label>\
     <textarea id="query">select Id from Account</textarea>\
   </div>\
   <div class="action-arrow">\
@@ -77,21 +84,21 @@ function dataLoader() {
   </div>\
   <div class="area">\
     <h1>Data</h1>\
-    <input type=radio name="data-format" checked id="data-format-excel"> Excel\
-    <input type=radio name="data-format"> CSV\
+    <label><input type=radio name="data-format" checked id="data-format-excel"> Excel</label>\
+    <label><input type=radio name="data-format"> CSV</label>\
+    <label><input type=radio name="data-format" id="data-format-json"> JSON</label>\
     <textarea id="data"></textarea>\
   </div>\
   ';
-  function csvEncode(text) {
-    return "\"" + text.replace("\"", "\"\"") + "\"";
-  }
   document.querySelector("#export-btn").addEventListener("click", function() {
     document.querySelector("#export-btn").disabled = true;
     document.querySelector("#data").value = "Exporting...";
     var query = document.querySelector("#query").value;
     var separator = document.querySelector("#data-format-excel").checked ? "\t" : ",";
+    var exportAsJson = document.querySelector("#data-format-json").checked;
+    var queryMethod = document.querySelector("#query-all").checked ? 'queryAll' : 'query';
     var records = [];
-    askSalesforce('/services/data/v31.0/query/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
+    askSalesforce('/services/data/v31.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
       var data = JSON.parse(responseText);
       var text = "";
       records = records.concat(data.records);
@@ -99,39 +106,68 @@ function dataLoader() {
         document.querySelector("#data").value = "Exporting... Completed " +records.length + " of " + data.totalSize + " records.";
         return askSalesforce(data.nextRecordsUrl).then(queryHandler);
       }
+      if (exportAsJson) {
+        return JSON.stringify(records);
+      }
       if (records.length == 0) {
-        text += "Zero records returned";
-      } else {
-        var header = records[0];
-        var firstField = true;
-        for (var field in header) {
-          if (field == "attributes") {
-            continue;
-          }
-          if (firstField) {
-            firstField = false;
-          } else {
-            text += separator;
-          }
-          text += csvEncode(field);
+        text += "No data exported.";
+        if (data.totalSize > 0) {
+          text += " " + data.totalSize + " record(s)."
         }
-        text += "\r\n";
+      } else {
+        var table = [];
+        /*
+        Discover what columns should be in our CSV file.
+        We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
+        This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
+        We don't care, because we don't need a stable set of columns for our use case.
+        */
+        var header = [];
         for (var i = 0; i < records.length; i++) {
           var record = records[i];
-          var firstField = true;
-          for (var field in record) {
-            if (field == "attributes") {
-              continue;
+          function discoverColumns(record, prefix) {
+            for (var field in record) {
+              if (field == "attributes") {
+                continue;
+              }
+              var column = prefix + field;
+              if (header.indexOf(column) < 0) {
+                header.push(column);
+              }
+              if (typeof record[field] == "object" && record[field] != null) {
+                discoverColumns(record[field], column + ".");
+              }
             }
-            if (firstField) {
-              firstField = false;
-            } else {
-              text += separator;
-            }
-            text += csvEncode(record[field] || "");
           }
-          text += "\r\n";
+          discoverColumns(record, "");
         }
+        table.push(header);
+        /*
+        Now we have the columns, we add the records to the CSV table.
+        */
+        for (var i = 0; i < records.length; i++) {
+          var record = records[i];
+          var row = [];
+          for (var c = 0; c < header.length; c++) {
+            var column = header[c].split(".");
+            var value = record;
+            for (var f = 0; f < column.length; f++) {
+              var field = column[f];
+              if (typeof value != "object") {
+                value = null;
+              }
+              if (value != null) {
+                value = value[field];
+              }
+            }
+            if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
+              value = "[" + value.attributes.type + "]";
+            }
+            row.push(value);
+          }
+          table.push(row);
+        }
+        text = csvSerialize(table, separator);
       }
       return text;
     }, function(xhr) {
@@ -148,8 +184,13 @@ function dataLoader() {
       document.querySelector("#data").value = text;
       document.querySelector("#export-btn").disabled = false;
     }, function(error) {
+      console.error(error);
       document.querySelector("#data").value = "UNEXPECTED EXCEPTION:" + error;
       document.querySelector("#export-btn").disabled = false;
     });
   });
+
+  function csvSerialize(table, separator) {
+    return table.map(function(row) { return row.map(function(text) { return "\"" + ("" + (text == null ? "" : text)).replace("\"", "\"\"") + "\""; }).join(separator); }).join("\r\n");
+  }
 }
