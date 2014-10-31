@@ -10,6 +10,10 @@ function dataLoader() {
     // Chrome
     popupWin = open('', '', 'width=850,height=800');
   }
+  window.addEventListener("pagehide", function() {
+    // All JS runs in the parent window, and will stop working when the parent goes away. Therefore close the popup.
+    popupWin.close();
+  });
   var document = popupWin.document;
   document.head.innerHTML = '\
   <title>Data Loader</title>\
