@@ -75,7 +75,7 @@ function dataLoader() {
   document.body.innerHTML = '\
   <div class="area">\
     <h1>Export query</h1>\
-    <label><input type="checkbox" id="query-all"> Include deleted records?</label>\
+    <label><input type="checkbox" id="query-all"> Include deleted and archived records?</label>\
     <textarea id="query">select Id from Account</textarea>\
   </div>\
   <div class="action-arrow">\
