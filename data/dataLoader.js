@@ -74,6 +74,9 @@ function dataLoader() {
   .area label {\
     padding-left: 10px;\
   }\
+  #export-help-btn, #import-help-btn {\
+    float: right;\
+  }\
   </style>\
   ';
 
@@ -81,7 +84,17 @@ function dataLoader() {
   <div class="area">\
     <h1>Export query</h1>\
     <label><input type="checkbox" id="query-all"> Include deleted and archived records?</label>\
+    <a href="#" id="export-help-btn">Export help</a>\
     <textarea id="query">select Id from Account</textarea>\
+    <div id="export-help-box" hidden>\
+      <p>Use for quick one-off data exports.</p>\
+      <ul>\
+        <li>Enter a <a href="http://www.salesforce.com/us/developer/docs/soql_sosl/" target="_blank">SOQL query</a> in the box above</li>\
+        <li>Select your output format</li>\
+        <li>Press Export</li>\
+      </ul>\
+      <p>Supports the full SOQL language. The columns in the CSV output depend on the returned data. Using subqueries may cause the output to grow rapidly. Bulk API is not supported. Large data volumes may freeze or crash your browser.</p>\
+    </div>\
   </div>\
   <div class="action-arrow">\
     <div class="arrow-body"><button id="export-btn">Export</button></div>\
@@ -104,9 +117,35 @@ function dataLoader() {
     <label><input type=radio name="import-action" id="import-action-update"> Update</label>\
     <label><input type=radio name="import-action" id="import-action-delete"> Delete</label>\
     <label>Object: <input value="Account" id="import-type"></label>\
+    <a href="#" id="import-help-btn">Import help</a>\
     <textarea id="import-result"></textarea>\
+    <div id="import-help-box" hidden>\
+      <p>Use for quick one-off data imports. Support is currently limited and may destroy your data.</p>\
+      <ul>\
+        <li>Enter your CSV or Excel data in the middle box. The input must contain a header row with field API names. Empty cells insert null values. Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>.</li>\
+        <li>Select your input format (only Excel and CSV is supported)</li>\
+        <li>Select operation (insert, update or delete)</li>\
+        <li>Enter the API name of the object to import</li>\
+        <li>Press Import</li>\
+      </ul>\
+      <p>Upsert is not supported. Bulk API is not supported. Batching is not supported (everything goes into one batch). Large data volumes may freeze or crash your browser.</p>\
+    </div>\
   </div>\
   ';
+  document.querySelector("#export-help-btn").addEventListener("click", function() {
+    if (document.querySelector("#export-help-box").hasAttribute("hidden")) {
+      document.querySelector("#export-help-box").removeAttribute("hidden");
+    } else {
+      document.querySelector("#export-help-box").setAttribute("hidden", "");
+    }
+  });
+  document.querySelector("#import-help-btn").addEventListener("click", function() {
+    if (document.querySelector("#import-help-box").hasAttribute("hidden")) {
+      document.querySelector("#import-help-box").removeAttribute("hidden");
+    } else {
+      document.querySelector("#import-help-box").setAttribute("hidden", "");
+    }
+  });
   document.querySelector("#export-btn").addEventListener("click", function() {
     document.querySelector("#export-btn").disabled = true;
     document.querySelector("#data").value = "Exporting...";
