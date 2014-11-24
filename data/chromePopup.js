@@ -40,33 +40,80 @@ function init() {
     
     var f = document.createElement('div');
     f.innerHTML = '<div id="insext">\
-        <div class="insext-btn" tabindex="0" title="Show Salesforce details">\
+        <div class="insext-btn" tabindex="0" accesskey="i" title="Show Salesforce details (Alt+I / Shift+Alt+I)">\
             <img src="/s.gif" class="menuArrow" />\
         </div>\
         <div class="insext-popup">\
             <h3>Salesforce inspector</h3>\
-            <button id="showStdPageDetailsBtn">Show field metadata</button>\
-            <button id="showAllDataBtn">Show all data</button>\
-            <button id="dataLoaderBtn">Data Loader</button>\
+            <button id="showStdPageDetailsBtn">Show field metadata (m)</button>\
+            <button id="showAllDataBtn">Show all data (a)</button>\
+            <button id="dataLoaderBtn">Data Loader (d)</button>\
             <div class="meta"><a href="#" id="aboutLnk">About</a></div>\
         </div>\
     </div>';
-    buttonParent.appendChild(f.firstChild);
+    var rootEl = f.firstChild;
+    buttonParent.appendChild(rootEl);
     document.querySelector('.insext-btn').addEventListener('click', function() {
-        document.querySelector('#insext').classList.toggle('insext-active');
+        if (!rootEl.classList.contains('insext-active')) {
+            rootEl.classList.add('insext-active');
+            // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector
+            addEventListener('keypress', keyListener);
+            addEventListener('click', outsidePopupClick);
+            var ws = document.querySelector('#presence_widgetstatus');
+            if (ws) {
+                ws.addEventListener('focus', removeConflictingFocus);
+            }
+        } else {
+            closePopup();
+        }
     });
+    function closePopup() {
+        rootEl.classList.remove('insext-active');
+        removeEventListener('keypress', keyListener);
+        removeEventListener('click', outsidePopupClick);
+        var ws = document.querySelector('#presence_widgetstatus');
+        if (ws) {
+            ws.removeEventListener('focus', removeConflictingFocus);
+        }
+    }
+    function keyListener(e) {
+        if (e.charCode == 109) {
+            showStdPageDetails();
+            closePopup();
+            e.preventDefault();
+        }
+        if (e.charCode == 97) {
+            showAllData();
+            closePopup();
+            e.preventDefault();
+        }
+        if (e.charCode == 100) {
+            dataLoader();
+            closePopup();
+            e.preventDefault();
+        }
+    }
+    function outsidePopupClick(e) {
+        // Close the popup when clicking outside it
+        if (!rootEl.contains(e.target)) {
+            closePopup();
+        }
+    }
+    function removeConflictingFocus(e) {
+        e.target.blur();
+    }
     
     document.querySelector('#showStdPageDetailsBtn').addEventListener('click', function() {
         showStdPageDetails();
-        document.querySelector('#insext').classList.remove('insext-active');
+        closePopup();
     });
     document.querySelector('#showAllDataBtn').addEventListener('click', function() {
         showAllData();
-        document.querySelector('#insext').classList.remove('insext-active');
+        closePopup();
     });
     document.querySelector('#dataLoaderBtn').addEventListener('click', function() {
         dataLoader();
-        document.querySelector('#insext').classList.remove('insext-active');
+        closePopup();
     });
     document.querySelector('#aboutLnk').addEventListener('click', function(){ 
         open('https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'); 
