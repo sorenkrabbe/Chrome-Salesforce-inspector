@@ -96,11 +96,18 @@ function showAllData() {
   .closeLnk:hover {\
     background: #00d9ff;\
   }\
+  #filter {\
+    width: 20em;\
+  }\
+  .filter-hidden {\
+    display: none;\
+  }\
   </style>\
   ';
 
   document.body.innerHTML = '\
-  <h1 id="heading"></h1>\
+  <h1 id="heading">Loading all data...</h1>\
+  <input id="filter" placeholder="Filter">\
   <table>\
   <thead>\
   <th class="field-label">Field Label</th>\
@@ -123,6 +130,16 @@ function showAllData() {
   document.querySelector('#fieldDetailsView .closeLnk').addEventListener('click', function(event) {
     hideAllFieldMetadataView();
   });
+  document.querySelector('#filter').addEventListener('input', function(event) {
+    console.log("filtering!");
+    var value = document.querySelector('#filter').value.trim().toLowerCase();
+    var rows = document.querySelectorAll('#dataTableBody tr');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      row.classList.toggle('filter-hidden', value && row.textContent.toLowerCase().indexOf(value) == -1);
+    };
+  });
+  document.querySelector('#filter').focus();
 
   var recordId = getRecordIdFromUrl();
   var fields = {};
