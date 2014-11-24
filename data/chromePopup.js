@@ -150,6 +150,7 @@ function askSalesforce(url) {
             reject(new Error("Session not found"));
             return;
         }
+        url += (url.indexOf("?") > -1 ? '&' : '?') + 'cache=' + Math.random();
         var xhr = new XMLHttpRequest();
         xhr.open("GET", "https://" + document.location.hostname + url, true);
         xhr.setRequestHeader('Authorization', "OAuth " + session);
@@ -174,7 +175,7 @@ function askSalesforceMetadata(request) {
             return;
         }
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/31.0', true);
+        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/31.0?cache=' + Math.random(), true);
         xhr.setRequestHeader('Content-Type', "text/xml");
         xhr.setRequestHeader('SOAPAction', '""');
         xhr.onreadystatechange = function() {
@@ -197,7 +198,7 @@ function askSalesforceSoap(request) {
             return;
         }
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/31.0', true);
+        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/31.0?cache=' + Math.random(), true);
         xhr.setRequestHeader('Content-Type', "text/xml");
         xhr.setRequestHeader('SOAPAction', '""');
         xhr.onreadystatechange = function() {
