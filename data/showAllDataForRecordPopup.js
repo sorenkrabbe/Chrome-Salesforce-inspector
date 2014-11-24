@@ -1,4 +1,4 @@
-function showAllData() {
+function showAllData(recordId) {
   // Load a blank page and then inject the HTML to work around https://bugzilla.mozilla.org/show_bug.cgi?id=792479
   // An empty string as URL loads about:blank synchronously
   var popupWin;
@@ -45,7 +45,6 @@ function showAllData() {
     width: 20em;\
   }\
   .field-name {\
-    text-decoration: underline;\
     width: 20em;\
   }\
   .field-value {\
@@ -54,6 +53,11 @@ function showAllData() {
   .field-type {\
     text-align: right;\
     width: 9em;\
+  }\
+  td[tabindex], th[tabindex] {\
+    text-decoration: underline;\
+    cursor: pointer;\
+    color: darkblue;\
   }\
   #fieldDetailsView {\
     display: none;\
@@ -141,7 +145,9 @@ function showAllData() {
   });
   document.querySelector('#filter').focus();
 
-  var recordId = getRecordIdFromUrl();
+  if (!recordId) {
+    recordId = getRecordIdFromUrl();
+  }
   var fields = {};
   loadMetadataForRecordId(recordId).then(function(responseText) {
     var objectMetadataResponse = JSON.parse(responseText);
@@ -189,7 +195,9 @@ function showAllData() {
           function(event) {
             showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
           },
-          null,
+          fields[index].type == 'reference' && fields[index].dataValue
+            ? function(event) { showAllData(event.currentTarget.textContent); }
+            : null,
           null
         ],
         (fields[index].calculated) ? 'calculated' : null
@@ -254,6 +262,7 @@ function showAllData() {
       }
       if (onClickFunctions[i] != null) {
         tableCell.addEventListener('click', onClickFunctions[i]);
+        tableCell.tabIndex = 0;
       }
       tableCell.textContent = cellData[i];
       tableRow.appendChild(tableCell);
