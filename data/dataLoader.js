@@ -116,7 +116,8 @@ function dataLoader() {
     <label><input type=radio name="import-action" checked id="import-action-create"> Insert</label>\
     <label><input type=radio name="import-action" id="import-action-update"> Update</label>\
     <label><input type=radio name="import-action" id="import-action-delete"> Delete</label>\
-    <label>Object: <input value="Account" id="import-type"></label>\
+    <label>Object: <input value="Account" id="import-type" list="sobjectlist"></label>\
+    <datalist id="sobjectlist"></datalist>\
     <a href="#" id="import-help-btn">Import help</a>\
     <textarea id="import-result"></textarea>\
     <div id="import-help-box" hidden>\
@@ -145,6 +146,14 @@ function dataLoader() {
     } else {
       document.querySelector("#import-help-box").setAttribute("hidden", "");
     }
+  });
+  askSalesforce("/services/data/v31.0/sobjects/").then(function(responseText) {
+    var list = document.querySelector("#sobjectlist");
+    JSON.parse(responseText).sobjects.forEach(function(sobject) {
+      var opt = document.createElement("option");
+      opt.value = sobject.name;
+      list.appendChild(opt);
+    });
   });
   document.querySelector("#export-btn").addEventListener("click", function() {
     document.querySelector("#export-btn").disabled = true;
