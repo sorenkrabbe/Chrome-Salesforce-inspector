@@ -30,6 +30,8 @@ function loadFieldSetupData() {
       fields[field.fullName] = field;
     }
     return fields;
+  }, function() {
+    return {}; // Don't fail if the user does not have access to the metadata API.
   });
 }
 
@@ -43,7 +45,7 @@ function getFieldSetupLink(fields, objectDescribe, fieldDescribe) {
   } else {
     var field = fields[objectDescribe.name + '.' + fieldDescribe.name];
     if (!field) {
-      return '#';
+      return null;
     }
     return '/' + field.id;
   }
@@ -165,9 +167,12 @@ function showFieldDetails(labelElement){
                     ])
                 ])
             );
-            var a = E('a', [T('Setup')]);
-            a.setAttribute('href', getFieldSetupLink(fieldSetupData, metadataResponse, fieldDetail));
-            output.appendChild(a);
+            var fieldSetupLink = getFieldSetupLink(fieldSetupData, metadataResponse, fieldDetail);
+            if (fieldSetupLink) {
+              var a = E('a', [T('Setup')]);
+              a.setAttribute('href', fieldSetupLink);
+              output.appendChild(a);
+            }
         }
     }
     
