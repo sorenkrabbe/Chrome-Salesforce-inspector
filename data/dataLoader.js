@@ -77,6 +77,13 @@ function dataLoader() {
   #export-help-btn, #import-help-btn {\
     float: right;\
   }\
+  #autocomplete-results {\
+    white-space: pre;\
+    overflow: hidden;\
+  }\
+  #autocomplete-results a {\
+    padding-left: 5px;\
+  }\
   #spinner {\
     position: absolute;\
     left: -15px;\
@@ -92,6 +99,7 @@ function dataLoader() {
     <label><input type="checkbox" id="query-all"> Include deleted and archived records?</label>\
     <a href="#" id="export-help-btn">Export help</a>\
     <textarea id="query">select Id from Account</textarea>\
+    <div id="autocomplete-results">&nbsp;</div>\
     <div id="export-help-box" hidden>\
       <p>Use for quick one-off data exports.</p>\
       <ul>\
@@ -165,12 +173,133 @@ function dataLoader() {
       document.querySelector("#import-help-box").setAttribute("hidden", "");
     }
   });
+  var sobjectDescribes = {};
+  var queryInput = document.querySelector("#query");
+  /**
+   * Autocomplete handling.
+   * Put caret at the end of a word or select some text to autocomplete it.
+   * Searches for both label and API name.
+   * Autocompletes sobject names after the "from" keyword.
+   * Autocompletes field names, if the "from" keyword exists followed by a valid object name.
+   * Supports relationship fields.
+   * Does not yet support subqueries.
+   */
+  function queryAutocompleteHandler() {
+    var query = queryInput.value;
+    // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
+    var sobjectName = (/(^|\s)from\s*([a-zA-Z0-9_]*)/.exec(query) || ["", "", ""])[2];
+    var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
+    function maybeGetFields(sobjectDescribe) {
+      if (sobjectDescribe && !sobjectDescribe.fields && !sobjectDescribe.fieldsRequest) {
+        console.log("getting fields for " + sobjectDescribe.name);
+        sobjectDescribe.fieldsRequest = true;
+        spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(responseText) {
+          sobjectDescribe.fields = JSON.parse(responseText).fields;
+          queryAutocompleteHandler();
+        }, function() {
+          sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
+        }));
+      }
+    }
+    maybeGetFields(sobjectDescribe);
+    var selStart = queryInput.selectionStart;
+    var selEnd = queryInput.selectionEnd;
+    var searchTerm = (selStart != selEnd
+      ? query.substring(selStart, selEnd)
+      : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0]).toLowerCase();
+    selStart = selEnd - searchTerm.length;
+
+    var autocompleteResults = document.querySelector("#autocomplete-results");
+    autocompleteResults.textContent = "\u00A0";
+    function makeLink(fieldName, title) {
+      var res = document.createElement("a");
+      res.textContent = fieldName;
+      res.title = title;
+      res.href = "#";
+      res.addEventListener('click', function(e) {
+        e.preventDefault();
+        var newValue = e.target.textContent;
+        queryInput.focus();
+        queryInput.setRangeText(newValue, selStart, selEnd, "end");
+        queryAutocompleteHandler();
+      });
+      autocompleteResults.appendChild(res);
+    }
+
+    if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
+      // Autocomplete the sobject name instead of a field name
+      autocompleteResults.textContent = "Objects:";
+      for (var sName in sobjectDescribes) {
+        var sobjectDescribe = sobjectDescribes[sName];
+        if (sobjectDescribe.name.toLowerCase().indexOf(searchTerm) > -1 || sobjectDescribe.label.toLowerCase().indexOf(searchTerm) > -1) {
+          makeLink(sobjectDescribe.name, sobjectDescribe.label);
+        }
+      }
+      return;
+    }
+
+    if (sobjectDescribe && sobjectDescribe.fields) {
+
+      /*
+      contextSobjectDescribes is a set of describe results for the relevant context sobjects.
+      Example: "select Subject, Who.Name from Task"
+      The context sobjects for "Subject" is {"Task"}.
+      The context sobjects for "Who" is {"Task"}.
+      The context sobjects for "Username" is {"Contact", "Lead"}.
+      */
+      var contextSobjectDescribes = [sobjectDescribe];
+      var contextPath = query.substring(0, selStart).match(/[a-zA-Z0-9_\.]*$/)[0].toLowerCase();
+      if (contextPath) {
+        var contextFields = contextPath.split(".");
+        contextFields.pop(); // always empty
+        contextFields.forEach(function(referenceFieldName) {
+          var newContextSobjectDescribes = new Set();
+          contextSobjectDescribes.forEach(function(sobjectDescribe) {
+            sobjectDescribe.fields
+              .filter(function(field) { return field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName; })
+              .forEach(function(field) {
+                field.referenceTo.forEach(function(referencedSobjectName) {
+                  var referencedSobjectDescribe = sobjectDescribes[referencedSobjectName.toLowerCase()];
+                  maybeGetFields(referencedSobjectDescribe);
+                  if (referencedSobjectDescribe && referencedSobjectDescribe.fields) {
+                    newContextSobjectDescribes.add(referencedSobjectDescribe);
+                  }
+                });
+              });
+          });
+          contextSobjectDescribes = [];
+          newContextSobjectDescribes.forEach(function(d) { contextSobjectDescribes.push(d); });
+        });
+      }
+
+      if (contextSobjectDescribes.length > 0) {
+        autocompleteResults.textContent = contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:";
+        contextSobjectDescribes.forEach(function(sobjectDescribe) {
+          sobjectDescribe.fields
+            .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm) > -1 || field.label.toLowerCase().indexOf(searchTerm) > -1; })
+            .forEach(function(field) {
+              makeLink(field.name, field.label);
+              if (field.type == "reference") {
+                makeLink(field.relationshipName + ".", field.label);
+              }
+            });
+        });
+      }
+    }
+  }
+  queryInput.addEventListener("input", queryAutocompleteHandler);
+  queryInput.addEventListener("select", queryAutocompleteHandler);
+  // There is no event for when caret is moved without any selection or value change, so use keyup and mouseup for that.
+  queryInput.addEventListener("keyup", queryAutocompleteHandler);
+  queryInput.addEventListener("mouseup", queryAutocompleteHandler);
+
   spinFor(askSalesforce("/services/data/v31.0/sobjects/").then(function(responseText) {
     var list = document.querySelector("#sobjectlist");
-    JSON.parse(responseText).sobjects.forEach(function(sobject) {
+    JSON.parse(responseText).sobjects.forEach(function(sobjectDescribe) {
       var opt = document.createElement("option");
-      opt.value = sobject.name;
+      opt.value = sobjectDescribe.name;
       list.appendChild(opt);
+      sobjectDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
   }));
   document.querySelector("#export-btn").addEventListener("click", function() {
