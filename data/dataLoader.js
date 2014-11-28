@@ -77,10 +77,16 @@ function dataLoader() {
   #export-help-btn, #import-help-btn {\
     float: right;\
   }\
+  #spinner {\
+    position: absolute;\
+    left: -15px;\
+    top: -15px;\
+  }\
   </style>\
   ';
 
   document.body.innerHTML = '\
+  <img id="spinner" src="https://' + window.document.location.hostname + '/img/loading32.gif" hidden>\
   <div class="area">\
     <h1>Export query</h1>\
     <label><input type="checkbox" id="query-all"> Include deleted and archived records?</label>\
@@ -133,6 +139,18 @@ function dataLoader() {
     </div>\
   </div>\
   ';
+  var spinnerCount = 0;
+  function spinFor(promise) {
+    spinnerCount++;
+    document.querySelector("#spinner").removeAttribute("hidden");
+    promise.then(stopSpinner, stopSpinner);
+  }
+  function stopSpinner() {
+    spinnerCount--;
+    if (spinnerCount == 0) {
+      document.querySelector("#spinner").setAttribute("hidden", "");
+    }
+  }
   document.querySelector("#export-help-btn").addEventListener("click", function() {
     if (document.querySelector("#export-help-box").hasAttribute("hidden")) {
       document.querySelector("#export-help-box").removeAttribute("hidden");
@@ -147,14 +165,14 @@ function dataLoader() {
       document.querySelector("#import-help-box").setAttribute("hidden", "");
     }
   });
-  askSalesforce("/services/data/v31.0/sobjects/").then(function(responseText) {
+  spinFor(askSalesforce("/services/data/v31.0/sobjects/").then(function(responseText) {
     var list = document.querySelector("#sobjectlist");
     JSON.parse(responseText).sobjects.forEach(function(sobject) {
       var opt = document.createElement("option");
       opt.value = sobject.name;
       list.appendChild(opt);
     });
-  });
+  }));
   document.querySelector("#export-btn").addEventListener("click", function() {
     document.querySelector("#export-btn").disabled = true;
     document.querySelector("#data").value = "Exporting...";
@@ -163,7 +181,7 @@ function dataLoader() {
     var exportAsJson = document.querySelector("#data-format-json").checked;
     var queryMethod = document.querySelector("#query-all").checked ? 'queryAll' : 'query';
     var records = [];
-    askSalesforce('/services/data/v31.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
+    spinFor(askSalesforce('/services/data/v31.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
       var data = JSON.parse(responseText);
       var text = "";
       records = records.concat(data.records);
@@ -252,14 +270,14 @@ function dataLoader() {
         text += data[i].message + "\n";
       }
       return text;
-    }).then( function(text) {
+    }).then(function(text) {
       document.querySelector("#data").value = text;
       document.querySelector("#export-btn").disabled = false;
     }, function(error) {
       console.error(error);
       document.querySelector("#data").value = "UNEXPECTED EXCEPTION:" + error;
       document.querySelector("#export-btn").disabled = false;
-    });
+    }));
   });
 
   document.querySelector("#import-btn").addEventListener("click", function() {
@@ -332,7 +350,7 @@ function dataLoader() {
 
     document.querySelector("#import-result").value = "Importing...";
 
-    askSalesforceSoap(xml).then(function(res) {
+    spinFor(askSalesforceSoap(xml).then(function(res) {
       var results = res.querySelectorAll("Body result");
       var successResults = [];
       var errorResults = [];
@@ -385,7 +403,7 @@ function dataLoader() {
     }).catch(function(error) {
       console.error(error);
       document.querySelector("#import-result").value = "UNEXPECTED EXCEPTION: " + error;
-    });
+    }));
 
   });
 
