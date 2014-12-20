@@ -147,6 +147,7 @@ function dataLoader() {
     </div>\
   </div>\
   ';
+
   var spinnerCount = 0;
   function spinFor(promise) {
     spinnerCount++;
@@ -159,6 +160,7 @@ function dataLoader() {
       document.querySelector("#spinner").setAttribute("hidden", "");
     }
   }
+
   document.querySelector("#export-help-btn").addEventListener("click", function(e) {
     e.preventDefault();
     if (document.querySelector("#export-help-box").hasAttribute("hidden")) {
@@ -175,47 +177,51 @@ function dataLoader() {
       document.querySelector("#import-help-box").setAttribute("hidden", "");
     }
   });
-  var sobjectDescribes = {};
-  var queryInput = document.querySelector("#query");
+
   /**
-   * Autocomplete handling.
+   * sobjectDescribes is a map.
+   * Keys are lowercased sobject API names.
+   * Values are DescribeGlobalSObjectResult objects with two extra properties:
+   *   - The "fields" property contains and array of DescribeFieldResult objects of all fields on the given sobject.
+   *     The "fields" property does not exist if fields are not yet loaded.
+   *   - The "fieldsRequest" contains a boolean, which is true if fields are loaded or a request to load them is in progress.
+   */
+  var sobjectDescribes = {};
+  function maybeGetFields(sobjectDescribe) {
+    if (sobjectDescribe && !sobjectDescribe.fields && !sobjectDescribe.fieldsRequest) {
+      console.log("getting fields for " + sobjectDescribe.name);
+      sobjectDescribe.fieldsRequest = true;
+      spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(responseText) {
+        sobjectDescribe.fields = JSON.parse(responseText).fields;
+        queryAutocompleteHandler();
+      }, function() {
+        sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
+      }));
+    }
+  }
+
+  var queryInput = document.querySelector("#query");
+
+  /**
+   * SOQL query autocomplete handling.
    * Put caret at the end of a word or select some text to autocomplete it.
    * Searches for both label and API name.
    * Autocompletes sobject names after the "from" keyword.
    * Autocompletes field names, if the "from" keyword exists followed by a valid object name.
    * Supports relationship fields.
+   * Autocompletes picklist values.
    * Does not yet support subqueries.
    */
   function queryAutocompleteHandler() {
     var query = queryInput.value;
-    // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
-    var sobjectName = (/(^|\s)from\s*([a-zA-Z0-9_]*)/.exec(query) || ["", "", ""])[2];
-    var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
-    function maybeGetFields(sobjectDescribe) {
-      if (sobjectDescribe && !sobjectDescribe.fields && !sobjectDescribe.fieldsRequest) {
-        console.log("getting fields for " + sobjectDescribe.name);
-        sobjectDescribe.fieldsRequest = true;
-        spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(responseText) {
-          sobjectDescribe.fields = JSON.parse(responseText).fields;
-          queryAutocompleteHandler();
-        }, function() {
-          sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
-        }));
-      }
-    }
-    maybeGetFields(sobjectDescribe);
     var selStart = queryInput.selectionStart;
     var selEnd = queryInput.selectionEnd;
-    var searchTerm = (selStart != selEnd
-      ? query.substring(selStart, selEnd)
-      : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0]).toLowerCase();
-    selStart = selEnd - searchTerm.length;
 
     var autocompleteResults = document.querySelector("#autocomplete-results");
     autocompleteResults.textContent = "\u00A0";
-    function makeLink(fieldName, title) {
+    function makeLink(value, title) {
       var res = document.createElement("a");
-      res.textContent = fieldName;
+      res.textContent = value;
       res.title = title;
       res.href = "about:blank"; // The normal trick of using "#" to make the link activateable does not seem to work in an about:blank page in Firefox
       res.addEventListener('click', function(e) {
@@ -228,8 +234,20 @@ function dataLoader() {
       autocompleteResults.appendChild(res);
     }
 
+    // Find out what sobject we are querying, by using the word after the "from" keyword.
+    // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
+    var sobjectName = (/(^|\s)from\s*([a-zA-Z0-9_]*)/.exec(query) || ["", "", ""])[2];
+    var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
+    maybeGetFields(sobjectDescribe);
+
+    // Find the token we want to autocomplete. This is the selected text, or the last word before the cursor.
+    var searchTerm = (selStart != selEnd
+      ? query.substring(selStart, selEnd)
+      : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0]).toLowerCase();
+    selStart = selEnd - searchTerm.length;
+
+    // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
-      // Autocomplete the sobject name instead of a field name
       autocompleteResults.textContent = "Objects:";
       for (var sName in sobjectDescribes) {
         var sobjectDescribe = sobjectDescribes[sName];
@@ -243,14 +261,36 @@ function dataLoader() {
     if (sobjectDescribe && sobjectDescribe.fields) {
 
       /*
+       * The context of a field is used to support queries on relationship fields.
+       *
+       * For example: If the cursor is at the end of the query "select Id from Contact where Account.Owner.Usern"
+       * then the the searchTerm we want to autocomplete is "Usern", the contextPath is "Account.Owner." and the sobjectName is "Contact"
+       *
+       * When autocompleting picklist values in the query "select Id from Contact where Account.Type = 'Cus"
+       * then the searchTerm we want to autocomplete is "Cus", the fieldName is "Type", the contextPath is "Account." and the sobjectName is "Contact"
+       */
+
+      var contextEnd = selStart;
+
+      // If we are within a string, autocomplete picklist values
+      var isInString = query.substring(0, selStart).match(/\s*[<>=!]+\s*'([^' ]*)$/);
+      var fieldName = null;
+      if (isInString) {
+        var fieldEnd = selStart - isInString[0].length;
+        fieldName = query.substring(0, fieldEnd).match(/[a-zA-Z0-9_]*$/)[0].toLowerCase();
+        contextEnd = fieldEnd - fieldName.length;
+        selStart -= isInString[1].length;
+      }
+
+      /*
       contextSobjectDescribes is a set of describe results for the relevant context sobjects.
       Example: "select Subject, Who.Name from Task"
       The context sobjects for "Subject" is {"Task"}.
       The context sobjects for "Who" is {"Task"}.
-      The context sobjects for "Username" is {"Contact", "Lead"}.
+      The context sobjects for "Name" is {"Contact", "Lead"}.
       */
       var contextSobjectDescribes = [sobjectDescribe];
-      var contextPath = query.substring(0, selStart).match(/[a-zA-Z0-9_\.]*$/)[0].toLowerCase();
+      var contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0].toLowerCase();
       if (contextPath) {
         var contextFields = contextPath.split(".");
         contextFields.pop(); // always empty
@@ -275,17 +315,42 @@ function dataLoader() {
       }
 
       if (contextSobjectDescribes.length > 0) {
-        autocompleteResults.textContent = contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:";
-        contextSobjectDescribes.forEach(function(sobjectDescribe) {
-          sobjectDescribe.fields
-            .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm) > -1 || field.label.toLowerCase().indexOf(searchTerm) > -1; })
-            .forEach(function(field) {
-              makeLink(field.name, field.label);
-              if (field.type == "reference") {
-                makeLink(field.relationshipName + ".", field.label);
-              }
-            });
-        });
+        if (isInString) {
+          // Autocomplete picklist values
+          var fieldNames = contextSobjectDescribes
+            .map(function(sobjectDescribe) {
+              return sobjectDescribe.fields
+                .filter(function(field) { return field.name.toLowerCase() == fieldName; })
+                .map(function(field) { return sobjectDescribe.name + "." + field.name; })
+                .join(", ");
+            })
+            .join(", ");
+          autocompleteResults.textContent = (fieldNames || "Field") + " values:";
+          contextSobjectDescribes.forEach(function(sobjectDescribe) {
+            sobjectDescribe.fields
+              .filter(function(field) { return field.name.toLowerCase() == fieldName; })
+              .forEach(function(field) {
+                field.picklistValues
+                  .filter(function(pickVal) { return pickVal.value.toLowerCase().indexOf(searchTerm) > -1 || pickVal.label.toLowerCase().indexOf(searchTerm) > -1; })
+                  .forEach(function(pickVal) {
+                    makeLink(pickVal.value, pickVal.label);
+                  });
+              });
+          });
+        } else {
+          // Autocomplete field names
+          autocompleteResults.textContent = contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:";
+          contextSobjectDescribes.forEach(function(sobjectDescribe) {
+            sobjectDescribe.fields
+              .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm) > -1 || field.label.toLowerCase().indexOf(searchTerm) > -1; })
+              .forEach(function(field) {
+                makeLink(field.name, field.label);
+                if (field.type == "reference") {
+                  makeLink(field.relationshipName + ".", field.label);
+                }
+              });
+          });
+        }
       }
     }
   }
