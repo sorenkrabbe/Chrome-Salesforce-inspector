@@ -137,7 +137,7 @@ function dataLoader() {
     <div id="import-help-box" hidden>\
       <p>Use for quick one-off data imports. Support is currently limited and may destroy your data.</p>\
       <ul>\
-        <li>Enter your CSV or Excel data in the middle box. The input must contain a header row with field API names. Empty cells insert null values. Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>.</li>\
+        <li>Enter your CSV or Excel data in the middle box. The input must contain a header row with field API names. Empty cells insert null values. Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>. Columns starting with an underscore are ignored.</li>\
         <li>Select your input format (only Excel and CSV is supported)</li>\
         <li>Select operation (insert, update or delete)</li>\
         <li>Enter the API name of the object to import</li>\
@@ -463,14 +463,16 @@ function dataLoader() {
       type.textContent = sobjectType;
       sobjects.appendChild(type);
       for (var c = 0; c < row.length; c++) {
-        if (row[c].trim() == "") {
-          var field = doc.createElement("fieldsToNull");
-          field.textContent = header[c];
-          sobjects.appendChild(field);
-        } else {
-          var field = doc.createElement(header[c]);
-          field.textContent = row[c];
-          sobjects.appendChild(field);
+        if (header[c][0] != "_") {
+          if (row[c].trim() == "") {
+            var field = doc.createElement("fieldsToNull");
+            field.textContent = header[c];
+            sobjects.appendChild(field);
+          } else {
+            var field = doc.createElement(header[c]);
+            field.textContent = row[c];
+            sobjects.appendChild(field);
+          }
         }
       }
       doc.documentElement.appendChild(sobjects);
