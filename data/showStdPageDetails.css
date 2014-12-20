@@ -35,3 +35,9 @@
 	text-align: center;
 	line-height: 30px;
 }
+#insext-spinner {
+	position: absolute;
+}
+#showStdPageDetailsBtn[disabled] {
+	color: gray;
+}

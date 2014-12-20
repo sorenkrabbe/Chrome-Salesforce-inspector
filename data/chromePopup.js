@@ -44,6 +44,7 @@ function init() {
             <img src="/s.gif" class="menuArrow" />\
         </div>\
         <div class="insext-popup">\
+            <img id="insext-spinner" src="/img/loading32.gif" hidden>\
             <h3>Salesforce inspector</h3>\
             <button id="showStdPageDetailsBtn">Show field metadata (m)</button>\
             <button id="showAllDataBtn">Show all data (a)</button>\
@@ -104,8 +105,12 @@ function init() {
     }
     
     document.querySelector('#showStdPageDetailsBtn').addEventListener('click', function() {
-        showStdPageDetails();
-        closePopup();
+        document.querySelector('#showStdPageDetailsBtn').disabled = true;
+        document.querySelector("#insext-spinner").removeAttribute("hidden");
+        showStdPageDetails().then(function() {
+          document.querySelector("#insext-spinner").setAttribute("hidden", "");
+          closePopup();
+        });
     });
     document.querySelector('#showAllDataBtn').addEventListener('click', function() {
         showAllData();

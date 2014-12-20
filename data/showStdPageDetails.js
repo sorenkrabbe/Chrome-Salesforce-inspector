@@ -6,7 +6,7 @@ var fieldSetupData = null;
 
 function showStdPageDetails() {
   var recordId = getRecordIdFromUrl();
-  Promise.all([
+  return Promise.all([
     loadFieldSetupData(),
     loadMetadataForRecordId(recordId)
   ])
