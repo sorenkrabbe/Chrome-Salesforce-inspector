@@ -167,6 +167,9 @@ function showFieldDetails(labelElement){
                     ])
                 ])
             );
+            if (fieldDetail.calculatedFormula) {
+                output.appendChild(E('div', [T(fieldDetail.calculatedFormula)]));
+            }
             var fieldSetupLink = getFieldSetupLink(fieldSetupData, metadataResponse, fieldDetail);
             if (fieldSetupLink) {
               var a = E('a', [T('Setup')]);
