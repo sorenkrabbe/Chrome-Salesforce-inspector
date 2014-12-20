@@ -124,7 +124,7 @@ function showAllData(recordId) {
   </table>\
   <div id="fieldDetailsView">\
   <div class="container">\
-  <a href="#" class="closeLnk">X</a>\
+  <a href="about:blank" class="closeLnk">X</a>\
   <div class="mainContent"></div>\
   </div>\
   </div>\
@@ -132,6 +132,7 @@ function showAllData(recordId) {
 
   //Setup eventlisteners for static content
   document.querySelector('#fieldDetailsView .closeLnk').addEventListener('click', function(event) {
+    event.preventDefault();
     hideAllFieldMetadataView();
   });
   document.querySelector('#filter').addEventListener('input', function(event) {

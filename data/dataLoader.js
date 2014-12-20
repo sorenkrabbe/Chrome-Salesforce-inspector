@@ -97,7 +97,7 @@ function dataLoader() {
   <div class="area">\
     <h1>Export query</h1>\
     <label><input type="checkbox" id="query-all"> Include deleted and archived records?</label>\
-    <a href="#" id="export-help-btn">Export help</a>\
+    <a href="about:blank" id="export-help-btn">Export help</a>\
     <textarea id="query">select Id from Account</textarea>\
     <div id="autocomplete-results">&nbsp;</div>\
     <div id="export-help-box" hidden>\
@@ -132,7 +132,7 @@ function dataLoader() {
     <label><input type=radio name="import-action" id="import-action-delete"> Delete</label>\
     <label>Object: <input value="Account" id="import-type" list="sobjectlist"></label>\
     <datalist id="sobjectlist"></datalist>\
-    <a href="#" id="import-help-btn">Import help</a>\
+    <a href="about:blank" id="import-help-btn">Import help</a>\
     <textarea id="import-result"></textarea>\
     <div id="import-help-box" hidden>\
       <p>Use for quick one-off data imports. Support is currently limited and may destroy your data.</p>\
@@ -159,14 +159,16 @@ function dataLoader() {
       document.querySelector("#spinner").setAttribute("hidden", "");
     }
   }
-  document.querySelector("#export-help-btn").addEventListener("click", function() {
+  document.querySelector("#export-help-btn").addEventListener("click", function(e) {
+    e.preventDefault();
     if (document.querySelector("#export-help-box").hasAttribute("hidden")) {
       document.querySelector("#export-help-box").removeAttribute("hidden");
     } else {
       document.querySelector("#export-help-box").setAttribute("hidden", "");
     }
   });
-  document.querySelector("#import-help-btn").addEventListener("click", function() {
+  document.querySelector("#import-help-btn").addEventListener("click", function(e) {
+    e.preventDefault();
     if (document.querySelector("#import-help-box").hasAttribute("hidden")) {
       document.querySelector("#import-help-box").removeAttribute("hidden");
     } else {
@@ -215,7 +217,7 @@ function dataLoader() {
       var res = document.createElement("a");
       res.textContent = fieldName;
       res.title = title;
-      res.href = "#";
+      res.href = "about:blank"; // The normal trick of using "#" to make the link activateable does not seem to work in an about:blank page in Firefox
       res.addEventListener('click', function(e) {
         e.preventDefault();
         var newValue = e.target.textContent;
