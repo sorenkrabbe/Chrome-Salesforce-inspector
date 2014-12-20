@@ -501,12 +501,16 @@ function dataLoader() {
     }
 
     var header = data.shift();
+    var idColumn = -1;
 
     var apiName = /^[a-zA-Z0-9_]+$/;
     for (var c = 0; c < header.length; c++) {
       if (!apiName.test(header[c])) {
         document.querySelector("#import-result").value = "=== ERROR ===\nInvalid column name: " + header[c];
         return;
+      }
+      if (header[c].toLowerCase() == "id") {
+        idColumn = c;
       }
     }
 
@@ -522,27 +526,38 @@ function dataLoader() {
       return;
     }
 
+    if (action != "create" && idColumn < 0) {
+      document.querySelector("#import-result").value = "=== ERROR ===\nThere is no ID column";
+      return;
+    }
+
     var doc = window.document.implementation.createDocument(null, action);
     for (var r = 0; r < data.length; r++) {
       var row = data[r];
-      var sobjects = doc.createElement("sObjects");
-      var type = doc.createElement("type");
-      type.textContent = sobjectType;
-      sobjects.appendChild(type);
-      for (var c = 0; c < row.length; c++) {
-        if (header[c][0] != "_") {
-          if (row[c].trim() == "") {
-            var field = doc.createElement("fieldsToNull");
-            field.textContent = header[c];
-            sobjects.appendChild(field);
-          } else {
-            var field = doc.createElement(header[c]);
-            field.textContent = row[c];
-            sobjects.appendChild(field);
+      if (action == "delete") {
+        var deleteId = doc.createElement("ID");
+        deleteId.textContent = row[idColumn];
+        doc.documentElement.appendChild(deleteId);
+      } else {
+        var sobjects = doc.createElement("sObjects");
+        var type = doc.createElement("type");
+        type.textContent = sobjectType;
+        sobjects.appendChild(type);
+        for (var c = 0; c < row.length; c++) {
+          if (header[c][0] != "_") {
+            if (row[c].trim() == "") {
+              var field = doc.createElement("fieldsToNull");
+              field.textContent = header[c];
+              sobjects.appendChild(field);
+            } else {
+              var field = doc.createElement(header[c]);
+              field.textContent = row[c];
+              sobjects.appendChild(field);
+            }
           }
         }
+        doc.documentElement.appendChild(sobjects);
       }
-      doc.documentElement.appendChild(sobjects);
     }
     var xml = new XMLSerializer().serializeToString(doc);
 
