@@ -171,6 +171,7 @@ function showFieldDetails(labelElement){
             if (fieldSetupLink) {
               var a = E('a', [T('Setup')]);
               a.setAttribute('href', fieldSetupLink);
+              a.setAttribute('target', '_blank');
               output.appendChild(a);
             }
         }
