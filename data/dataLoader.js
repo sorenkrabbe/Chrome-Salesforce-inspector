@@ -89,6 +89,11 @@ function dataLoader() {
     left: -15px;\
     top: -15px;\
   }\
+  .enable-import-box {\
+    position: absolute;\
+    bottom: 0;\
+    left: 0;\
+  }\
   </style>\
   ';
 
@@ -121,11 +126,11 @@ function dataLoader() {
     <label><input type=radio name="data-format" id="data-format-json"> JSON</label>\
     <textarea id="data"></textarea>\
   </div>\
-  <div class="action-arrow">\
+  <div class="action-arrow" id="import-arrow" hidden>\
     <div class="arrow-body"><button id="import-btn">Import</button><div style="color:white;font-weight:bold;font-size:1.4em;margin-top:.3em;text-shadow:2px 2px 3px red">BETA!</div></div>\
     <div class="arrow-head"></div>\
   </div>\
-  <div class="area">\
+  <div class="area" id="import-area" hidden>\
     <h1>Import result</h1>\
     <label><input type=radio name="import-action" checked id="import-action-create"> Insert</label>\
     <label><input type=radio name="import-action" id="import-action-update"> Update</label>\
@@ -145,6 +150,9 @@ function dataLoader() {
       </ul>\
       <p>Upsert is not supported. Bulk API is not supported. Batching is not supported (everything goes into one batch). Large data volumes may freeze or crash your browser.</p>\
     </div>\
+  </div>\
+  <div class="enable-import-box">\
+    <label><input type="checkbox" id="enable-import"> Enable import</label>\
   </div>\
   ';
 
@@ -177,6 +185,21 @@ function dataLoader() {
       document.querySelector("#import-help-box").setAttribute("hidden", "");
     }
   });
+
+  document.querySelector("#enable-import").checked = localStorage.getItem("insext-import-enabled");
+  function toggleImportEnabled() {
+    if (document.querySelector("#enable-import").checked) {
+      document.querySelector("#import-arrow").removeAttribute("hidden");
+      document.querySelector("#import-area").removeAttribute("hidden");
+      localStorage.setItem("insext-import-enabled", "1");
+    } else {
+      document.querySelector("#import-arrow").setAttribute("hidden", "");
+      document.querySelector("#import-area").setAttribute("hidden", "");
+      localStorage.removeItem("insext-import-enabled");
+    }
+  }
+  document.querySelector("#enable-import").addEventListener("change", toggleImportEnabled);
+  toggleImportEnabled();
 
   /**
    * sobjectDescribes is a map.
@@ -477,6 +500,10 @@ function dataLoader() {
   });
 
   document.querySelector("#import-btn").addEventListener("click", function() {
+
+    if (!popupWin.confirm("You are about to modify your data in Salesforce. This action cannot be undone.")) {
+        return;
+    }
 
     if (document.querySelector("#data-format-json").checked) {
       document.querySelector("#import-result").value = "=== ERROR ===\nImport from JSON not supported.";
