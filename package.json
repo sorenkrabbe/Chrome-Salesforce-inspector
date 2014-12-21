@@ -2,8 +2,8 @@
   "name": "salesforce-inspector",
   "title": "Salesforce inspector",
   "id": "jid1-DBcuAQpfLMcvOQ",
-  "description": "Adds a buttons to show data and metadata details on Salesforce standard details pages.",
-  "version": "0.3.1",
+  "description": "Productivity tools for Salesforce administrators and developers to inspect data and metadata.",
+  "version": "0.4",
   "permissions": {
     "private-browsing": true
   }

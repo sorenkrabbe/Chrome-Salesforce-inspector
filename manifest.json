@@ -1,6 +1,6 @@
 {
   "name": "Salesforce inspector",
-  "description": "Adds a buttons to show data and metadata details on Salesforce standard details pages.",
+  "description": "Productivity tools for Salesforce administrators and developers to inspect data and metadata.",
   "version": "0.3.0",
   "permissions": [
     "https://*.salesforce.com/*",
