@@ -360,7 +360,7 @@ function dataLoader() {
   queryInput.addEventListener("keyup", queryAutocompleteHandler);
   queryInput.addEventListener("mouseup", queryAutocompleteHandler);
 
-  spinFor(askSalesforce("/services/data/v31.0/sobjects/").then(function(responseText) {
+  spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(responseText) {
     var list = document.querySelector("#sobjectlist");
     JSON.parse(responseText).sobjects.forEach(function(sobjectDescribe) {
       var opt = document.createElement("option");
@@ -377,7 +377,7 @@ function dataLoader() {
     var exportAsJson = document.querySelector("#data-format-json").checked;
     var queryMethod = document.querySelector("#query-all").checked ? 'queryAll' : 'query';
     var records = [];
-    spinFor(askSalesforce('/services/data/v31.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
+    spinFor(askSalesforce('/services/data/v32.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
       var data = JSON.parse(responseText);
       var text = "";
       records = records.concat(data.records);

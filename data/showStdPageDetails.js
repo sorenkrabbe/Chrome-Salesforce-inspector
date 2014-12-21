@@ -20,7 +20,7 @@ function showStdPageDetails() {
 }
 
 function loadFieldSetupData() {
-  return askSalesforceMetadata('<listMetadata><queries><type>CustomField</type></queries><asOfVersion>31.0</asOfVersion></listMetadata>').then(function(res) {
+  return askSalesforceMetadata('<listMetadata><queries><type>CustomField</type></queries><asOfVersion>32.0</asOfVersion></listMetadata>').then(function(res) {
     var fields = {};
     for (var fieldEl = res.firstChild; fieldEl; fieldEl = fieldEl.nextSibling) {
       var field = {};

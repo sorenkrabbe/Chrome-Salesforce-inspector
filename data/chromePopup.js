@@ -137,7 +137,7 @@ function getRecordIdFromUrl() {
 }
 
 function loadMetadataForRecordId(recordId) {
-    return askSalesforce('/services/data/v31.0/sobjects/').then(function(responseText) {
+    return askSalesforce('/services/data/v32.0/sobjects/').then(function(responseText) {
         var currentObjKeyPrefix = recordId.substring(0, 3);
         var generalMetadataResponse = JSON.parse(responseText);
         for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
@@ -180,7 +180,7 @@ function askSalesforceMetadata(request) {
             return;
         }
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/31.0?cache=' + Math.random(), true);
+        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/32.0?cache=' + Math.random(), true);
         xhr.setRequestHeader('Content-Type', "text/xml");
         xhr.setRequestHeader('SOAPAction', '""');
         xhr.onreadystatechange = function() {
@@ -203,7 +203,7 @@ function askSalesforceSoap(request) {
             return;
         }
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/31.0?cache=' + Math.random(), true);
+        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/32.0?cache=' + Math.random(), true);
         xhr.setRequestHeader('Content-Type', "text/xml");
         xhr.setRequestHeader('SOAPAction', '""');
         xhr.onreadystatechange = function() {
