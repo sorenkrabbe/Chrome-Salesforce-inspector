@@ -577,6 +577,7 @@ function dataLoader() {
               field.textContent = header[c];
               sobjects.appendChild(field);
             } else {
+              // For Mozilla reviewers: doc is a SOAP XML document.
               var field = doc.createElement(header[c]);
               field.textContent = row[c];
               sobjects.appendChild(field);
