@@ -41,3 +41,13 @@
 #showStdPageDetailsBtn[disabled] {
 	color: gray;
 }
+.insext-unchecked {
+	text-decoration: line-through;
+	color: gray;
+}
+.insext-formula {
+	text-align: left;
+	margin: .5em;
+	word-wrap: break-word;
+	white-space: pre-wrap;
+}

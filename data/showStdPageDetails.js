@@ -126,12 +126,18 @@ function showFieldDetails(labelElement){
         guessIndex++;
     }
     
-    function E(name, children) {
+    function Ea(name, attrs, children) {
         var e = document.createElement(name);
+        for (var attrName in attrs) {
+            e.setAttribute(attrName, attrs[attrName]);
+        }
         for (var i = 0; i < children.length; i++) {
           e.appendChild(children[i]);
         }
         return e;
+    }
+    function E(name, children) {
+        return Ea(name, {}, children);
     }
     function T(text) {
         return document.createTextNode(text);
@@ -152,30 +158,27 @@ function showFieldDetails(labelElement){
             //output.inner HTML += '<a href="/p/setup/field/StandardFieldAttributes/d?retURL=' + retUrlEncoded + '&id=' + fieldDetail.name + '&type=' + metadataResponse.name + '" class="name" target="_top">' + fieldDetail.name + '</a> ';
             //output.inner HTML += '<a href="/_ui/common/lookupFilters/FieldAttributesUi/e?retURL=' + retUrlEncoded + '&Table='+ metadataResponse.name +'&FieldOrColumn=' + fieldDetail.name + '" class="salesforce-inspector-minor">[edit]</a>';
             output.appendChild(
-                E('table', [
-                    E('tr', [
-                        E('td', [T('Type:')]),
-                        E('td', [T(fieldDetail.type == 'reference' ? '[' + fieldDetail.referenceTo + ']' : fieldDetail.type + ' (' + fieldDetail.length + ')')])
-                    ]),
-                    //E('tr', [
-                    //    E('td', [T('SOAP type:')]),
-                    //    E('td', [T(fieldDetail.soapType + '(' + fieldDetail.byteLength + ' bytes)')])
-                    //]),
-                    E('tr', [
-                        E('td', [T('ExtId/Auto/Unique')]),
-                        E('td', [T(fieldDetail.externalId + '/' + fieldDetail.autoNumber + '/' + fieldDetail.unique)])
-                    ])
+                E('div', [
+                    T(
+                        fieldDetail.type == 'reference' ? '[' + fieldDetail.referenceTo + ']'
+                        : fieldDetail.type
+                            + (fieldDetail.length != 0 ? ' (' + fieldDetail.length + ')' : '')
+                            + (fieldDetail.precision != 0 || fieldDetail.scale != 0 ? ' (' + fieldDetail.precision + ', ' + fieldDetail.scale + ')' : '')
+                    ),
+                    T(' '),
+                    Ea('span', {'class': fieldDetail.externalId ? 'insext-checked' : 'insext-unchecked'}, [T('ExtId')]),
+                    T(' '),
+                    Ea('span', {'class': fieldDetail.autoNumber ? 'insext-checked' : 'insext-unchecked'}, [T('Auto')]),
+                    T(' '),
+                    Ea('span', {'class': fieldDetail.unique ? 'insext-checked' : 'insext-unchecked'}, [T('Unique')])
                 ])
             );
             if (fieldDetail.calculatedFormula) {
-                output.appendChild(E('div', [T(fieldDetail.calculatedFormula)]));
+                output.appendChild(Ea('div', {'class': 'insext-formula'}, [T(fieldDetail.calculatedFormula)]));
             }
             var fieldSetupLink = getFieldSetupLink(fieldSetupData, metadataResponse, fieldDetail);
             if (fieldSetupLink) {
-              var a = E('a', [T('Setup')]);
-              a.setAttribute('href', fieldSetupLink);
-              a.setAttribute('target', '_blank');
-              output.appendChild(a);
+                output.appendChild(Ea('a', {'href': fieldSetupLink, 'target': '_blank'}, [T('Setup')]));
             }
         }
     }
