@@ -16,7 +16,8 @@
       "js": [
         "data/chromePopup.js",
         "data/showAllDataForRecordPopup.js",
-        "data/dataLoader.js",
+        "data/dataExport.js",
+        "data/dataImport.js",
         "data/showStdPageDetails.js"
       ]
     }

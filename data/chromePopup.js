@@ -48,7 +48,8 @@ function init() {
             <h3>Salesforce inspector</h3>\
             <button id="showStdPageDetailsBtn">Show field metadata (m)</button>\
             <button id="showAllDataBtn">Show all data (a)</button>\
-            <button id="dataLoaderBtn">Data Loader (d)</button>\
+            <button id="dataExportBtn">Data Export (e)</button>\
+            <button id="dataImportBtn">Data Import (i)</button>\
             <div class="meta"><a href="#" id="aboutLnk">About</a></div>\
         </div>\
     </div>';
@@ -78,18 +79,23 @@ function init() {
         }
     }
     function keyListener(e) {
-        if (e.charCode == 109) {
+        if (e.charCode == 109 /*m*/) {
             showStdPageDetails();
             closePopup();
             e.preventDefault();
         }
-        if (e.charCode == 97) {
+        if (e.charCode == 97 /*a*/) {
             showAllData();
             closePopup();
             e.preventDefault();
         }
-        if (e.charCode == 100) {
-            dataLoader();
+        if (e.charCode == 101 /*e*/) {
+            dataExport();
+            closePopup();
+            e.preventDefault();
+        }
+        if (e.charCode == 105 /*i*/) {
+            dataImport();
             closePopup();
             e.preventDefault();
         }
@@ -116,8 +122,12 @@ function init() {
         showAllData();
         closePopup();
     });
-    document.querySelector('#dataLoaderBtn').addEventListener('click', function() {
-        dataLoader();
+    document.querySelector('#dataExportBtn').addEventListener('click', function() {
+        dataExport();
+        closePopup();
+    });
+    document.querySelector('#dataImportBtn').addEventListener('click', function() {
+        dataImport();
         closePopup();
     });
     document.querySelector('#aboutLnk').addEventListener('click', function(){ 
