@@ -28,6 +28,7 @@ function dataExport() {
     resize: vertical;\
     white-space: pre;\
     word-wrap: normal;\
+    margin-top: 3px;\
   }\
   #query {\
     height: 4em;\
@@ -114,9 +115,9 @@ function dataExport() {
   <div class="area">\
     <h1>Export result</h1>\
     <label><input type=radio name="data-format" checked id="data-format-excel"> Excel</label>\
-    <label><input type=radio name="data-format"> CSV</label>\
+    <label><input type=radio name="data-format" id="data-format-csv"> CSV</label>\
     <label><input type=radio name="data-format" id="data-format-json"> JSON</label>\
-    <textarea id="data"></textarea>\
+    <textarea id="data" readonly></textarea>\
   </div>\
   ';
 
@@ -329,86 +330,104 @@ function dataExport() {
   queryInput.addEventListener("keyup", queryAutocompleteHandler);
   queryInput.addEventListener("mouseup", queryAutocompleteHandler);
 
-  document.querySelector("#export-btn").addEventListener("click", function() {
-    document.querySelector("#export-btn").disabled = true;
-    document.querySelector("#data").value = "Exporting...";
-    var query = document.querySelector("#query").value;
+  var exportedRecords = [];
+  var exportStatus = "";
+  function showExportResult() {
+    if (exportStatus != null) {
+      document.querySelector("#data").value = exportStatus;
+      return;
+    }
     var separator = document.querySelector("#data-format-excel").checked ? "\t" : ",";
     var exportAsJson = document.querySelector("#data-format-json").checked;
+    if (exportAsJson) {
+      document.querySelector("#data").value = JSON.stringify(exportedRecords);
+      return;
+    }
+    if (exportedRecords.length == 0) {
+      text += "No data exported.";
+      if (data.totalSize > 0) {
+        text += " " + data.totalSize + " record(s)."
+      }
+    } else {
+      var table = [];
+      /*
+      Discover what columns should be in our CSV file.
+      We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
+      This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
+      We don't care, because we don't need a stable set of columns for our use case.
+      */
+      var header = [];
+      for (var i = 0; i < exportedRecords.length; i++) {
+        var record = exportedRecords[i];
+        function discoverColumns(record, prefix) {
+          for (var field in record) {
+            if (field == "attributes") {
+              continue;
+            }
+            var column = prefix + field;
+            if (header.indexOf(column) < 0) {
+              header.push(column);
+            }
+            if (typeof record[field] == "object" && record[field] != null) {
+              discoverColumns(record[field], column + ".");
+            }
+          }
+        }
+        discoverColumns(record, "");
+      }
+      table.push(header);
+      /*
+      Now we have the columns, we add the records to the CSV table.
+      */
+      for (var i = 0; i < exportedRecords.length; i++) {
+        var record = exportedRecords[i];
+        var row = [];
+        for (var c = 0; c < header.length; c++) {
+          var column = header[c].split(".");
+          var value = record;
+          for (var f = 0; f < column.length; f++) {
+            var field = column[f];
+            if (typeof value != "object") {
+              value = null;
+            }
+            if (value != null) {
+              value = value[field];
+            }
+          }
+          if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
+            value = "[" + value.attributes.type + "]";
+          }
+          row.push(value);
+        }
+        table.push(row);
+      }
+      text = csvSerialize(table, separator);
+    }
+    document.querySelector("#data").value = text;
+  }
+  document.querySelector("#data-format-excel").addEventListener("change", showExportResult);
+  document.querySelector("#data-format-csv").addEventListener("change", showExportResult);
+  document.querySelector("#data-format-json").addEventListener("change", showExportResult);
+
+  document.querySelector("#export-btn").addEventListener("click", function() {
+    document.querySelector("#export-btn").disabled = true;
+    exportStatus = "Exporting...";
+    showExportResult();
+    var query = document.querySelector("#query").value;
     var queryMethod = document.querySelector("#query-all").checked ? 'queryAll' : 'query';
-    var records = [];
+    exportedRecords = [];
     spinFor(askSalesforce('/services/data/v32.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
       var data = JSON.parse(responseText);
       var text = "";
-      records = records.concat(data.records);
+      exportedRecords = exportedRecords.concat(data.records);
       if (!data.done) {
-        document.querySelector("#data").value = "Exporting... Completed " +records.length + " of " + data.totalSize + " records.";
+        exportStatus = "Exporting... Completed " +exportedRecords.length + " of " + data.totalSize + " records.";
+        showExportResult();
         return askSalesforce(data.nextRecordsUrl).then(queryHandler);
       }
-      if (exportAsJson) {
-        return JSON.stringify(records);
-      }
-      if (records.length == 0) {
-        text += "No data exported.";
-        if (data.totalSize > 0) {
-          text += " " + data.totalSize + " record(s)."
-        }
-      } else {
-        var table = [];
-        /*
-        Discover what columns should be in our CSV file.
-        We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
-        This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
-        We don't care, because we don't need a stable set of columns for our use case.
-        */
-        var header = [];
-        for (var i = 0; i < records.length; i++) {
-          var record = records[i];
-          function discoverColumns(record, prefix) {
-            for (var field in record) {
-              if (field == "attributes") {
-                continue;
-              }
-              var column = prefix + field;
-              if (header.indexOf(column) < 0) {
-                header.push(column);
-              }
-              if (typeof record[field] == "object" && record[field] != null) {
-                discoverColumns(record[field], column + ".");
-              }
-            }
-          }
-          discoverColumns(record, "");
-        }
-        table.push(header);
-        /*
-        Now we have the columns, we add the records to the CSV table.
-        */
-        for (var i = 0; i < records.length; i++) {
-          var record = records[i];
-          var row = [];
-          for (var c = 0; c < header.length; c++) {
-            var column = header[c].split(".");
-            var value = record;
-            for (var f = 0; f < column.length; f++) {
-              var field = column[f];
-              if (typeof value != "object") {
-                value = null;
-              }
-              if (value != null) {
-                value = value[field];
-              }
-            }
-            if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
-              value = "[" + value.attributes.type + "]";
-            }
-            row.push(value);
-          }
-          table.push(row);
-        }
-        text = csvSerialize(table, separator);
-      }
-      return text;
+      exportStatus = null;
+      showExportResult();
+      return null;
     }, function(xhr) {
       if (!xhr || xhr.readyState != 4) {
         throw xhr; // Not an HTTP error response
@@ -418,13 +437,15 @@ function dataExport() {
       for (var i = 0; i < data.length; i++) {
         text += data[i].message + "\n";
       }
-      return text;
-    }).then(function(text) {
-      document.querySelector("#data").value = text;
+      exportStatus = text;
+      showExportResult();
+      return null;
+    }).then(function() {
       document.querySelector("#export-btn").disabled = false;
     }, function(error) {
       console.error(error);
-      document.querySelector("#data").value = "UNEXPECTED EXCEPTION:" + error;
+      exportStatus = "UNEXPECTED EXCEPTION:" + error;
+      showExportResult();
       document.querySelector("#export-btn").disabled = false;
     }));
   });
