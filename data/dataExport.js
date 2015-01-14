@@ -21,6 +21,7 @@ function dataExport() {
   body {\
     font-family: Arial, Helvetica, sans-serif;\
     font-size: 11px;\
+    overflow: hidden;\
   }\
   textarea {\
     display:block;\
@@ -28,13 +29,32 @@ function dataExport() {
     resize: vertical;\
     white-space: pre;\
     word-wrap: normal;\
+    font-size: 11px;\
+  }\
+  textarea[hidden] {\
+    display: none;\
+  }\
+  table {\
+    border-collapse: collapse;\
+  }\
+  th, td {\
+    text-align: left;\
+    font-size: 11px;\
+    border: 1px solid gray;\
+    background-color: white;\
+    white-space: pre;\
+  }\
+  #result-box {\
     margin-top: 3px;\
+    overflow: auto;\
   }\
   #query {\
     height: 4em;\
+    margin-top: 3px;\
   }\
   #data {\
-    height:17em;\
+    height: calc(100% - 2px);\
+    resize: none;\
   }\
   .area {\
     background-color: #F8F8F8;\
@@ -112,12 +132,16 @@ function dataExport() {
     <div class="arrow-body"><button id="export-btn">Export</button></div>\
     <div class="arrow-head"></div>\
   </div>\
-  <div class="area">\
+  <div class="area" id="result-area">\
     <h1>Export result</h1>\
+    <label><input type=radio name="data-format" checked id="data-format-table"> Table</label>\
     <label><input type=radio name="data-format" checked id="data-format-excel"> Excel</label>\
     <label><input type=radio name="data-format" id="data-format-csv"> CSV</label>\
     <label><input type=radio name="data-format" id="data-format-json"> JSON</label>\
-    <textarea id="data" readonly></textarea>\
+    <div id="result-box">\
+      <textarea id="data" readonly></textarea>\
+      <table id="result-table"></table>\
+    </div>\
   </div>\
   ';
 
@@ -171,6 +195,17 @@ function dataExport() {
   }));
 
   var queryInput = document.querySelector("#query");
+
+  var resultBox = document.querySelector("#result-box");
+  function recalculateHeight() {
+    resultBox.style.height = (popupWin.innerHeight - resultBox.offsetTop - 25) + "px";
+  }
+  queryInput.addEventListener("mousemove", recalculateHeight);
+  popupWin.addEventListener("mouseup", recalculateHeight);
+  popupWin.addEventListener("resize", function() {
+    queryInput.style.maxHeight = (popupWin.innerHeight - 200) + "px";
+    recalculateHeight();
+  });
 
   /**
    * SOQL query autocomplete handling.
@@ -332,22 +367,26 @@ function dataExport() {
 
   var exportedRecords = [];
   var exportStatus = "";
+  var resultTable = document.querySelector("#result-table");
+  var resultText = document.querySelector("#data");
   function showExportResult() {
     if (exportStatus != null) {
-      document.querySelector("#data").value = exportStatus;
+      resultText.value = exportStatus;
+      resultText.removeAttribute("hidden");
+      resultTable.setAttribute("hidden", "");
       return;
     }
-    var separator = document.querySelector("#data-format-excel").checked ? "\t" : ",";
     var exportAsJson = document.querySelector("#data-format-json").checked;
     if (exportAsJson) {
-      document.querySelector("#data").value = JSON.stringify(exportedRecords);
+      resultText.value = JSON.stringify(exportedRecords);
+      resultText.removeAttribute("hidden");
+      resultTable.setAttribute("hidden", "");
       return;
     }
     if (exportedRecords.length == 0) {
-      text += "No data exported.";
-      if (data.totalSize > 0) {
-        text += " " + data.totalSize + " record(s)."
-      }
+      resultText.value = data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.";
+      resultText.removeAttribute("hidden");
+      resultTable.setAttribute("hidden", "");
     } else {
       var table = [];
       /*
@@ -401,10 +440,30 @@ function dataExport() {
         }
         table.push(row);
       }
-      text = csvSerialize(table, separator);
+      if (document.querySelector("#data-format-table").checked) {
+        resultTable.innerHTML = "";
+        var firstRow = true;
+        table.forEach(function(row) {
+          var tr = document.createElement("tr");
+          row.forEach(function(cell) {
+            var td = document.createElement(firstRow ? "th" : "td");
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+          resultTable.appendChild(tr);
+          firstRow = false;
+        });
+        resultText.setAttribute("hidden", "");
+        resultTable.removeAttribute("hidden");
+      } else {
+        var separator = document.querySelector("#data-format-excel").checked ? "\t" : ",";
+        resultText.value = csvSerialize(table, separator);
+        resultText.removeAttribute("hidden");
+        resultTable.setAttribute("hidden", "");
+      }
     }
-    document.querySelector("#data").value = text;
   }
+  document.querySelector("#data-format-table").addEventListener("change", showExportResult);
   document.querySelector("#data-format-excel").addEventListener("change", showExportResult);
   document.querySelector("#data-format-csv").addEventListener("change", showExportResult);
   document.querySelector("#data-format-json").addEventListener("change", showExportResult);
@@ -418,7 +477,6 @@ function dataExport() {
     exportedRecords = [];
     spinFor(askSalesforce('/services/data/v32.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
       var data = JSON.parse(responseText);
-      var text = "";
       exportedRecords = exportedRecords.concat(data.records);
       if (!data.done) {
         exportStatus = "Exporting... Completed " +exportedRecords.length + " of " + data.totalSize + " records.";

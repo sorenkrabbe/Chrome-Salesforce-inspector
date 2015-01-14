@@ -21,6 +21,7 @@ function dataImport() {
   body {\
     font-family: Arial, Helvetica, sans-serif;\
     font-size: 11px;\
+    overflow: hidden;\
   }\
   textarea {\
     display:block;\
@@ -28,13 +29,18 @@ function dataImport() {
     resize: vertical;\
     white-space: pre;\
     word-wrap: normal;\
+  }\
+  #result-box {\
     margin-top: 3px;\
+    overflow: auto;\
   }\
   #data {\
     height:17em;\
+    margin-top: 3px;\
   }\
   #import-result {\
-    height:17em;\
+    height: calc(100% - 2px);\
+    resize: none;\
   }\
   .area {\
     background-color: #F8F8F8;\
@@ -110,9 +116,24 @@ function dataImport() {
   </div>\
   <div class="area">\
     <h1>Import result</h1>\
-    <textarea id="import-result" readonly></textarea>\
+    <div id="result-box">\
+      <textarea id="import-result" readonly></textarea>\
+    </div>\
   </div>\
   ';
+
+  var dataInput = document.querySelector("#data");
+
+  var resultBox = document.querySelector("#result-box");
+  function recalculateHeight() {
+    resultBox.style.height = (popupWin.innerHeight - resultBox.offsetTop - 25) + "px";
+  }
+  dataInput.addEventListener("mousemove", recalculateHeight);
+  popupWin.addEventListener("mouseup", recalculateHeight);
+  popupWin.addEventListener("resize", function() {
+    dataInput.style.maxHeight = (popupWin.innerHeight - 200) + "px";
+    recalculateHeight();
+  });
 
   var spinnerCount = 0;
   function spinFor(promise) {
@@ -146,7 +167,7 @@ function dataImport() {
   }));
   document.querySelector("#import-btn").addEventListener("click", function() {
 
-    var text = document.querySelector("#data").value;
+    var text = dataInput.value;
     var separator = document.querySelector("#data-format").value == "Excel" ? "\t" : ",";
     var data;
     try {
@@ -154,7 +175,7 @@ function dataImport() {
     } catch (e) {
       console.log(e);
       document.querySelector("#import-result").value = "=== ERROR ===\n" + e.message;
-      document.querySelector("#data").setSelectionRange(e.offsetStart, e.offsetEnd);
+      dataInput.setSelectionRange(e.offsetStart, e.offsetEnd);
       return;
     }
 
