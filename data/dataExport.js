@@ -383,84 +383,78 @@ function dataExport() {
       resultTable.setAttribute("hidden", "");
       return;
     }
-    if (exportedRecords.length == 0) {
-      resultText.value = data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.";
+    var table = [];
+    /*
+    Discover what columns should be in our CSV file.
+    We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
+    This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
+    We don't care, because we don't need a stable set of columns for our use case.
+    */
+    var header = [];
+    for (var i = 0; i < exportedRecords.length; i++) {
+      var record = exportedRecords[i];
+      function discoverColumns(record, prefix) {
+        for (var field in record) {
+          if (field == "attributes") {
+            continue;
+          }
+          var column = prefix + field;
+          if (header.indexOf(column) < 0) {
+            header.push(column);
+          }
+          if (typeof record[field] == "object" && record[field] != null) {
+            discoverColumns(record[field], column + ".");
+          }
+        }
+      }
+      discoverColumns(record, "");
+    }
+    table.push(header);
+    /*
+    Now we have the columns, we add the records to the CSV table.
+    */
+    for (var i = 0; i < exportedRecords.length; i++) {
+      var record = exportedRecords[i];
+      var row = [];
+      for (var c = 0; c < header.length; c++) {
+        var column = header[c].split(".");
+        var value = record;
+        for (var f = 0; f < column.length; f++) {
+          var field = column[f];
+          if (typeof value != "object") {
+            value = null;
+          }
+          if (value != null) {
+            value = value[field];
+          }
+        }
+        if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
+          value = "[" + value.attributes.type + "]";
+        }
+        row.push(value);
+      }
+      table.push(row);
+    }
+    if (document.querySelector("#data-format-table").checked) {
+      resultTable.innerHTML = "";
+      var firstRow = true;
+      table.forEach(function(row) {
+        var tr = document.createElement("tr");
+        row.forEach(function(cell) {
+          var td = document.createElement(firstRow ? "th" : "td");
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        resultTable.appendChild(tr);
+        firstRow = false;
+      });
+      resultText.setAttribute("hidden", "");
+      resultTable.removeAttribute("hidden");
+    } else {
+      var separator = document.querySelector("#data-format-excel").checked ? "\t" : ",";
+      resultText.value = csvSerialize(table, separator);
       resultText.removeAttribute("hidden");
       resultTable.setAttribute("hidden", "");
-    } else {
-      var table = [];
-      /*
-      Discover what columns should be in our CSV file.
-      We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
-      This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
-      We don't care, because we don't need a stable set of columns for our use case.
-      */
-      var header = [];
-      for (var i = 0; i < exportedRecords.length; i++) {
-        var record = exportedRecords[i];
-        function discoverColumns(record, prefix) {
-          for (var field in record) {
-            if (field == "attributes") {
-              continue;
-            }
-            var column = prefix + field;
-            if (header.indexOf(column) < 0) {
-              header.push(column);
-            }
-            if (typeof record[field] == "object" && record[field] != null) {
-              discoverColumns(record[field], column + ".");
-            }
-          }
-        }
-        discoverColumns(record, "");
-      }
-      table.push(header);
-      /*
-      Now we have the columns, we add the records to the CSV table.
-      */
-      for (var i = 0; i < exportedRecords.length; i++) {
-        var record = exportedRecords[i];
-        var row = [];
-        for (var c = 0; c < header.length; c++) {
-          var column = header[c].split(".");
-          var value = record;
-          for (var f = 0; f < column.length; f++) {
-            var field = column[f];
-            if (typeof value != "object") {
-              value = null;
-            }
-            if (value != null) {
-              value = value[field];
-            }
-          }
-          if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
-            value = "[" + value.attributes.type + "]";
-          }
-          row.push(value);
-        }
-        table.push(row);
-      }
-      if (document.querySelector("#data-format-table").checked) {
-        resultTable.innerHTML = "";
-        var firstRow = true;
-        table.forEach(function(row) {
-          var tr = document.createElement("tr");
-          row.forEach(function(cell) {
-            var td = document.createElement(firstRow ? "th" : "td");
-            td.textContent = cell;
-            tr.appendChild(td);
-          });
-          resultTable.appendChild(tr);
-          firstRow = false;
-        });
-        resultText.setAttribute("hidden", "");
-        resultTable.removeAttribute("hidden");
-      } else {
-        var separator = document.querySelector("#data-format-excel").checked ? "\t" : ",";
-        resultText.value = csvSerialize(table, separator);
-        resultText.removeAttribute("hidden");
-        resultTable.setAttribute("hidden", "");
-      }
     }
   }
   document.querySelector("#data-format-table").addEventListener("change", showExportResult);
@@ -482,6 +476,11 @@ function dataExport() {
         exportStatus = "Exporting... Completed " +exportedRecords.length + " of " + data.totalSize + " records.";
         showExportResult();
         return askSalesforce(data.nextRecordsUrl).then(queryHandler);
+      }
+      if (exportedRecords.length == 0) {
+        exportStatus = data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.";
+        showExportResult();
+        return null;
       }
       exportStatus = null;
       showExportResult();
