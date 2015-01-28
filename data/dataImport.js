@@ -101,7 +101,15 @@ function dataImport() {
     <div id="import-help-box" hidden>\
       <p>Use for quick one-off data imports. Support is currently limited and may destroy your data.</p>\
       <ul>\
-        <li>Enter your CSV or Excel data in the box above. The input must contain a header row with field API names. Empty cells insert null values. Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>. Columns starting with an underscore are ignored.</li>\
+        <li>Enter your CSV or Excel data in the box above.\
+          <ul>\
+            <li>The input must contain a header row with field API names.</li>\
+            <li>To use an external ID for a lookup field, the header row should contain the lookup relation name, the target sobject name and the external ID name separated by colons, e.g. "MyLookupField__r:MyObject__c:MyExternalIdField__c".</li>\
+            <li>Empty cells insert null values.</li>\
+            <li>Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>.</li>\
+            <li>Columns starting with an underscore are ignored.</li>\
+          </ul>\
+        </li>\
         <li>Select your input format</li>\
         <li>Select an action (insert, update or delete)</li>\
         <li>Enter the API name of the object to import</li>\
@@ -187,9 +195,8 @@ function dataImport() {
     var header = data.shift();
     var idColumn = -1;
 
-    var apiName = /^[a-zA-Z0-9_]+$/;
     for (var c = 0; c < header.length; c++) {
-      if (!apiName.test(header[c])) {
+      if (!/^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+:[a-zA-Z0-9_]+)?$/.test(header[c])) {
         document.querySelector("#import-result").value = "=== ERROR ===\nInvalid column name: " + header[c];
         return;
       }
@@ -201,7 +208,7 @@ function dataImport() {
     var action = document.querySelector("#import-action").value;
     var sobjectType = document.querySelector("#import-type").value;
 
-    if (!apiName.test(sobjectType)) {
+    if (!/^[a-zA-Z0-9_]+$/.test(sobjectType)) {
       document.querySelector("#import-result").value = "=== ERROR ===\nInvalid object name: " + sobjectType;
       return;
     }
@@ -225,14 +232,31 @@ function dataImport() {
         sobjects.appendChild(type);
         for (var c = 0; c < row.length; c++) {
           if (header[c][0] != "_") {
+            var columnName = header[c].split(":");
             if (row[c].trim() == "") {
               var field = doc.createElement("fieldsToNull");
-              field.textContent = header[c];
+              if (columnName.length == 1) { // Our regexp ensures there are always one or three elements in the array
+                field.textContent = columnName[0];
+              } else {
+                field.textContent = /__r$/.test(columnName[0]) ? columnName[0].replace(/__r$/, "__c") : columnName[0] + "Id";
+              }
               sobjects.appendChild(field);
             } else {
-              // For Mozilla reviewers: doc is a SOAP XML document.
-              var field = doc.createElement(header[c]);
-              field.textContent = row[c];
+              if (columnName.length == 1) { // Our regexp ensures there are always one or three elements in the array
+                // For Mozilla reviewers: doc is a SOAP XML document.
+                var field = doc.createElement(columnName[0]);
+                field.textContent = row[c];
+              } else {
+                var subType = doc.createElement("type");
+                subType.textContent = columnName[1];
+                // For Mozilla reviewers: doc is a SOAP XML document.
+                var subField = doc.createElement(columnName[2]);
+                subField.textContent = row[c];
+                // For Mozilla reviewers: doc is a SOAP XML document.
+                var field = doc.createElement(columnName[0]);
+                field.appendChild(subType);
+                field.appendChild(subField);
+              }
               sobjects.appendChild(field);
             }
           }
