@@ -124,6 +124,7 @@ function dataExport() {
   <div class="area">\
     <h1>Export query</h1>\
     <label><input type="checkbox" id="query-all"> Include deleted and archived records?</label>\
+    <label title="With the tooling API you can query more metadata, but you cannot query regular data"><input type="checkbox" id="query-tooling"> Use Tooling API?</label>\
     <a href="about:blank" id="export-help-btn">Export help</a>\
     <textarea id="query">select Id from Account</textarea>\
     <div id="autocomplete-results">&nbsp;</div>\
@@ -184,7 +185,8 @@ function dataExport() {
    *     The "fields" property does not exist if fields are not yet loaded.
    *   - The "fieldsRequest" contains a boolean, which is true if fields are loaded or a request to load them is in progress.
    */
-  var sobjectDescribes = {};
+  var sobjectDataDescribes = {};
+  var sobjectToolingDescribes = {};
   function maybeGetFields(sobjectDescribe) {
     if (sobjectDescribe && !sobjectDescribe.fields && !sobjectDescribe.fieldsRequest) {
       console.log("getting fields for " + sobjectDescribe.name);
@@ -199,7 +201,12 @@ function dataExport() {
   }
   spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(responseText) {
     JSON.parse(responseText).sobjects.forEach(function(sobjectDescribe) {
-      sobjectDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
+      sobjectDataDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
+    });
+  }));
+  spinFor(askSalesforce("/services/data/v32.0/tooling/sobjects/").then(function(responseText) {
+    JSON.parse(responseText).sobjects.forEach(function(sobjectDescribe) {
+      sobjectToolingDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
   }));
 
@@ -231,6 +238,7 @@ function dataExport() {
    * Does not yet support subqueries.
    */
   function queryAutocompleteHandler() {
+    var sobjectDescribes = document.querySelector("#query-tooling").checked ? sobjectToolingDescribes : sobjectDataDescribes;
     var query = queryInput.value;
     var selStart = queryInput.selectionStart;
     var selEnd = queryInput.selectionEnd;
@@ -391,7 +399,7 @@ function dataExport() {
     }
     var exportAsJson = document.querySelector("#data-format-json").checked;
     if (exportAsJson) {
-      resultText.value = JSON.stringify(exportedRecords);
+      resultText.value = JSON.stringify(exportedRecords, null, "  ");
       resultText.removeAttribute("hidden");
       resultTable.setAttribute("hidden", "");
       return;
@@ -475,12 +483,20 @@ function dataExport() {
   document.querySelector("#data-format-csv").addEventListener("change", showExportResult);
   document.querySelector("#data-format-json").addEventListener("change", showExportResult);
 
+  document.querySelector("#query-tooling").addEventListener("change", function(e) {
+    queryAutocompleteHandler();
+    document.querySelector("#query-all").disabled = e.target.checked;
+  });
+  document.querySelector("#query-all").addEventListener("change", function(e) {
+    document.querySelector("#query-tooling").disabled = e.target.checked;
+  });
+
   document.querySelector("#export-btn").addEventListener("click", function() {
     document.querySelector("#export-btn").disabled = true;
     exportStatus = "Exporting...";
     showExportResult();
     var query = document.querySelector("#query").value;
-    var queryMethod = document.querySelector("#query-all").checked ? 'queryAll' : 'query';
+    var queryMethod = document.querySelector("#query-tooling").checked ? 'tooling/query' : document.querySelector("#query-all").checked ? 'queryAll' : 'query';
     exportedRecords = [];
     spinFor(askSalesforce('/services/data/v32.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
       var data = JSON.parse(responseText);
