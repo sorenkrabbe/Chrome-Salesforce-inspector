@@ -1,4 +1,4 @@
-function showAllData(recordId) {
+function showAllData(recordDesc) {
   // Load a blank page and then inject the HTML to work around https://bugzilla.mozilla.org/show_bug.cgi?id=792479
   // An empty string as URL loads about:blank synchronously
   var popupWin;
@@ -54,7 +54,7 @@ function showAllData(recordId) {
     text-align: right;\
     width: 9em;\
   }\
-  td[tabindex], th[tabindex] {\
+  span[tabindex], td[tabindex], th[tabindex] {\
     text-decoration: underline;\
     cursor: pointer;\
     color: darkblue;\
@@ -110,7 +110,7 @@ function showAllData(recordId) {
   ';
 
   document.body.innerHTML = '\
-  <h1 id="heading">Loading all data...</h1>\
+  <h1><span id="object-name">Loading all data...</span> <span id="record-name"></span></h1>\
   <input id="filter" placeholder="Filter">\
   <table>\
   <thead>\
@@ -146,22 +146,42 @@ function showAllData(recordId) {
   });
   document.querySelector('#filter').focus();
 
-  if (!recordId) {
-    recordId = getRecordIdFromUrl();
+  var objectMetadataResponse;
+  var metadataPromise;
+  if ("recordId" in recordDesc) {
+    metdataPromise = loadMetadataForRecordId(recordDesc.recordId);
+  } else if ("recordAttributes" in recordDesc) {
+    metdataPromise = askSalesforce("/services/data/v32.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+  } else {
+    throw "unknown input for showAllData";
   }
-  var fields = {};
-  loadMetadataForRecordId(recordId).then(function(responseText) {
-    var objectMetadataResponse = JSON.parse(responseText);
+  metdataPromise.then(function(responseText) {
+    objectMetadataResponse = JSON.parse(responseText);
 
+    if (objectMetadataResponse.retrieveable) {
+      if ("recordId" in recordDesc) {
+        if (recordDesc.recordId.length < 15) {
+          return JSON.stringify({}); // Just a prefix, don't attempt to load the record
+        } else {
+          return askSalesforce(objectMetadataResponse.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
+        }
+      } else if ("recordAttributes" in recordDesc) {
+        return askSalesforce(recordDesc.recordAttributes.url);
+      } else {
+        throw "unknown input for showAllData";
+      }
+    } else {
+      // TODO better display of the error message
+      return JSON.stringify({"_": "This object does not support showing all data"});
+    }
+  }).then(function(responseText) {
+    var objectDataResponse = JSON.parse(responseText);
+
+    var fields = {};
     for (var index in objectMetadataResponse.fields) {
       fields[objectMetadataResponse.fields[index].name] = objectMetadataResponse.fields[index];
     }
 
-    //Query data for the relevant object (as objectDataResponse) and merge it with objectMetadataResponse in the fields array 
-    return askSalesforce(objectMetadataResponse.urls.rowTemplate.replace("{ID}", recordId));
-
-  }).then(function(responseText) {
-    var objectDataResponse = JSON.parse(responseText);
     for (var fieldName in objectDataResponse) {
       if (fieldName != 'attributes') {
         if (!fields.hasOwnProperty(fieldName)) {
@@ -172,8 +192,13 @@ function showAllData(recordId) {
     }
 
     //Add to layout
-    document.title = 'ALL DATA: ' + objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
-    setHeading(objectDataResponse.attributes.type + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')');
+    document.title = 'ALL DATA: ' + objectMetadataResponse.name + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
+    document.querySelector('#record-name').textContent = '(' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
+    document.querySelector('#object-name').textContent = objectMetadataResponse.name;
+    document.querySelector('#object-name').tabIndex = 0;
+    document.querySelector('#object-name').addEventListener('click', function() {
+      showAllFieldMetadata(objectMetadataResponse);
+    });
     for (var index in fields) {
       var fieldTypeDesc = fields[index].type + ' (' + fields[index].length + ')';
       fieldTypeDesc += (fields[index].calculated) ? '*' : '';
@@ -197,7 +222,7 @@ function showAllData(recordId) {
             showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
           },
           fields[index].type == 'reference' && fields[index].dataValue
-            ? function(event) { showAllData(event.currentTarget.textContent); }
+            ? function(event) { showAllData({recordId: event.currentTarget.textContent}); }
             : null,
           null
         ],
@@ -270,10 +295,6 @@ function showAllData(recordId) {
     }
 
     document.querySelector('#dataTableBody').appendChild(tableRow);
-  }
-
-  function setHeading(label) {
-    document.querySelector('#heading').textContent = label;
   }
 
   function sortTable(table, col, dir) {

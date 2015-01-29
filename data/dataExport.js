@@ -388,6 +388,7 @@ function dataExport() {
 
   var exportedRecords = [];
   var exportStatus = "";
+  var exportedTooling = false;
   var resultTable = document.querySelector("#result-table");
   var resultText = document.querySelector("#data");
   function showExportResult() {
@@ -458,17 +459,34 @@ function dataExport() {
     }
     if (document.querySelector("#data-format-table").checked) {
       resultTable.innerHTML = "";
-      var firstRow = true;
-      table.forEach(function(row) {
+      for (var r = 0; r < table.length; r++) {
+        var row = table[r];
         var tr = document.createElement("tr");
+        if (true) {
+          var td = document.createElement(r == 0 ? "th" : "td");
+          if (r == 0) {
+            td.textContent = "+";
+          } else {
+            var a = document.createElement("a");
+            a.href = "about:blank";
+            a.textContent = "+";
+            a.title = "Show all data";
+            a.sfRecordAttributes = exportedRecords[r - 1].attributes;
+            a.addEventListener("click", function(e) {
+              e.preventDefault();
+              showAllData({recordAttributes: e.target.sfRecordAttributes, useToolingApi: exportedTooling});
+            });
+            td.appendChild(a);
+          }
+          tr.appendChild(td);
+        }
         row.forEach(function(cell) {
-          var td = document.createElement(firstRow ? "th" : "td");
+          var td = document.createElement(r == 0 ? "th" : "td");
           td.textContent = cell;
           tr.appendChild(td);
         });
         resultTable.appendChild(tr);
-        firstRow = false;
-      });
+      }
       resultText.setAttribute("hidden", "");
       resultTable.removeAttribute("hidden");
     } else {
@@ -493,6 +511,7 @@ function dataExport() {
 
   document.querySelector("#export-btn").addEventListener("click", function() {
     document.querySelector("#export-btn").disabled = true;
+    exportedTooling = document.querySelector("#query-tooling").checked;
     exportStatus = "Exporting...";
     showExportResult();
     var query = document.querySelector("#query").value;

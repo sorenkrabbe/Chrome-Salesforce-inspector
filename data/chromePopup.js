@@ -85,7 +85,7 @@ function init() {
             e.preventDefault();
         }
         if (e.charCode == 97 /*a*/) {
-            showAllData();
+            showAllData({recordId: getRecordIdFromUrl()});
             closePopup();
             e.preventDefault();
         }
@@ -119,7 +119,7 @@ function init() {
         });
     });
     document.querySelector('#showAllDataBtn').addEventListener('click', function() {
-        showAllData();
+        showAllData({recordId: getRecordIdFromUrl()});
         closePopup();
     });
     document.querySelector('#dataExportBtn').addEventListener('click', function() {
