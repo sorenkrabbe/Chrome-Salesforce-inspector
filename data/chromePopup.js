@@ -183,29 +183,6 @@ function askSalesforce(url) {
     });
 }
 
-function askSalesforceMetadata(request) {
-    return new Promise(function(resolve, reject) {
-        if (!session) {
-            reject(new Error("Session not found"));
-            return;
-        }
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/m/32.0?cache=' + Math.random(), true);
-        xhr.setRequestHeader('Content-Type', "text/xml");
-        xhr.setRequestHeader('SOAPAction', '""');
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState == 4) {
-                if (xhr.status == 200) {
-                    resolve(xhr.responseXML.documentElement.firstChild.firstChild);
-                } else {
-                    reject(xhr);
-                }
-            }
-        }
-        xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="http://soap.sforce.com/2006/04/metadata"><SessionHeader><sessionId>' + session + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="http://soap.sforce.com/2006/04/metadata">' + request + '</soapenv:Body></soapenv:Envelope>');
-    });
-}
-
 function askSalesforceSoap(request) {
     return new Promise(function(resolve, reject) {
         if (!session) {

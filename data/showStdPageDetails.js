@@ -20,22 +20,18 @@ function showStdPageDetails() {
 }
 
 function loadFieldSetupData() {
-  return askSalesforceMetadata('<listMetadata><queries><type>CustomField</type></queries><asOfVersion>32.0</asOfVersion></listMetadata>').then(function(res) {
-    var fields = {};
-    for (var fieldEl = res.firstChild; fieldEl; fieldEl = fieldEl.nextSibling) {
-      var field = {};
-      for (var el = fieldEl.firstChild; el; el = el.nextSibling) {
-        field[el.nodeName] = el.textContent;
-      }
-      fields[field.fullName] = field;
-    }
-    return fields;
+  return askSalesforce('/services/data/v32.0/tooling/query/?q=' + encodeURIComponent('select Id, FullName from CustomField')).then(function(res) {
+    var fieldIds = {};
+    JSON.parse(res).records.forEach(function(customField) {
+      fieldIds[customField.FullName] = customField.Id;
+    });
+    return fieldIds;
   }, function() {
     return {}; // Don't fail if the user does not have access to the metadata API.
   });
 }
 
-function getFieldSetupLink(fields, objectDescribe, fieldDescribe) {
+function getFieldSetupLink(fieldIds, objectDescribe, fieldDescribe) {
   if (!fieldDescribe.custom) {
     var name = fieldDescribe.name;
     if (name.substr(-2) == "Id") {
@@ -43,11 +39,11 @@ function getFieldSetupLink(fields, objectDescribe, fieldDescribe) {
     }
     return '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + objectDescribe.name;
   } else {
-    var field = fields[objectDescribe.name + '.' + fieldDescribe.name];
-    if (!field) {
+    var fieldId = fieldIds[objectDescribe.name + '.' + fieldDescribe.name];
+    if (!fieldId) {
       return null;
     }
-    return '/' + field.id;
+    return '/' + fieldId;
   }
 }
 
