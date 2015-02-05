@@ -54,6 +54,10 @@ function showAllData(recordDesc) {
     text-align: right;\
     width: 9em;\
   }\
+  .field-setup {\
+    text-align: right;\
+    width: 4em;\
+  }\
   span[tabindex], td[tabindex], th[tabindex] {\
     text-decoration: underline;\
     cursor: pointer;\
@@ -118,6 +122,7 @@ function showAllData(recordDesc) {
   <th class="field-name">API Name</th>\
   <th class="field-value">Value</th>\
   <th class="field-type">Type</th>\
+  <th class="field-setup">Setup</th>\
   </thead>\
   <tbody id="dataTableBody">\
   </tbody>\
@@ -149,13 +154,13 @@ function showAllData(recordDesc) {
   var objectMetadataResponse;
   var metadataPromise;
   if ("recordId" in recordDesc) {
-    metdataPromise = loadMetadataForRecordId(recordDesc.recordId);
+    metadataPromise = loadMetadataForRecordId(recordDesc.recordId);
   } else if ("recordAttributes" in recordDesc) {
-    metdataPromise = askSalesforce("/services/data/v32.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+    metadataPromise = askSalesforce("/services/data/v32.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
   } else {
     throw "unknown input for showAllData";
   }
-  metdataPromise.then(function(responseText) {
+  var recordDataPromise = metadataPromise.then(function(responseText) {
     objectMetadataResponse = JSON.parse(responseText);
 
     if (objectMetadataResponse.retrieveable) {
@@ -174,8 +179,11 @@ function showAllData(recordDesc) {
       // TODO better display of the error message
       return JSON.stringify({"_": "This object does not support showing all data"});
     }
-  }).then(function(responseText) {
-    var objectDataResponse = JSON.parse(responseText);
+  });
+  var toolingPromise = loadFieldSetupData();
+  Promise.all([recordDataPromise, toolingPromise]).then(function(responses) {
+    var objectDataResponse = JSON.parse(responses[0]);
+    var fieldIds = responses[1];
 
     var fields = {};
     for (var index in objectMetadataResponse.fields) {
@@ -203,11 +211,13 @@ function showAllData(recordDesc) {
       var fieldTypeDesc = fields[index].type + ' (' + fields[index].length + ')';
       fieldTypeDesc += (fields[index].calculated) ? '*' : '';
 
+      var setupLink = getFieldSetupLink(fieldIds, objectMetadataResponse, fields[index]);
       addRowToDataTable(
         [fields[index].label,
           fields[index].name,
           fields[index].dataValue,
-          fieldTypeDesc
+          fieldTypeDesc,
+          setupLink ? 'Setup' : ''
         ], [{
           class: 'field-label'
         }, {
@@ -217,6 +227,9 @@ function showAllData(recordDesc) {
           class: 'field-value'
         }, {
           class: 'field-type'
+        }, {
+          class: 'field-setup',
+          'data-setup-link': setupLink
         }], [null,
           function(event) {
             showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
@@ -224,7 +237,10 @@ function showAllData(recordDesc) {
           fields[index].type == 'reference' && fields[index].dataValue
             ? function(event) { showAllData({recordId: event.currentTarget.textContent}); }
             : null,
-          null
+          null,
+          setupLink ? function(event) {
+            open(event.currentTarget.getAttribute('data-setup-link'));
+          } : null
         ],
         (fields[index].calculated) ? 'calculated' : null
       );

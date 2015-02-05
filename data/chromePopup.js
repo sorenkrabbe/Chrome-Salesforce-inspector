@@ -159,6 +159,34 @@ function loadMetadataForRecordId(recordId) {
     });
 }
 
+function loadFieldSetupData() {
+  return askSalesforce('/services/data/v32.0/tooling/query/?q=' + encodeURIComponent('select Id, FullName from CustomField')).then(function(res) {
+    var fieldIds = {};
+    JSON.parse(res).records.forEach(function(customField) {
+      fieldIds[customField.FullName] = customField.Id;
+    });
+    return fieldIds;
+  }, function() {
+    return {}; // Don't fail if the user does not have access to the tooling API.
+  });
+}
+
+function getFieldSetupLink(fieldIds, objectDescribe, fieldDescribe) {
+  if (!fieldDescribe.custom) {
+    var name = fieldDescribe.name;
+    if (name.substr(-2) == "Id") {
+      name = name.slice(0, -2);
+    }
+    return 'https://' + document.location.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + objectDescribe.name;
+  } else {
+    var fieldId = fieldIds[objectDescribe.name + '.' + fieldDescribe.name];
+    if (!fieldId) {
+      return null;
+    }
+    return 'https://' + document.location.hostname + '/' + fieldId;
+  }
+}
+
 function askSalesforce(url) {
     return new Promise(function(resolve, reject) {
         if (!session) {
