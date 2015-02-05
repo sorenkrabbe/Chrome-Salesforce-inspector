@@ -117,21 +117,28 @@ function showAllData(recordDesc) {
   <h1><span id="object-name">Loading all data...</span> <span id="record-name"></span></h1>\
   <input id="filter" placeholder="Filter">\
   <table>\
-  <thead>\
-  <th class="field-label">Field Label</th>\
-  <th class="field-name">API Name</th>\
-  <th class="field-value">Value</th>\
-  <th class="field-type">Type</th>\
-  <th class="field-setup">Setup</th>\
-  </thead>\
-  <tbody id="dataTableBody">\
-  </tbody>\
+    <thead>\
+      <th class="field-label">Field Label</th>\
+      <th class="field-name">API Name</th>\
+      <th class="field-value">Value</th>\
+      <th class="field-type">Type</th>\
+      <th class="field-setup">Setup</th>\
+    </thead>\
+    <tbody id="dataTableBody">\
+    </tbody>\
   </table>\
   <div id="fieldDetailsView">\
-  <div class="container">\
-  <a href="about:blank" class="closeLnk">X</a>\
-  <div class="mainContent"></div>\
-  </div>\
+    <div class="container">\
+      <a href="about:blank" class="closeLnk">X</a>\
+      <div class="mainContent">\
+        <h3 id="fieldDetailsHeading"></h3>\
+        <input id="field-filter" placeholder="Filter">\
+        <table>\
+          <thead><tr><th>Key</th><th>Value</th></tr></thead>\
+          <tbody id="fieldDetailsTbody"></tbody>\
+        </table>\
+      </div>\
+    </div>\
   </div>\
   ';
 
@@ -141,9 +148,16 @@ function showAllData(recordDesc) {
     hideAllFieldMetadataView();
   });
   document.querySelector('#filter').addEventListener('input', function(event) {
-    console.log("filtering!");
     var value = document.querySelector('#filter').value.trim().toLowerCase();
     var rows = document.querySelectorAll('#dataTableBody tr');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      row.classList.toggle('filter-hidden', value && row.textContent.toLowerCase().indexOf(value) == -1);
+    };
+  });
+  document.querySelector('#field-filter').addEventListener('input', function(event) {
+    var value = document.querySelector('#field-filter').value.trim().toLowerCase();
+    var rows = document.querySelectorAll('#fieldDetailsTbody tr');
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
       row.classList.toggle('filter-hidden', value && row.textContent.toLowerCase().indexOf(value) == -1);
@@ -160,9 +174,10 @@ function showAllData(recordDesc) {
   } else {
     throw "unknown input for showAllData";
   }
-  var recordDataPromise = metadataPromise.then(function(responseText) {
+  metadataPromise = metadataPromise.then(function(responseText) {
     objectMetadataResponse = JSON.parse(responseText);
-
+  });
+  var recordDataPromise = metadataPromise.then(function() {
     if (objectMetadataResponse.retrieveable) {
       if ("recordId" in recordDesc) {
         if (recordDesc.recordId.length < 15) {
@@ -180,10 +195,14 @@ function showAllData(recordDesc) {
       return JSON.stringify({"_": "This object does not support showing all data"});
     }
   });
-  var toolingPromise = loadFieldSetupData();
-  Promise.all([recordDataPromise, toolingPromise]).then(function(responses) {
+  var fieldIdsPromise = loadFieldSetupData();
+  var fieldDescriptionsPromise = metadataPromise.then(function() {
+    return askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Metadata from FieldDefinition where EntityDefinitionId = '" + objectMetadataResponse.name + "'"));
+  });
+  Promise.all([recordDataPromise, fieldIdsPromise, fieldDescriptionsPromise]).then(function(responses) {
     var objectDataResponse = JSON.parse(responses[0]);
     var fieldIds = responses[1];
+    var fieldDescriptions = JSON.parse(responses[2]);
 
     var fields = {};
     for (var index in objectMetadataResponse.fields) {
@@ -198,6 +217,12 @@ function showAllData(recordDesc) {
         fields[fieldName].dataValue = objectDataResponse[fieldName];
       }
     }
+
+    fieldDescriptions.records.forEach(function(fieldDescription) {
+      if (fields.hasOwnProperty(fieldDescription.QualifiedApiName)) {
+        fields[fieldDescription.QualifiedApiName].description = fieldDescription.Metadata.description;
+      }
+    });
 
     //Add to layout
     document.title = 'ALL DATA: ' + objectMetadataResponse.name + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
@@ -222,6 +247,12 @@ function showAllData(recordDesc) {
           class: 'field-label'
         }, {
           class: 'field-name',
+          title: fields[index].name + "\n"
+            + (fields[index].calculatedFormula ? "Formula: " + fields[index].calculatedFormula + "\n" : "")
+            + (fields[index].description ? "Description: " + fields[index].description + "\n" : "")
+            + (fields[index].inlineHelpText ? "Help text: " + fields[index].inlineHelpText + "\n" : "")
+            + (fields[index].picklistValues.length > 0 ? "Picklist values: " + fields[index].picklistValues.map(function(pickval) { return pickval.value; }).join(", ") + "\n" : "")
+            ,
           'data-all-sfdc-metadata': JSON.stringify(fields[index])
         }, {
           class: 'field-value'
@@ -253,23 +284,10 @@ function showAllData(recordDesc) {
   function showAllFieldMetadata(allFieldMetadata) {
     var fieldDetailsView = document.querySelector('#fieldDetailsView');
 
-    var heading = document.createElement('h3');
-    heading.textContent = 'All available metadata for "' + allFieldMetadata.name + '"';
+    fieldDetailsView.querySelector('#fieldDetailsHeading').textContent = 'All available metadata for "' + allFieldMetadata.name + '"';
 
-    var table = document.createElement('table');
-
-    var thead = document.createElement('thead');
-    var tr = document.createElement('tr');
-    var thKey = document.createElement('th');
-    var thValue = document.createElement('th');
-    thKey.textContent = 'Key';
-    thValue.textContent = 'Value';
-    tr.appendChild(thKey);
-    tr.appendChild(thValue);
-    thead.appendChild(tr);
-    table.appendChild(thead);
-
-    var tbody = document.createElement('tbody');
+    var tbody = fieldDetailsView.querySelector('#fieldDetailsTbody');
+    tbody.textContent = '';
     for (var fieldMetadataAttribute in allFieldMetadata) {
       var tr = document.createElement('tr');
       var tdKey = document.createElement('td');
@@ -280,12 +298,8 @@ function showAllData(recordDesc) {
       tr.appendChild(tdValue)
       tbody.appendChild(tr);
     }
-    table.appendChild(tbody);
-    var mainContentElm = fieldDetailsView.querySelector('.mainContent');
-    mainContentElm.textContent = '';
-    mainContentElm.appendChild(heading);
-    mainContentElm.appendChild(table);
     fieldDetailsView.style.display = 'block';
+    document.querySelector('#field-filter').focus();
   }
 
   function hideAllFieldMetadataView() {
