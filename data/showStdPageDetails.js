@@ -2,29 +2,39 @@ var outputElement;
 var fieldDetailsByLabel = {};
 var metadataResponse = {};
 var describeAllObjects = {};
-var fieldSetupData = null;
+var fieldSetupData = {};
 
 function showStdPageDetails() {
   var recordId = getRecordIdFromUrl();
-  return Promise.all([
-    loadFieldSetupData(),
-    loadMetadataForRecordId(recordId)
-  ])
-  .then(function(results) {
-    fieldSetupData = results[0];
-    parseSalesforceFieldMetadata(results[1]);
-  })
-  .catch(function(error) {
+  return loadMetadataForRecordId(recordId)
+    .then(function(responseText) {
+      metadataResponse = JSON.parse(responseText);
+      
+      // We don't wait for loadFieldSetupData to resolve. We show the data we have, and add the field setup links once that data arrives
+      fieldDetailsReady();
+      
+      loadFieldSetupData(metadataResponse.name)
+        .then(function(res) {
+          fieldSetupData = res;
+        }, function() {
+          // Don't fail if the user does not have access to the tooling API.
+        });
+    })
+    .catch(function(error) {
       alert(error);
-  });
+    });
 }
 
 /*******************
  * Helper functions *
  ********************/
-function parseSalesforceFieldMetadata(responseText){
-    metadataResponse = JSON.parse(responseText);
-    
+
+
+
+/**
+ * Loop through all label elements, add event listeners
+ */
+function fieldDetailsReady(){
     for (var i = 0; i < metadataResponse.fields.length; i++) {
         var fieldDetails = metadataResponse.fields[i];
         
@@ -35,14 +45,6 @@ function parseSalesforceFieldMetadata(responseText){
         fieldDetailsByLabel[fieldDetails.label].push(fieldDetails);
     }
     
-    fieldDetailsReady();
-}
-
-
-/**
- * Loop through all label elements, add event listeners
- */
-function fieldDetailsReady(){
     var labelElements = document.querySelectorAll("td.labelCol")
     for (var i = 0; i < labelElements.length; i++) {
         if (labelElements[i].textContent.trim() != '') {

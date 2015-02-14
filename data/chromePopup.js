@@ -159,27 +159,25 @@ function loadMetadataForRecordId(recordId) {
     });
 }
 
-function loadFieldSetupData() {
-  return askSalesforce('/services/data/v32.0/tooling/query/?q=' + encodeURIComponent('select Id, FullName from CustomField')).then(function(res) {
+function loadFieldSetupData(sobjectName) {
+  return askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField where EntityDefinitionId = '" + sobjectName + "'")).then(function(res) {
     var fieldIds = {};
     JSON.parse(res).records.forEach(function(customField) {
       fieldIds[customField.FullName] = customField.Id;
     });
     return fieldIds;
-  }, function() {
-    return {}; // Don't fail if the user does not have access to the tooling API.
   });
 }
 
-function getFieldSetupLink(fieldIds, objectDescribe, fieldDescribe) {
+function getFieldSetupLink(fieldIds, sobjectDescribe, fieldDescribe) {
   if (!fieldDescribe.custom) {
     var name = fieldDescribe.name;
-    if (name.substr(-2) == "Id") {
+    if (name.substr(-2) == "Id" && name != "Id") {
       name = name.slice(0, -2);
     }
-    return 'https://' + document.location.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + objectDescribe.name;
+    return 'https://' + document.location.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + sobjectDescribe.name;
   } else {
-    var fieldId = fieldIds[objectDescribe.name + '.' + fieldDescribe.name];
+    var fieldId = fieldIds[sobjectDescribe.name + '.' + fieldDescribe.name];
     if (!fieldId) {
       return null;
     }

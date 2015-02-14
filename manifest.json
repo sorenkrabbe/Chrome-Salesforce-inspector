@@ -14,6 +14,7 @@
         "data/showStdPageDetails.css"
       ],
       "js": [
+        "data/knockout-3.2.0.js",
         "data/chromePopup.js",
         "data/showAllDataForRecordPopup.js",
         "data/dataExport.js",

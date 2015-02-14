@@ -5,10 +5,10 @@ function showAllData(recordDesc) {
   if (window.unsafeWindow && window.XPCNativeWrapper) {
     // Firefox
     // Use unsafeWindow to work around https://bugzilla.mozilla.org/show_bug.cgi?id=996069
-    popupWin = new XPCNativeWrapper(unsafeWindow.open('', '', 'width=850,height=800,scrollbars=yes'));
+    popupWin = new XPCNativeWrapper(unsafeWindow.open("", "", "width=850,height=800,scrollbars=yes"));
   } else {
     // Chrome
-    popupWin = open('', '', 'width=850,height=800,scrollbars=yes');
+    popupWin = open("", "", "width=850,height=800,scrollbars=yes");
   }
   window.addEventListener("pagehide", function() {
     // All JS runs in the parent window, and will stop working when the parent goes away. Therefore close the popup.
@@ -16,7 +16,7 @@ function showAllData(recordDesc) {
   });
   var document = popupWin.document;
   document.head.innerHTML = '\
-  <title>Loading all data...</title>\
+  <title data-bind="text: title()"></title>\
   <style>\
   body {\
     font-family: Arial, Helvetica, sans-serif;\
@@ -26,9 +26,11 @@ function showAllData(recordDesc) {
     width: 100%;\
     border-spacing: 0px;\
     font-size: 11px;\
+    table-layout: fixed;\
+  }\
+  .value-text {\
     word-wrap: break-word;\
     white-space: pre-wrap;\
-    table-layout: fixed;\
   }\
   tr.calculated {\
     color: #777777;\
@@ -64,7 +66,6 @@ function showAllData(recordDesc) {
     color: darkblue;\
   }\
   #fieldDetailsView {\
-    display: none;\
     position: fixed;\
     top: 0;\
     right: 0;\
@@ -104,256 +105,267 @@ function showAllData(recordDesc) {
   .closeLnk:hover {\
     background: #00d9ff;\
   }\
-  #filter {\
+  .filter-input {\
     width: 20em;\
   }\
-  .filter-hidden {\
-    display: none;\
+  .error-message {\
+    font-size: 1.2em;\
+    font-weight: bold;\
+    margin: 1em 0;\
+    background-color: #fe3;\
+    padding: .5em;\
+    border: 1px solid red;\
+    border-radius: 7px;\
+  }\
+  #spinner {\
+    position: absolute;\
+    left: -15px;\
+    top: -15px;\
   }\
   </style>\
   ';
 
   document.body.innerHTML = '\
-  <h1><span id="object-name">Loading all data...</span> <span id="record-name"></span></h1>\
-  <input id="filter" placeholder="Filter">\
+  <img id="spinner" src="data:image/gif;base64,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" data-bind="visible: spinnerCount() > 0">\
+  <h1>\
+    <span data-bind="if: objectName()"><a href="about:blank" data-bind="text: objectName(), click: showObjectMetadata"></a></span>\
+    <span data-bind="text: recordHeading()"></span>\
+  </h1>\
+  <div data-bind="foreach: errorMessages, visible: errorMessages().length > 0" class="error-message"><div data-bind="text: $data"></div></div>\
+  <input class="filter-input" placeholder="Filter" data-bind="value: fieldRowsFilter, valueUpdate: \'input\'" autofocus>\
   <table>\
     <thead>\
-      <th class="field-label">Field Label</th>\
-      <th class="field-name">API Name</th>\
-      <th class="field-value">Value</th>\
-      <th class="field-type">Type</th>\
+      <th class="field-label" tabindex="0" data-bind="click: sortByLabel">Field Label</th>\
+      <th class="field-name" tabindex="0" data-bind="click: sortByName">API Name</th>\
+      <th class="field-value" tabindex="0" data-bind="click: sortByValue">Value</th>\
+      <th class="field-type" tabindex="0" data-bind="click: sortByType">Type</th>\
       <th class="field-setup">Setup</th>\
     </thead>\
-    <tbody id="dataTableBody">\
+    <tbody id="dataTableBody" data-bind="foreach: fieldRows">\
+      <tr data-bind="css: {calculated: fieldIsCalculated}, visible: visible()">\
+        <td data-bind="text: fieldLabel" class="field-label"></td>\
+        <td data-bind="text: fieldName, attr: {title: summary()}, click: openDetails" tabindex="0" class="field-name"></td>\
+        <td class="field-value">\
+          <!-- ko if: isId() --><a href="about:blank" data-bind="text: dataValue(), click: showRecordId" class="value-text"></a><!-- /ko -->\
+          <!-- ko if: !isId() --><span data-bind="text: dataValue()" class="value-text"></span><!-- /ko -->\
+        </td>\
+        <td data-bind="text: fieldTypeDesc" class="field-type"></td>\
+        <td class="field-setup"><a href="about:blank" data-bind="visible: setupLink(), attr: {href: setupLink()}" target="_blank">Setup</a></td>\
+      </tr>\
     </tbody>\
   </table>\
-  <div id="fieldDetailsView">\
-    <div class="container">\
-      <a href="about:blank" class="closeLnk">X</a>\
-      <div class="mainContent">\
-        <h3 id="fieldDetailsHeading"></h3>\
-        <input id="field-filter" placeholder="Filter">\
-        <table>\
-          <thead><tr><th>Key</th><th>Value</th></tr></thead>\
-          <tbody id="fieldDetailsTbody"></tbody>\
-        </table>\
+  <div data-bind="if: fieldDetails()">\
+    <div id="fieldDetailsView">\
+      <div class="container">\
+        <a href="about:blank" class="closeLnk" data-bind="click: closeFieldDetails">X</a>\
+        <div class="mainContent">\
+          <h3>All available metadata for "<span data-bind="text: fieldDetails().name"></span>"</h3>\
+          <input placeholder="Filter" data-bind="value: fieldDetailsFilter, valueUpdate: \'input\', hasFocus: fieldDetailsFilterFocus">\
+          <table>\
+            <thead><tr><th>Key</th><th>Value</th></tr></thead>\
+            <tbody data-bind="foreach: fieldDetails().rows">\
+              <tr data-bind="visible: visible()">\
+                <td data-bind="text: key"></td>\
+                <td data-bind="text: value"></td>\
+              </tr>\
+            </tbody>\
+          </table>\
+        </div>\
       </div>\
     </div>\
   </div>\
   ';
 
-  //Setup eventlisteners for static content
-  document.querySelector('#fieldDetailsView .closeLnk').addEventListener('click', function(event) {
-    event.preventDefault();
-    hideAllFieldMetadataView();
-  });
-  document.querySelector('#filter').addEventListener('input', function(event) {
-    var value = document.querySelector('#filter').value.trim().toLowerCase();
-    var rows = document.querySelectorAll('#dataTableBody tr');
-    for (var i = 0; i < rows.length; i++) {
-      var row = rows[i];
-      row.classList.toggle('filter-hidden', value && row.textContent.toLowerCase().indexOf(value) == -1);
-    };
-  });
-  document.querySelector('#field-filter').addEventListener('input', function(event) {
-    var value = document.querySelector('#field-filter').value.trim().toLowerCase();
-    var rows = document.querySelectorAll('#fieldDetailsTbody tr');
-    for (var i = 0; i < rows.length; i++) {
-      var row = rows[i];
-      row.classList.toggle('filter-hidden', value && row.textContent.toLowerCase().indexOf(value) == -1);
-    };
-  });
-  document.querySelector('#filter').focus();
+  var objectData = ko.observable(null);
+  var recordData = ko.observable(null);
+  var toolingFieldDefinitions = ko.observable({});
+  var fieldIds = ko.observable({});
 
-  var objectMetadataResponse;
-  var metadataPromise;
+  var vm = {
+    spinnerCount: ko.observable(0),
+    recordHeading: function() {
+      return recordData() ? "(" + recordData().Name + " / " + recordData().Id + ")" : "Loading all data..."
+    },
+    objectName: function() {
+      return objectData() && objectData().name;
+    },
+    title: function() {
+      return (objectData() ? "ALL DATA: " + objectData().name + " " : "") + vm.recordHeading();
+    },
+    errorMessages: ko.observableArray(),
+    fieldRowsFilter: ko.observable(""),
+    fieldRows: ko.observableArray(),
+    sortByLabel: function() {
+      sortFieldRows("label", function(r) { return r.fieldLabel; });
+    },
+    sortByName: function() {
+      sortFieldRows("name", function(r) { return r.fieldName; });
+    },
+    sortByValue: function() {
+      sortFieldRows("dataValue", function(r) { return "" + r.dataValue(); });
+    },
+    sortByType: function() {
+      sortFieldRows("type", function(r) { return r.fieldTypeDesc; });
+    },
+    fieldDetailsFilterFocus: ko.observable(false),
+    fieldDetailsFilter: ko.observable(""),
+    fieldDetails: ko.observable(null),
+    closeFieldDetails: function() {
+      vm.fieldDetails(null);
+    },
+    showObjectMetadata: function() {
+      showAllFieldMetadata(objectData());
+    }
+  };
+
+  function FieldRow(fieldDescribe, sobjectDescribe) {
+    var fieldTypeDesc = fieldDescribe.type + " (" + fieldDescribe.length + ")" + (fieldDescribe.calculated ? "*" : "");
+    function fieldDescription() {
+      return toolingFieldDefinitions()[fieldDescribe.name] && toolingFieldDefinitions()[fieldDescribe.name].Metadata.description;
+    }
+
+    var fieldVm = {
+      fieldLabel: fieldDescribe.label,
+      fieldName: fieldDescribe.name,
+      fieldTypeDesc: fieldTypeDesc,
+      fieldIsCalculated: fieldDescribe.calculated,
+      dataValue: function() {
+        return recordData() && recordData()[fieldDescribe.name];
+      },
+      setupLink: function() {
+        return getFieldSetupLink(fieldIds(), sobjectDescribe, fieldDescribe);
+      },
+      summary: function() {
+        return fieldDescribe.name + "\n"
+          + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
+          + (fieldDescription() ? "Description: " + fieldDescription() + "\n" : "")
+          + (fieldDescribe.inlineHelpText ? "Help text: " + fieldDescribe.inlineHelpText + "\n" : "")
+          + (fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(function(pickval) { return pickval.value; }).join(", ") + "\n" : "")
+          ;
+      },
+      isId: function() {
+        return fieldDescribe.type == "reference" && fieldVm.dataValue();
+      },
+      openDetails: function() {
+        var map = {};
+        for (var key in fieldDescribe) {
+          map[key] = fieldDescribe[key];
+        }
+        map.dataValue = fieldVm.dataValue();
+        map.description = fieldDescription();
+        showAllFieldMetadata(map);
+      },
+      showRecordId: function() {
+        showAllData({recordId: fieldVm.dataValue()});
+      },
+      visible: function() {
+        var value = vm.fieldRowsFilter().trim().toLowerCase();
+        var row = fieldVm.fieldLabel + "," + fieldVm.fieldName + "," + fieldVm.dataValue() + "," + fieldVm.fieldTypeDesc;
+        return !value || row.toLowerCase().indexOf(value) != -1;
+      }
+    };
+    return fieldVm;
+  }
+
+  function showAllFieldMetadata(allFieldMetadata) {
+    var fieldDetailVms = [];
+    for (var key in allFieldMetadata) {
+      var value = JSON.stringify(allFieldMetadata[key]);
+      fieldDetailVms.push({
+        key: key,
+        value: value,
+        visible: function() {
+          var value = vm.fieldDetailsFilter().trim().toLowerCase();
+          return !value || this.toLowerCase().indexOf(value) != -1;
+        }.bind(key + "," + value)
+      });
+    }
+    vm.fieldDetails({rows: fieldDetailVms, name: allFieldMetadata.name});
+    vm.fieldDetailsFilterFocus(true);
+  }
+
+  var sortCol = "";
+  var sortDir = -1;
+  function sortFieldRows(col, value) {
+    sortDir = col == sortCol ? -sortDir : 1;
+    sortCol = col;
+    vm.fieldRows.sort(function(a, b) {
+      return sortDir * value(a).trim().localeCompare(value(b).trim());
+    });
+  }
+
+  ko.applyBindings(vm, document.documentElement);
+
+  function spinFor(actionName, promise) {
+    vm.spinnerCount(vm.spinnerCount() + 1);
+    promise
+      .then(null, function(error) {
+        if (error && error.responseText) {
+          error = error.responseText;
+        }
+        console.error(error);
+        vm.errorMessages.push("Error " + actionName + ": " + error);
+      })
+      .then(stopSpinner, stopSpinner);
+  }
+  function stopSpinner() {
+    vm.spinnerCount(vm.spinnerCount() - 1);
+  }
+
+  // Fetch object data using object describe call
+  var sobjectDescribePromise;
   if ("recordId" in recordDesc) {
-    metadataPromise = loadMetadataForRecordId(recordDesc.recordId);
+    sobjectDescribePromise = loadMetadataForRecordId(recordDesc.recordId);
   } else if ("recordAttributes" in recordDesc) {
-    metadataPromise = askSalesforce("/services/data/v32.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+    sobjectDescribePromise = askSalesforce("/services/data/v32.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
   } else {
     throw "unknown input for showAllData";
   }
-  metadataPromise = metadataPromise.then(function(responseText) {
-    objectMetadataResponse = JSON.parse(responseText);
-  });
-  var recordDataPromise = metadataPromise.then(function() {
-    if (objectMetadataResponse.retrieveable) {
+  spinFor("getting metadata", sobjectDescribePromise.then(function(responseText) {
+    // Display the retrieved object data
+    var sobjectDescribe = JSON.parse(responseText);
+    objectData(sobjectDescribe);
+    vm.fieldRows.removeAll();
+    sobjectDescribe.fields.forEach(function(fieldDescribe) {
+      vm.fieldRows.push(new FieldRow(fieldDescribe, sobjectDescribe));
+    });
+    
+    // Fetch record data using record retrieve call
+    if (sobjectDescribe.retrieveable) {
+      var recordDataPromise;
       if ("recordId" in recordDesc) {
         if (recordDesc.recordId.length < 15) {
-          return JSON.stringify({}); // Just a prefix, don't attempt to load the record
+          recordDataPromise = Promise.resolve(JSON.stringify({})); // Just a prefix, don't attempt to load the record
         } else {
-          return askSalesforce(objectMetadataResponse.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
+          recordDataPromise = askSalesforce(sobjectDescribe.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
         }
       } else if ("recordAttributes" in recordDesc) {
-        return askSalesforce(recordDesc.recordAttributes.url);
+        recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
       } else {
         throw "unknown input for showAllData";
       }
+      spinFor("getting record data", recordDataPromise.then(function(res) {
+        recordData(JSON.parse(res));
+      }));
     } else {
-      // TODO better display of the error message
-      return JSON.stringify({"_": "This object does not support showing all data"});
-    }
-  });
-  var fieldIdsPromise = loadFieldSetupData();
-  var fieldDescriptionsPromise = metadataPromise.then(function() {
-    return askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Metadata from FieldDefinition where EntityDefinitionId = '" + objectMetadataResponse.name + "'"));
-  });
-  Promise.all([recordDataPromise, fieldIdsPromise, fieldDescriptionsPromise]).then(function(responses) {
-    var objectDataResponse = JSON.parse(responses[0]);
-    var fieldIds = responses[1];
-    var fieldDescriptions = JSON.parse(responses[2]);
-
-    var fields = {};
-    for (var index in objectMetadataResponse.fields) {
-      fields[objectMetadataResponse.fields[index].name] = objectMetadataResponse.fields[index];
+      recordData({}); // Hides the loading indicator
+      vm.errorMessages.push("This object does not support showing all data");
     }
 
-    for (var fieldName in objectDataResponse) {
-      if (fieldName != 'attributes') {
-        if (!fields.hasOwnProperty(fieldName)) {
-          fields[fieldName] = {};
-        }
-        fields[fieldName].dataValue = objectDataResponse[fieldName];
-      }
-    }
-
-    fieldDescriptions.records.forEach(function(fieldDescription) {
-      if (fields.hasOwnProperty(fieldDescription.QualifiedApiName)) {
-        fields[fieldDescription.QualifiedApiName].description = fieldDescription.Metadata.description;
-      }
-    });
-
-    //Add to layout
-    document.title = 'ALL DATA: ' + objectMetadataResponse.name + ' (' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
-    document.querySelector('#record-name').textContent = '(' + objectDataResponse.Name + ' / ' + objectDataResponse.Id + ')';
-    document.querySelector('#object-name').textContent = objectMetadataResponse.name;
-    document.querySelector('#object-name').tabIndex = 0;
-    document.querySelector('#object-name').addEventListener('click', function() {
-      showAllFieldMetadata(objectMetadataResponse);
-    });
-    for (var index in fields) {
-      var fieldTypeDesc = fields[index].type + ' (' + fields[index].length + ')';
-      fieldTypeDesc += (fields[index].calculated) ? '*' : '';
-
-      var setupLink = getFieldSetupLink(fieldIds, objectMetadataResponse, fields[index]);
-      addRowToDataTable(
-        [fields[index].label,
-          fields[index].name,
-          fields[index].dataValue,
-          fieldTypeDesc,
-          setupLink ? 'Setup' : ''
-        ], [{
-          class: 'field-label'
-        }, {
-          class: 'field-name',
-          title: fields[index].name + "\n"
-            + (fields[index].calculatedFormula ? "Formula: " + fields[index].calculatedFormula + "\n" : "")
-            + (fields[index].description ? "Description: " + fields[index].description + "\n" : "")
-            + (fields[index].inlineHelpText ? "Help text: " + fields[index].inlineHelpText + "\n" : "")
-            + (fields[index].picklistValues.length > 0 ? "Picklist values: " + fields[index].picklistValues.map(function(pickval) { return pickval.value; }).join(", ") + "\n" : "")
-            ,
-          'data-all-sfdc-metadata': JSON.stringify(fields[index])
-        }, {
-          class: 'field-value'
-        }, {
-          class: 'field-type'
-        }, {
-          class: 'field-setup',
-          'data-setup-link': setupLink
-        }], [null,
-          function(event) {
-            showAllFieldMetadata(JSON.parse(event.currentTarget.getAttribute('data-all-sfdc-metadata')));
-          },
-          fields[index].type == 'reference' && fields[index].dataValue
-            ? function(event) { showAllData({recordId: event.currentTarget.textContent}); }
-            : null,
-          null,
-          setupLink ? function(event) {
-            open(event.currentTarget.getAttribute('data-setup-link'));
-          } : null
-        ],
-        (fields[index].calculated) ? 'calculated' : null
-      );
-    }
-    makeSortable(document.querySelector('#dataTableBody').parentNode);
-  }).then(null, function(error) {
-    popupWin.alert(error);
-  });
-
-  function showAllFieldMetadata(allFieldMetadata) {
-    var fieldDetailsView = document.querySelector('#fieldDetailsView');
-
-    fieldDetailsView.querySelector('#fieldDetailsHeading').textContent = 'All available metadata for "' + allFieldMetadata.name + '"';
-
-    var tbody = fieldDetailsView.querySelector('#fieldDetailsTbody');
-    tbody.textContent = '';
-    for (var fieldMetadataAttribute in allFieldMetadata) {
-      var tr = document.createElement('tr');
-      var tdKey = document.createElement('td');
-      var tdValue = document.createElement('td');
-      tdKey.textContent = fieldMetadataAttribute;
-      tdValue.textContent = JSON.stringify(allFieldMetadata[fieldMetadataAttribute]);
-      tr.appendChild(tdKey);
-      tr.appendChild(tdValue)
-      tbody.appendChild(tr);
-    }
-    fieldDetailsView.style.display = 'block';
-    document.querySelector('#field-filter').focus();
-  }
-
-  function hideAllFieldMetadataView() {
-    var fieldDetailsView = document.querySelector('#fieldDetailsView');
-    fieldDetailsView.style.display = 'none';
-  }
-
-  function addRowToDataTable(cellData, cellAttributes, onClickFunctions, rowClass) {
-    var tableRow = document.createElement('tr');
-    tableRow.setAttribute('class', rowClass);
-
-    for (var i = 0; i < cellData.length; i++) {
-      var tableCell = document.createElement('td');
-      for (var attributeName in cellAttributes[i]) {
-        tableCell.setAttribute(attributeName, cellAttributes[i][attributeName]);
-      }
-      if (onClickFunctions[i] != null) {
-        tableCell.addEventListener('click', onClickFunctions[i]);
-        tableCell.tabIndex = 0;
-      }
-      tableCell.textContent = cellData[i];
-      tableRow.appendChild(tableCell);
-    }
-
-    document.querySelector('#dataTableBody').appendChild(tableRow);
-  }
-
-  function sortTable(table, col, dir) {
-    var tbody = table.tBodies[0];
-    var rows = Array.prototype.slice.call(tbody.rows, 0);
-    rows = rows.sort(function (a, b) {
-      return dir * (a.cells[col].textContent.trim().localeCompare(b.cells[col].textContent.trim()));
-    });
-    for (var i = 0; i < rows.length; ++i) {
-      tbody.appendChild(rows[i]);
-    }
-  }
-
-  function makeSortable(table) {
-    var thead = table.tHead.rows[0].cells;
-    var sortCol = 0;
-    var sortDir = -1;
-    for (var col = 0; col < thead.length; col++) {
-      thead[col].tabIndex = 0;
-      (function (col) {
-        thead[col].addEventListener("click", function () {
-          thead[sortCol].style.background = '';
-          sortDir = col == sortCol ? -sortDir : 1;
-          sortCol = col;
-          thead[sortCol].style.backgroundImage = sortDir > 0 ? 'url(/img/colTitle_downarrow.gif)' : 'url(/img/colTitle_uparrow.gif)';
-          sortTable(table, sortCol, sortDir);
+    // Fetch extra field metadata (field descriptions) using Tooling API call
+    spinFor("getting field descriptions", askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Metadata from FieldDefinition where EntityDefinitionId = '" + sobjectDescribe.name + "'"))
+      .then(function(res) {
+        var map = {};
+        JSON.parse(res).records.forEach(function(fd) {
+          map[fd.QualifiedApiName] = fd;
         });
-      }(col));
-    }
-  }
+        toolingFieldDefinitions(map);
+      }));
+
+    spinFor("getting setup links", loadFieldSetupData(sobjectDescribe.name).then(function(res) {
+      fieldIds(res);
+    }));
+
+  }));
 
 }
