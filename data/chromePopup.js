@@ -140,10 +140,7 @@ function getRecordIdFromUrl() {
     var recordId = urlSearch.indexOf('?id=') > -1 ? urlSearch.substring(urlSearch.indexOf('?id=') + '?id='.length)
         : urlSearch.indexOf('&id=') > -1 ? urlSearch.substring(urlSearch.indexOf('&id=') + '&id='.length)
         : document.location.pathname.substring(1);
-    if (recordId.indexOf('&') > -1) {
-        recordId = recordId.substring(0, recordId.indexOf('&'));
-    }
-    return recordId;
+    return /[a-zA-Z0-9]*/.exec(recordId)[0];
 }
 
 function loadMetadataForRecordId(recordId) {
