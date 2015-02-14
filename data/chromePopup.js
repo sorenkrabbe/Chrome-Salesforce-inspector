@@ -144,7 +144,7 @@ function getRecordIdFromUrl() {
 }
 
 function loadMetadataForRecordId(recordId) {
-    return askSalesforce('/services/data/v32.0/sobjects/').then(function(generalMetadataResponse) {
+    return askSalesforce('/services/data/v33.0/sobjects/').then(function(generalMetadataResponse) {
         var currentObjKeyPrefix = recordId.substring(0, 3);
         for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
             if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
@@ -156,7 +156,7 @@ function loadMetadataForRecordId(recordId) {
 }
 
 function loadFieldSetupData(sobjectName) {
-  return askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField where EntityDefinitionId = '" + sobjectName + "'")).then(function(res) {
+  return askSalesforce("/services/data/v33.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField where EntityDefinitionId = '" + sobjectName + "'")).then(function(res) {
     var fieldIds = {};
     res.records.forEach(function(customField) {
       fieldIds[customField.FullName] = customField.Id;
@@ -212,7 +212,7 @@ function askSalesforceSoap(request) {
             return;
         }
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/32.0?cache=' + Math.random(), true);
+        xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/33.0?cache=' + Math.random(), true);
         xhr.setRequestHeader('Content-Type', "text/xml");
         xhr.setRequestHeader('SOAPAction', '""');
         xhr.onreadystatechange = function() {

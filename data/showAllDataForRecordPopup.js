@@ -317,7 +317,7 @@ function showAllData(recordDesc) {
   if ("recordId" in recordDesc) {
     sobjectDescribePromise = loadMetadataForRecordId(recordDesc.recordId);
   } else if ("recordAttributes" in recordDesc) {
-    sobjectDescribePromise = askSalesforce("/services/data/v32.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+    sobjectDescribePromise = askSalesforce("/services/data/v33.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
   } else {
     throw "unknown input for showAllData";
   }
@@ -352,7 +352,7 @@ function showAllData(recordDesc) {
     }
 
     // Fetch extra field metadata (field descriptions) using Tooling API call
-    spinFor("getting field descriptions", askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Metadata from FieldDefinition where EntityDefinitionId = '" + sobjectDescribe.name + "'"))
+    spinFor("getting field descriptions", askSalesforce("/services/data/v33.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Metadata from FieldDefinition where EntityDefinitionId = '" + sobjectDescribe.name + "'"))
       .then(function(res) {
         var map = {};
         res.records.forEach(function(fd) {

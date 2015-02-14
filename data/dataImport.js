@@ -174,7 +174,7 @@ function dataImport() {
     }
   });
 
-  spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(res) {
+  spinFor(askSalesforce("/services/data/v33.0/sobjects/").then(function(res) {
     var list = document.querySelector("#sobjectlist");
     res.sobjects.forEach(function(sobjectDescribe) {
       var opt = document.createElement("option");

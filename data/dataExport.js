@@ -199,12 +199,12 @@ function dataExport() {
       }));
     }
   }
-  spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(res) {
+  spinFor(askSalesforce("/services/data/v33.0/sobjects/").then(function(res) {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectDataDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
   }));
-  spinFor(askSalesforce("/services/data/v32.0/tooling/sobjects/").then(function(res) {
+  spinFor(askSalesforce("/services/data/v33.0/tooling/sobjects/").then(function(res) {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectToolingDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
@@ -517,7 +517,7 @@ function dataExport() {
     var query = document.querySelector("#query").value;
     var queryMethod = document.querySelector("#query-tooling").checked ? 'tooling/query' : document.querySelector("#query-all").checked ? 'queryAll' : 'query';
     exportedRecords = [];
-    spinFor(askSalesforce('/services/data/v32.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(data) {
+    spinFor(askSalesforce('/services/data/v33.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(data) {
       exportedRecords = exportedRecords.concat(data.records);
       if (!data.done) {
         exportStatus = "Exporting... Completed " +exportedRecords.length + " of " + data.totalSize + " records.";
