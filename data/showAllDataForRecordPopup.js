@@ -34,7 +34,6 @@ function showAllData(recordDesc) {
   }\
   tr.calculated {\
     color: #777777;\
-    background-color: #CCCCCC;\
     font-style: italic;\
   }\
   tr:hover, tr.calculated:hover {\
