@@ -130,7 +130,7 @@ function showFieldDetails(labelElement){
             output.appendChild(
                 E('div', [
                     T(
-                        fieldDetail.type == 'reference' ? '[' + fieldDetail.referenceTo + ']'
+                        fieldDetail.type == 'reference' ? '[' + fieldDetail.referenceTo.join(', ') + ']'
                         : fieldDetail.type
                             + (fieldDetail.length != 0 ? ' (' + fieldDetail.length + ')' : '')
                             + (fieldDetail.precision != 0 || fieldDetail.scale != 0 ? ' (' + fieldDetail.precision + ', ' + fieldDetail.scale + ')' : '')

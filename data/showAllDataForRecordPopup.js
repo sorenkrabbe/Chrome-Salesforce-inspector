@@ -218,7 +218,13 @@ function showAllData(recordDesc) {
   };
 
   function FieldRow(fieldDescribe, sobjectDescribe) {
-    var fieldTypeDesc = fieldDescribe.type + " (" + fieldDescribe.length + ")" + (fieldDescribe.calculated ? "*" : "");
+    var fieldTypeDesc =
+      fieldDescribe.type == "reference"
+        ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
+        : fieldDescribe.type
+          + (fieldDescribe.length != 0 ? " (" + fieldDescribe.length + ")" : "")
+          + (fieldDescribe.precision != 0 || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
+          + (fieldDescribe.calculated ? "*" : "");
     function fieldDescription() {
       return toolingFieldDefinitions()[fieldDescribe.name] && toolingFieldDefinitions()[fieldDescribe.name].Metadata.description;
     }
