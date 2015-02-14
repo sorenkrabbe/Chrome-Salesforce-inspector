@@ -174,9 +174,9 @@ function dataImport() {
     }
   });
 
-  spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(responseText) {
+  spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(res) {
     var list = document.querySelector("#sobjectlist");
-    JSON.parse(responseText).sobjects.forEach(function(sobjectDescribe) {
+    res.sobjects.forEach(function(sobjectDescribe) {
       var opt = document.createElement("option");
       opt.value = sobjectDescribe.name;
       list.appendChild(opt);

@@ -147,9 +147,8 @@ function getRecordIdFromUrl() {
 }
 
 function loadMetadataForRecordId(recordId) {
-    return askSalesforce('/services/data/v32.0/sobjects/').then(function(responseText) {
+    return askSalesforce('/services/data/v32.0/sobjects/').then(function(generalMetadataResponse) {
         var currentObjKeyPrefix = recordId.substring(0, 3);
-        var generalMetadataResponse = JSON.parse(responseText);
         for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
             if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
                 return askSalesforce(generalMetadataResponse.sobjects[i].urls.describe);
@@ -162,7 +161,7 @@ function loadMetadataForRecordId(recordId) {
 function loadFieldSetupData(sobjectName) {
   return askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField where EntityDefinitionId = '" + sobjectName + "'")).then(function(res) {
     var fieldIds = {};
-    JSON.parse(res).records.forEach(function(customField) {
+    res.records.forEach(function(customField) {
       fieldIds[customField.FullName] = customField.Id;
     });
     return fieldIds;
@@ -199,7 +198,7 @@ function askSalesforce(url) {
         xhr.onreadystatechange = function() {
             if (xhr.readyState == 4) {
                 if (xhr.status == 200) {
-                    resolve(xhr.responseText);
+                    resolve(JSON.parse(xhr.responseText));
                 } else {
                     reject(xhr);
                 }

@@ -191,21 +191,21 @@ function dataExport() {
     if (sobjectDescribe && !sobjectDescribe.fields && !sobjectDescribe.fieldsRequest) {
       console.log("getting fields for " + sobjectDescribe.name);
       sobjectDescribe.fieldsRequest = true;
-      spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(responseText) {
-        sobjectDescribe.fields = JSON.parse(responseText).fields;
+      spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(res) {
+        sobjectDescribe.fields = res.fields;
         queryAutocompleteHandler();
       }, function() {
         sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
       }));
     }
   }
-  spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(responseText) {
-    JSON.parse(responseText).sobjects.forEach(function(sobjectDescribe) {
+  spinFor(askSalesforce("/services/data/v32.0/sobjects/").then(function(res) {
+    res.sobjects.forEach(function(sobjectDescribe) {
       sobjectDataDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
   }));
-  spinFor(askSalesforce("/services/data/v32.0/tooling/sobjects/").then(function(responseText) {
-    JSON.parse(responseText).sobjects.forEach(function(sobjectDescribe) {
+  spinFor(askSalesforce("/services/data/v32.0/tooling/sobjects/").then(function(res) {
+    res.sobjects.forEach(function(sobjectDescribe) {
       sobjectToolingDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
   }));
@@ -517,8 +517,7 @@ function dataExport() {
     var query = document.querySelector("#query").value;
     var queryMethod = document.querySelector("#query-tooling").checked ? 'tooling/query' : document.querySelector("#query-all").checked ? 'queryAll' : 'query';
     exportedRecords = [];
-    spinFor(askSalesforce('/services/data/v32.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(responseText) {
-      var data = JSON.parse(responseText);
+    spinFor(askSalesforce('/services/data/v32.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(data) {
       exportedRecords = exportedRecords.concat(data.records);
       if (!data.done) {
         exportStatus = "Exporting... Completed " +exportedRecords.length + " of " + data.totalSize + " records.";

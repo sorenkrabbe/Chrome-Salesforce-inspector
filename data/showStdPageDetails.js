@@ -7,8 +7,8 @@ var fieldSetupData = {};
 function showStdPageDetails() {
   var recordId = getRecordIdFromUrl();
   return loadMetadataForRecordId(recordId)
-    .then(function(responseText) {
-      metadataResponse = JSON.parse(responseText);
+    .then(function(res) {
+      metadataResponse = res;
       
       // We don't wait for loadFieldSetupData to resolve. We show the data we have, and add the field setup links once that data arrives
       fieldDetailsReady();

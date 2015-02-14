@@ -321,9 +321,8 @@ function showAllData(recordDesc) {
   } else {
     throw "unknown input for showAllData";
   }
-  spinFor("getting metadata", sobjectDescribePromise.then(function(responseText) {
+  spinFor("getting metadata", sobjectDescribePromise.then(function(sobjectDescribe) {
     // Display the retrieved object data
-    var sobjectDescribe = JSON.parse(responseText);
     objectData(sobjectDescribe);
     vm.fieldRows.removeAll();
     sobjectDescribe.fields.forEach(function(fieldDescribe) {
@@ -335,7 +334,7 @@ function showAllData(recordDesc) {
       var recordDataPromise;
       if ("recordId" in recordDesc) {
         if (recordDesc.recordId.length < 15) {
-          recordDataPromise = Promise.resolve(JSON.stringify({})); // Just a prefix, don't attempt to load the record
+          recordDataPromise = Promise.resolve({}); // Just a prefix, don't attempt to load the record
         } else {
           recordDataPromise = askSalesforce(sobjectDescribe.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
         }
@@ -345,7 +344,7 @@ function showAllData(recordDesc) {
         throw "unknown input for showAllData";
       }
       spinFor("getting record data", recordDataPromise.then(function(res) {
-        recordData(JSON.parse(res));
+        recordData(res);
       }));
     } else {
       recordData({}); // Hides the loading indicator
@@ -356,7 +355,7 @@ function showAllData(recordDesc) {
     spinFor("getting field descriptions", askSalesforce("/services/data/v32.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Metadata from FieldDefinition where EntityDefinitionId = '" + sobjectDescribe.name + "'"))
       .then(function(res) {
         var map = {};
-        JSON.parse(res).records.forEach(function(fd) {
+        res.records.forEach(function(fd) {
           map[fd.QualifiedApiName] = fd;
         });
         toolingFieldDefinitions(map);
