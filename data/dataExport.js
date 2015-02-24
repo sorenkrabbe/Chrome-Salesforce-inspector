@@ -60,7 +60,7 @@ function dataExport() {
     height: 4em;\
     margin-top: 3px;\
   }\
-  #data {\
+  #result-text {\
     height: calc(100% - 2px);\
     resize: none;\
   }\
@@ -119,16 +119,16 @@ function dataExport() {
   ';
 
   document.body.innerHTML = '\
-  <img id="spinner" src="data:image/gif;base64,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" hidden>\
-  <div id="user-info">...</div>\
+  <img id="spinner" src="data:image/gif;base64,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" data-bind="visible: spinnerCount() > 0">\
+  <div id="user-info" data-bind="text: userInfo"></div>\
   <div class="area">\
     <h1>Export query</h1>\
-    <label><input type="checkbox" id="query-all"> Include deleted and archived records?</label>\
-    <label title="With the tooling API you can query more metadata, but you cannot query regular data"><input type="checkbox" id="query-tooling"> Use Tooling API?</label>\
-    <a href="about:blank" id="export-help-btn">Export help</a>\
-    <textarea id="query">select Id from Account</textarea>\
-    <div id="autocomplete-results">&nbsp;</div>\
-    <div id="export-help-box" hidden>\
+    <label><input type="checkbox" data-bind="checked: queryAll, disable: queryTooling"> Include deleted and archived records?</label>\
+    <label title="With the tooling API you can query more metadata, but you cannot query regular data"><input type="checkbox" data-bind="checked: queryTooling, disable: queryAll"> Use Tooling API?</label>\
+    <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>\
+    <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}">select Id from Account</textarea>\
+    <div id="autocomplete-results"><span data-bind="text: autocompleteTitle"></span><span data-bind="foreach: autocompleteResults"><a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a></span></div>\
+    <div data-bind="visible: showHelp">\
       <p>Use for quick one-off data exports.</p>\
       <ul>\
         <li>Enter a <a href="http://www.salesforce.com/us/developer/docs/soql_sosl/" target="_blank">SOQL query</a> in the box above</li>\
@@ -139,43 +139,52 @@ function dataExport() {
     </div>\
   </div>\
   <div class="action-arrow">\
-    <div class="arrow-body"><button id="export-btn">Export</button></div>\
+    <div class="arrow-body"><button data-bind="disable: exportResultVm().isWorking, click: doExport">Export</button></div>\
     <div class="arrow-head"></div>\
   </div>\
   <div class="area" id="result-area">\
     <h1>Export result</h1>\
-    <label><input type=radio name="data-format" checked id="data-format-table"> Table</label>\
-    <label><input type=radio name="data-format" checked id="data-format-excel"> Excel</label>\
-    <label><input type=radio name="data-format" id="data-format-csv"> CSV</label>\
-    <label><input type=radio name="data-format" id="data-format-json"> JSON</label>\
-    <div id="result-box">\
-      <textarea id="data" readonly></textarea>\
-      <table id="result-table"></table>\
+    <label><input type=radio name="data-format" value="table" data-bind="checked: dataFormat"> Table</label>\
+    <label><input type=radio name="data-format" value="excel" data-bind="checked: dataFormat"> Excel</label>\
+    <label><input type=radio name="data-format" value="csv" data-bind="checked: dataFormat"> CSV</label>\
+    <label><input type=radio name="data-format" value="json" data-bind="checked: dataFormat"> JSON</label>\
+    <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + \'px\'}">\
+      <textarea id="result-text" readonly data-bind="text: exportResultVm().resultText, visible: !exportResultVm().resultTable"></textarea>\
+      <table data-bind="dom: exportResultVm().resultTable, visible: exportResultVm().resultTable"></table>\
     </div>\
   </div>\
   ';
 
-  var spinnerCount = 0;
+  var exportResult = ko.observable({isWorking: false, exportStatus: "", exportedRecords: [], exportedTooling: false});
+
+  var vm = {
+    spinnerCount: ko.observable(0),
+    showHelp: ko.observable(false),
+    userInfo: ko.observable("..."),
+    winInnerHeight: ko.observable(0),
+    resultBoxOffsetTop: ko.observable(0),
+    queryAll: ko.observable(false),
+    queryTooling: ko.observable(false),
+    autocompleteTitle: ko.observable("\u00A0"),
+    autocompleteResults: ko.observable([]),
+    dataFormat: ko.observable("excel"),
+    autocompleteClick: null,
+    exportResultVm: ko.computed(computeExportResultVm),
+    toggleHelp: function() {
+      vm.showHelp(!vm.showHelp());
+    },
+    doExport: doExport
+  };
+
+  ko.applyBindings(vm, document.documentElement);
+
   function spinFor(promise) {
-    spinnerCount++;
-    document.querySelector("#spinner").removeAttribute("hidden");
+    vm.spinnerCount(vm.spinnerCount() + 1);
     promise.then(stopSpinner, stopSpinner);
   }
   function stopSpinner() {
-    spinnerCount--;
-    if (spinnerCount == 0) {
-      document.querySelector("#spinner").setAttribute("hidden", "");
-    }
+    vm.spinnerCount(vm.spinnerCount() - 1);
   }
-
-  document.querySelector("#export-help-btn").addEventListener("click", function(e) {
-    e.preventDefault();
-    if (document.querySelector("#export-help-box").hasAttribute("hidden")) {
-      document.querySelector("#export-help-box").removeAttribute("hidden");
-    } else {
-      document.querySelector("#export-help-box").setAttribute("hidden", "");
-    }
-  });
 
   /**
    * sobjectDescribes is a map.
@@ -211,20 +220,20 @@ function dataExport() {
   }));
 
   spinFor(askSalesforceSoap('<getUserInfo/>').then(function(res) {
-    document.querySelector('#user-info').textContent = res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent;
+    vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
   var queryInput = document.querySelector("#query");
 
   var resultBox = document.querySelector("#result-box");
   function recalculateHeight() {
-    resultBox.style.height = (popupWin.innerHeight - resultBox.offsetTop - 25) + "px";
+    vm.resultBoxOffsetTop(resultBox.offsetTop);
   }
   queryInput.addEventListener("mousemove", recalculateHeight);
   popupWin.addEventListener("mouseup", recalculateHeight);
   popupWin.addEventListener("resize", function() {
-    queryInput.style.maxHeight = (popupWin.innerHeight - 200) + "px";
-    recalculateHeight();
+    vm.winInnerHeight(popupWin.innerHeight);
+    recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
   });
 
   /**
@@ -238,27 +247,18 @@ function dataExport() {
    * Does not yet support subqueries.
    */
   function queryAutocompleteHandler() {
-    var sobjectDescribes = document.querySelector("#query-tooling").checked ? sobjectToolingDescribes : sobjectDataDescribes;
+    var sobjectDescribes = vm.queryTooling() ? sobjectToolingDescribes : sobjectDataDescribes;
     var query = queryInput.value;
     var selStart = queryInput.selectionStart;
     var selEnd = queryInput.selectionEnd;
 
-    var autocompleteResults = document.querySelector("#autocomplete-results");
-    autocompleteResults.textContent = "\u00A0";
-    function makeLink(value, title) {
-      var res = document.createElement("a");
-      res.textContent = value;
-      res.title = title;
-      res.href = "about:blank"; // The normal trick of using "#" to make the link activateable does not seem to work in an about:blank page in Firefox
-      res.addEventListener('click', function(e) {
-        e.preventDefault();
-        var newValue = e.target.textContent;
-        queryInput.focus();
-        queryInput.setRangeText(newValue, selStart, selEnd, "end");
-        queryAutocompleteHandler();
-      });
-      autocompleteResults.appendChild(res);
-    }
+    vm.autocompleteTitle("\u00A0");
+    vm.autocompleteResults([]);
+    vm.autocompleteClick = function(item) {
+      queryInput.focus();
+      queryInput.setRangeText(item.value, selStart, selEnd, "end");
+      queryAutocompleteHandler();
+    };
 
     // Find out what sobject we are querying, by using the word after the "from" keyword.
     // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
@@ -274,13 +274,15 @@ function dataExport() {
 
     // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
-      autocompleteResults.textContent = "Objects:";
+      var ar = [];
       for (var sName in sobjectDescribes) {
         var sobjectDescribe = sobjectDescribes[sName];
         if (sobjectDescribe.name.toLowerCase().indexOf(searchTerm) > -1 || sobjectDescribe.label.toLowerCase().indexOf(searchTerm) > -1) {
-          makeLink(sobjectDescribe.name, sobjectDescribe.label);
+          ar.push({value: sobjectDescribe.name, title: sobjectDescribe.label});
         }
       }
+      vm.autocompleteTitle("Objects:");
+      vm.autocompleteResults(ar);
       return;
     }
 
@@ -351,7 +353,7 @@ function dataExport() {
                 .join(", ");
             })
             .join(", ");
-          autocompleteResults.textContent = (fieldNames || "Field") + " values:";
+          var ar = [];
           contextSobjectDescribes.forEach(function(sobjectDescribe) {
             sobjectDescribe.fields
               .filter(function(field) { return field.name.toLowerCase() == fieldName; })
@@ -359,23 +361,27 @@ function dataExport() {
                 field.picklistValues
                   .filter(function(pickVal) { return pickVal.value.toLowerCase().indexOf(searchTerm) > -1 || pickVal.label.toLowerCase().indexOf(searchTerm) > -1; })
                   .forEach(function(pickVal) {
-                    makeLink(pickVal.value, pickVal.label);
+                    ar.push({value: pickVal.value, title: pickVal.label});
                   });
               });
           });
+          vm.autocompleteTitle((fieldNames || "Field") + " values:");
+          vm.autocompleteResults(ar);
         } else {
           // Autocomplete field names
-          autocompleteResults.textContent = contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:";
+          var ar = [];
           contextSobjectDescribes.forEach(function(sobjectDescribe) {
             sobjectDescribe.fields
               .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm) > -1 || field.label.toLowerCase().indexOf(searchTerm) > -1; })
               .forEach(function(field) {
-                makeLink(field.name, field.label);
+                ar.push({value: field.name, title: field.label});
                 if (field.type == "reference") {
-                  makeLink(field.relationshipName + ".", field.label);
+                  ar.push({value: field.relationshipName + ".", title: field.label});
                 }
               });
           });
+          vm.autocompleteTitle(contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:");
+          vm.autocompleteResults(ar);
         }
       }
     }
@@ -386,24 +392,20 @@ function dataExport() {
   queryInput.addEventListener("keyup", queryAutocompleteHandler);
   queryInput.addEventListener("mouseup", queryAutocompleteHandler);
 
-  var exportedRecords = [];
-  var exportStatus = "";
-  var exportedTooling = false;
-  var resultTable = document.querySelector("#result-table");
-  var resultText = document.querySelector("#data");
-  function showExportResult() {
-    if (exportStatus != null) {
-      resultText.value = exportStatus;
-      resultText.removeAttribute("hidden");
-      resultTable.setAttribute("hidden", "");
-      return;
+  function computeExportResultVm() {
+    if (exportResult().exportStatus != null) {
+      return {
+        isWorking: exportResult().isWorking,
+        resultText: exportResult().exportStatus
+      };
     }
-    var exportAsJson = document.querySelector("#data-format-json").checked;
+    var expRecords = exportResult().exportedRecords;
+    var exportAsJson = vm.dataFormat() == "json";
     if (exportAsJson) {
-      resultText.value = JSON.stringify(exportedRecords, null, "  ");
-      resultText.removeAttribute("hidden");
-      resultTable.setAttribute("hidden", "");
-      return;
+      return {
+        isWorking: exportResult().isWorking,
+        resultText: JSON.stringify(expRecords, null, "  ")
+      };
     }
     var table = [];
     /*
@@ -413,8 +415,8 @@ function dataExport() {
     We don't care, because we don't need a stable set of columns for our use case.
     */
     var header = [];
-    for (var i = 0; i < exportedRecords.length; i++) {
-      var record = exportedRecords[i];
+    for (var i = 0; i < expRecords.length; i++) {
+      var record = expRecords[i];
       function discoverColumns(record, prefix) {
         for (var field in record) {
           if (field == "attributes") {
@@ -435,8 +437,8 @@ function dataExport() {
     /*
     Now we have the columns, we add the records to the CSV table.
     */
-    for (var i = 0; i < exportedRecords.length; i++) {
-      var record = exportedRecords[i];
+    for (var i = 0; i < expRecords.length; i++) {
+      var record = expRecords[i];
       var row = [];
       for (var c = 0; c < header.length; c++) {
         var column = header[c].split(".");
@@ -457,8 +459,9 @@ function dataExport() {
       }
       table.push(row);
     }
-    if (document.querySelector("#data-format-table").checked) {
-      resultTable.innerHTML = "";
+    if (vm.dataFormat() == "table") {
+      // Here we do raw DOM manipulation. Consider refactoring into using Knockout.js data binding.
+      var trs = [];
       for (var r = 0; r < table.length; r++) {
         var row = table[r];
         var tr = document.createElement("tr");
@@ -471,10 +474,10 @@ function dataExport() {
             a.href = "about:blank";
             a.textContent = "+";
             a.title = "Show all data";
-            a.sfRecordAttributes = exportedRecords[r - 1].attributes;
+            a.sfRecordAttributes = expRecords[r - 1].attributes;
             a.addEventListener("click", function(e) {
               e.preventDefault();
-              showAllData({recordAttributes: e.target.sfRecordAttributes, useToolingApi: exportedTooling});
+              showAllData({recordAttributes: e.target.sfRecordAttributes, useToolingApi: exportResult().exportedTooling});
             });
             td.appendChild(a);
           }
@@ -485,52 +488,62 @@ function dataExport() {
           td.textContent = cell;
           tr.appendChild(td);
         });
-        resultTable.appendChild(tr);
+        trs.push(tr);
       }
-      resultText.setAttribute("hidden", "");
-      resultTable.removeAttribute("hidden");
+      return {
+        isWorking: exportResult().isWorking,
+        resultTable: trs
+      };
     } else {
-      var separator = document.querySelector("#data-format-excel").checked ? "\t" : ",";
-      resultText.value = csvSerialize(table, separator);
-      resultText.removeAttribute("hidden");
-      resultTable.setAttribute("hidden", "");
+      var separator = vm.dataFormat() == "excel" ? "\t" : ",";
+      return {
+        isWorking: exportResult().isWorking,
+        resultText: csvSerialize(table, separator)
+      };
     }
   }
-  document.querySelector("#data-format-table").addEventListener("change", showExportResult);
-  document.querySelector("#data-format-excel").addEventListener("change", showExportResult);
-  document.querySelector("#data-format-csv").addEventListener("change", showExportResult);
-  document.querySelector("#data-format-json").addEventListener("change", showExportResult);
 
-  document.querySelector("#query-tooling").addEventListener("change", function(e) {
+  vm.queryTooling.subscribe(function() {
     queryAutocompleteHandler();
-    document.querySelector("#query-all").disabled = e.target.checked;
-  });
-  document.querySelector("#query-all").addEventListener("change", function(e) {
-    document.querySelector("#query-tooling").disabled = e.target.checked;
   });
 
-  document.querySelector("#export-btn").addEventListener("click", function() {
-    document.querySelector("#export-btn").disabled = true;
-    exportedTooling = document.querySelector("#query-tooling").checked;
-    exportStatus = "Exporting...";
-    showExportResult();
-    var query = document.querySelector("#query").value;
-    var queryMethod = document.querySelector("#query-tooling").checked ? 'tooling/query' : document.querySelector("#query-all").checked ? 'queryAll' : 'query';
-    exportedRecords = [];
+  function doExport() {
+    var exportedTooling = vm.queryTooling();
+    var exportedRecords = [];
+    exportResult({
+      isWorking: true,
+      exportStatus: "Exporting...",
+      exportedRecords: exportedRecords,
+      exportedTooling: exportedTooling
+    });
+    var query = queryInput.value;
+    var queryMethod = exportedTooling ? 'tooling/query' : vm.queryAll() ? 'queryAll' : 'query';
     spinFor(askSalesforce('/services/data/v33.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(data) {
       exportedRecords = exportedRecords.concat(data.records);
       if (!data.done) {
-        exportStatus = "Exporting... Completed " +exportedRecords.length + " of " + data.totalSize + " records.";
-        showExportResult();
+        exportResult({
+          isWorking: true,
+          exportStatus: "Exporting... Completed " + exportedRecords.length + " of " + data.totalSize + " records.",
+          exportedRecords: exportedRecords,
+          exportedTooling: exportedTooling
+        });
         return askSalesforce(data.nextRecordsUrl).then(queryHandler);
       }
       if (exportedRecords.length == 0) {
-        exportStatus = data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.";
-        showExportResult();
+        exportResult({
+          isWorking: false,
+          exportStatus: data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.",
+          exportedRecords: exportedRecords,
+          exportedTooling: exportedTooling
+        });
         return null;
       }
-      exportStatus = null;
-      showExportResult();
+      exportResult({
+        isWorking: false,
+        exportStatus: null,
+        exportedRecords: exportedRecords,
+        exportedTooling: exportedTooling
+      });
       return null;
     }, function(xhr) {
       if (!xhr || xhr.readyState != 4) {
@@ -541,18 +554,23 @@ function dataExport() {
       for (var i = 0; i < data.length; i++) {
         text += data[i].message + "\n";
       }
-      exportStatus = text;
-      showExportResult();
+      exportResult({
+        isWorking: false,
+        exportStatus: text,
+        exportedRecords: exportedRecords,
+        exportedTooling: exportedTooling
+      });
       return null;
-    }).then(function() {
-      document.querySelector("#export-btn").disabled = false;
-    }, function(error) {
+    }).then(null, function(error) {
       console.error(error);
-      exportStatus = "UNEXPECTED EXCEPTION:" + error;
-      showExportResult();
-      document.querySelector("#export-btn").disabled = false;
+      exportResult({
+        isWorking: false,
+        exportStatus: "UNEXPECTED EXCEPTION:" + error,
+        exportedRecords: exportedRecords,
+        exportedTooling: exportedTooling
+      });
     }));
-  });
+  }
 
   function csvSerialize(table, separator) {
     return table.map(function(row) { return row.map(function(text) { return "\"" + ("" + (text == null ? "" : text)).replace("\"", "\"\"") + "\""; }).join(separator); }).join("\r\n");

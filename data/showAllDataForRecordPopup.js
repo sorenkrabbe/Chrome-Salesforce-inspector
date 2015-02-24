@@ -6,6 +6,7 @@ function showAllData(recordDesc) {
     // Firefox
     // Use unsafeWindow to work around https://bugzilla.mozilla.org/show_bug.cgi?id=996069
     popupWin = new XPCNativeWrapper(unsafeWindow.open("", "", "width=850,height=800,scrollbars=yes"));
+    // Note: The normal trick of using <a href="#" onclick="..."> to make a link activateable does not seem to work in an about:blank page in Firefox. Therefore we use <a href="about:blank" onclick="..."> instead.
   } else {
     // Chrome
     popupWin = open("", "", "width=850,height=800,scrollbars=yes");

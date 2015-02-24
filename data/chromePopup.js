@@ -227,3 +227,15 @@ function askSalesforceSoap(request) {
         xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="urn:partner.soap.sforce.com"><SessionHeader><sessionId>' + session + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="urn:partner.soap.sforce.com">' + request + '</soapenv:Body></soapenv:Envelope>');
     });
 }
+
+ko.bindingHandlers.dom = {
+  update: function(element, valueAccessor) {
+    var childs = ko.unwrap(valueAccessor());
+    element.textContent = "";
+    if (childs) {
+      for (var i = 0; i < childs.length; i++) {
+        element.appendChild(childs[i]);
+      }
+    }
+  }
+};
