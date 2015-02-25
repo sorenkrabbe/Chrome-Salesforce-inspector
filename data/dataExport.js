@@ -5,10 +5,10 @@ function dataExport() {
   if (window.unsafeWindow && window.XPCNativeWrapper) {
     // Firefox
     // Use unsafeWindow to work around https://bugzilla.mozilla.org/show_bug.cgi?id=996069
-    popupWin = new XPCNativeWrapper(unsafeWindow.open('', '', 'width=850,height=800,scrollbars=yes'));
+    popupWin = new XPCNativeWrapper(unsafeWindow.open("", "", "width=850,height=800,scrollbars=yes"));
   } else {
     // Chrome
-    popupWin = open('', '', 'width=850,height=800,scrollbars=yes');
+    popupWin = open("", "", "width=850,height=800,scrollbars=yes");
   }
   window.addEventListener("pagehide", function() {
     // All JS runs in the parent window, and will stop working when the parent goes away. Therefore close the popup.
@@ -228,7 +228,7 @@ function dataExport() {
     queryAutocompleteHandler();
   }));
 
-  spinFor(askSalesforceSoap('<getUserInfo/>').then(function(res) {
+  spinFor(askSalesforceSoap("<getUserInfo/>").then(function(res) {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
@@ -527,8 +527,8 @@ function dataExport() {
       exportedTooling: exportedTooling
     });
     var query = queryInput.value;
-    var queryMethod = exportedTooling ? 'tooling/query' : vm.queryAll() ? 'queryAll' : 'query';
-    spinFor(askSalesforce('/services/data/v33.0/' + queryMethod + '/?q=' + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
+    var queryMethod = exportedTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+    spinFor(askSalesforce("/services/data/v33.0/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
       exportedRecords = exportedRecords.concat(data.records);
       if (!data.done) {
         exportResult({

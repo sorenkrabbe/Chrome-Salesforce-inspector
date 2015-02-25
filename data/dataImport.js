@@ -5,10 +5,10 @@ function dataImport() {
   if (window.unsafeWindow && window.XPCNativeWrapper) {
     // Firefox
     // Use unsafeWindow to work around https://bugzilla.mozilla.org/show_bug.cgi?id=996069
-    popupWin = new XPCNativeWrapper(unsafeWindow.open('', '', 'width=850,height=800,scrollbars=yes'));
+    popupWin = new XPCNativeWrapper(unsafeWindow.open("", "", "width=850,height=800,scrollbars=yes"));
   } else {
     // Chrome
-    popupWin = open('', '', 'width=850,height=800,scrollbars=yes');
+    popupWin = open("", "", "width=850,height=800,scrollbars=yes");
   }
   window.addEventListener("pagehide", function() {
     // All JS runs in the parent window, and will stop working when the parent goes away. Therefore close the popup.
@@ -183,7 +183,7 @@ function dataImport() {
     vm.sobjectList(res.sobjects.map(function(sobjectDescribe) { return sobjectDescribe.name; }));
   }));
 
-  spinFor(askSalesforceSoap('<getUserInfo/>').then(function(res) {
+  spinFor(askSalesforceSoap("<getUserInfo/>").then(function(res) {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
