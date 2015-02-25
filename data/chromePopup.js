@@ -181,7 +181,7 @@ function getFieldSetupLink(fieldIds, sobjectDescribe, fieldDescribe) {
   }
 }
 
-function askSalesforce(url) {
+function askSalesforce(url, progressHandler) {
     return new Promise(function(resolve, reject) {
         if (!session) {
             reject(new Error("Session not found"));
@@ -189,6 +189,12 @@ function askSalesforce(url) {
         }
         url += (url.indexOf("?") > -1 ? '&' : '?') + 'cache=' + Math.random();
         var xhr = new XMLHttpRequest();
+        if (progressHandler) {
+            progressHandler.abort = function(result) {
+                resolve(result);
+                xhr.abort();
+            }
+        }
         xhr.open("GET", "https://" + document.location.hostname + url, true);
         xhr.setRequestHeader('Authorization', "OAuth " + session);
         xhr.setRequestHeader('Accept', "application/json");

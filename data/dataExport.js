@@ -115,6 +115,11 @@ function dataExport() {
     left: -15px;\
     top: -15px;\
   }\
+  .cancel-btn {\
+    float: right;\
+    height: 1.3em;\
+    border: 1px solid gray;\
+  }\
   </style>\
   ';
 
@@ -148,6 +153,7 @@ function dataExport() {
     <label><input type=radio name="data-format" value="excel" data-bind="checked: dataFormat"> Excel</label>\
     <label><input type=radio name="data-format" value="csv" data-bind="checked: dataFormat"> CSV</label>\
     <label><input type=radio name="data-format" value="json" data-bind="checked: dataFormat"> JSON</label>\
+    <button class="cancel-btn" data-bind="visible: exportResultVm().isWorking, click: stopExport">Stop</button>\
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + \'px\'}">\
       <textarea id="result-text" readonly data-bind="text: exportResultVm().resultText, visible: !exportResultVm().resultTable"></textarea>\
       <table data-bind="dom: exportResultVm().resultTable, visible: exportResultVm().resultTable"></table>\
@@ -173,7 +179,8 @@ function dataExport() {
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
     },
-    doExport: doExport
+    doExport: doExport,
+    stopExport: stopExport
   };
 
   ko.applyBindings(vm, document.documentElement);
@@ -507,6 +514,7 @@ function dataExport() {
     queryAutocompleteHandler();
   });
 
+  var exportProgress = {};
   function doExport() {
     var exportedTooling = vm.queryTooling();
     var exportedRecords = [];
@@ -518,7 +526,7 @@ function dataExport() {
     });
     var query = queryInput.value;
     var queryMethod = exportedTooling ? 'tooling/query' : vm.queryAll() ? 'queryAll' : 'query';
-    spinFor(askSalesforce('/services/data/v33.0/' + queryMethod + '/?q=' + encodeURIComponent(query)).then(function queryHandler(data) {
+    spinFor(askSalesforce('/services/data/v33.0/' + queryMethod + '/?q=' + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
       exportedRecords = exportedRecords.concat(data.records);
       if (!data.done) {
         exportResult({
@@ -527,7 +535,7 @@ function dataExport() {
           exportedRecords: exportedRecords,
           exportedTooling: exportedTooling
         });
-        return askSalesforce(data.nextRecordsUrl).then(queryHandler);
+        return askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
       }
       if (exportedRecords.length == 0) {
         exportResult({
@@ -570,6 +578,10 @@ function dataExport() {
         exportedTooling: exportedTooling
       });
     }));
+  }
+
+  function stopExport() {
+    exportProgress.abort({records: [], done: true, totalSize: 0});
   }
 
   function csvSerialize(table, separator) {
