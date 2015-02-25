@@ -219,11 +219,13 @@ function dataExport() {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectDataDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
+    queryAutocompleteHandler();
   }));
   spinFor(askSalesforce("/services/data/v33.0/tooling/sobjects/").then(function(res) {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectToolingDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
+    queryAutocompleteHandler();
   }));
 
   spinFor(askSalesforceSoap('<getUserInfo/>').then(function(res) {
