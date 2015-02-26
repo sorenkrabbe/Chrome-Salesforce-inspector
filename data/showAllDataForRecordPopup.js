@@ -52,6 +52,10 @@ function showAllData(recordDesc) {
   .field-value {\
     text-align: right;\
   }\
+  .field-value textarea {\
+    width: 100%;\
+    resize: vertical;\
+  }\
   .field-type {\
     text-align: right;\
     width: 9em;\
@@ -108,10 +112,13 @@ function showAllData(recordDesc) {
   .filter-input {\
     width: 20em;\
   }\
+  h1 {\
+    margin: 0;\
+  }\
   .error-message {\
     font-size: 1.2em;\
     font-weight: bold;\
-    margin: 1em 0;\
+    margin: .5em 0;\
     background-color: #fe3;\
     padding: .5em;\
     border: 1px solid red;\
@@ -121,6 +128,12 @@ function showAllData(recordDesc) {
     position: absolute;\
     left: -15px;\
     top: -15px;\
+  }\
+  .object-bar {\
+    margin: .5em 0;\
+  }\
+  .object-actions {\
+    float: right;\
   }\
   </style>\
   ';
@@ -132,7 +145,14 @@ function showAllData(recordDesc) {
     <span data-bind="text: recordHeading()"></span>\
   </h1>\
   <div data-bind="foreach: errorMessages, visible: errorMessages().length > 0" class="error-message"><div data-bind="text: $data"></div></div>\
-  <input class="filter-input" placeholder="Filter" data-bind="value: fieldRowsFilter, valueUpdate: \'input\'" autofocus>\
+  <div class="object-bar">\
+    <div class="object-actions">\
+      <button title="View this record in Salesforce" data-bind="enable: canView(), click: doView">View</button>\
+      <button title="Inline edit the values of this record" data-bind="enable: canEdit(), visible: !isEditing(), click: doEdit">Edit</button>\
+      <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: doSave">Save</button>\
+    </div>\
+    <input class="filter-input" placeholder="Filter" data-bind="value: fieldRowsFilter, valueUpdate: \'input\'" autofocus>\
+  </div>\
   <table>\
     <thead>\
       <th class="field-label" tabindex="0" data-bind="click: sortByLabel">Field Label</th>\
@@ -146,8 +166,9 @@ function showAllData(recordDesc) {
         <td data-bind="text: fieldLabel" class="field-label"></td>\
         <td data-bind="text: fieldName, attr: {title: summary()}, click: openDetails" tabindex="0" class="field-name"></td>\
         <td class="field-value">\
-          <!-- ko if: isId() --><a href="about:blank" data-bind="text: dataValue(), click: showRecordId" class="value-text"></a><!-- /ko -->\
-          <!-- ko if: !isId() --><span data-bind="text: dataValue()" class="value-text"></span><!-- /ko -->\
+          <!-- ko if: isId() && !showEdit() --><a href="about:blank" data-bind="text: dataValue(), click: showRecordId" class="value-text"></a><!-- /ko -->\
+          <!-- ko if: !isId() && !showEdit() --><span data-bind="text: dataValue()" class="value-text"></span><!-- /ko -->\
+          <textarea data-bind="visible: showEdit(), value: dataValue"></textarea>\
         </td>\
         <td data-bind="text: fieldTypeDesc" class="field-type"></td>\
         <td class="field-setup"><a href="about:blank" data-bind="visible: setupLink(), attr: {href: setupLink()}" target="_blank">Setup</a></td>\
@@ -210,11 +231,37 @@ function showAllData(recordDesc) {
     fieldDetailsFilterFocus: ko.observable(false),
     fieldDetailsFilter: ko.observable(""),
     fieldDetails: ko.observable(null),
+    isEditing: ko.observable(false),
     closeFieldDetails: function() {
       vm.fieldDetails(null);
     },
     showObjectMetadata: function() {
       showAllFieldMetadata(objectData());
+    },
+    canEdit: function() {
+      return objectData() && objectData().updateable && recordData() && recordData().Id;
+    },
+    doEdit: function() {
+      vm.isEditing(true);
+    },
+    doSave: function() {
+      var record = {};
+      vm.fieldRows().forEach(function(fieldRow) {
+        fieldRow.saveDataValue(record);
+      });
+      spinFor(
+        "saving record",
+        askSalesforce("/services/data/v33.0/sobjects/" + objectData().name + "/" + recordData().Id, null, {method: "PATCH", body: record})
+          .then(function() {
+            vm.errorMessages.push("Record saved successfully");
+          })
+      );
+    },
+    canView: function() {
+      return recordData() && recordData().Id;
+    },
+    doView: function() {
+      open("https://" + window.document.location.hostname + "/" + recordData().Id);
     }
   };
 
@@ -235,8 +282,16 @@ function showAllData(recordDesc) {
       fieldName: fieldDescribe.name,
       fieldTypeDesc: fieldTypeDesc,
       fieldIsCalculated: fieldDescribe.calculated,
-      dataValue: function() {
-        return recordData() && recordData()[fieldDescribe.name];
+      dataValue: ko.observable(""),
+      setDataValue: function(recordData) {
+        if (recordData[fieldDescribe.name] != null) {
+          fieldVm.dataValue("" + recordData[fieldDescribe.name]);
+        }
+      },
+      saveDataValue: function(recordData) {
+        if (fieldDescribe.updateable) {
+          recordData[fieldDescribe.name] = fieldVm.dataValue() == "" ? null : fieldVm.dataValue();
+        }
       },
       setupLink: function() {
         return getFieldSetupLink(fieldIds(), sobjectDescribe, fieldDescribe);
@@ -248,6 +303,9 @@ function showAllData(recordDesc) {
           + (fieldDescribe.inlineHelpText ? "Help text: " + fieldDescribe.inlineHelpText + "\n" : "")
           + (fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(function(pickval) { return pickval.value; }).join(", ") + "\n" : "")
           ;
+      },
+      showEdit: function() {
+        return vm.isEditing() && fieldDescribe.updateable;
       },
       isId: function() {
         return fieldDescribe.type == "reference" && fieldVm.dataValue();
@@ -350,6 +408,9 @@ function showAllData(recordDesc) {
         throw "unknown input for showAllData";
       }
       spinFor("getting record data", recordDataPromise.then(function(res) {
+        vm.fieldRows().forEach(function(fieldRow) {
+          fieldRow.setDataValue(res);
+        });
         recordData(res);
       }));
     } else {
