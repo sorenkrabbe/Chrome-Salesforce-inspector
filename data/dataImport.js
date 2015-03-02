@@ -71,7 +71,7 @@ function dataImport() {
     margin: 0 auto;\
     padding-top: 5px;\
   }\
-  .arrow-head{\
+  .arrow-head {\
     border-left: 50px solid transparent;\
     border-right: 50px solid transparent;\
     border-top: 15px solid green;\
@@ -83,6 +83,9 @@ function dataImport() {
     font-weight: bold;\
     color: #4a4a56;\
     padding-left: 15px;\
+  }\
+  .area * {\
+    vertical-align: middle\
   }\
   #import-help-btn {\
     float: right;\
@@ -101,9 +104,9 @@ function dataImport() {
   <div id="user-info" data-bind="text: userInfo"></div>\
   <div class="area">\
     <h1>Input data</h1>\
-    <label>Format: <select data-bind="value: dataFormat"><option value="excel">Excel<option value="csv">CSV</select></label>\
-    <label>Action: <select data-bind="value: importAction"><option value="create">Insert<option value="update">Update<option value="delete">Delete</select></label>\
-    <label>Object: <input type="text" data-bind="value: importType" list="sobjectlist"></label>\
+    <label><span>Format:</span> <select data-bind="value: dataFormat"><option value="excel">Excel<option value="csv">CSV</select></label>\
+    <label><span>Action:</span> <select data-bind="value: importAction"><option value="create">Insert<option value="update">Update<option value="delete">Delete</select></label>\
+    <label><span>Object:</span> <input type="text" data-bind="value: importType" list="sobjectlist"></label>\
     <datalist id="sobjectlist" data-bind="foreach: sobjectList"><option data-bind="attr: {value: $data}"></datalist>\
     <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>\
     <textarea id="data" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}"></textarea>\

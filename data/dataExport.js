@@ -85,7 +85,7 @@ function dataExport() {
     margin: 0 auto;\
     padding-top: 5px;\
   }\
-  .arrow-head{\
+  .arrow-head {\
     border-left: 50px solid transparent;\
     border-right: 50px solid transparent;\
     border-top: 15px solid green;\
@@ -94,14 +94,20 @@ function dataExport() {
     position: relative;\
   }\
   .area input[type="radio"], .area input[type="checkbox"] {\
-    vertical-align: middle;\
     margin: 0 2px 0 0;\
   }\
   .area label {\
     padding-left: 10px;\
   }\
+  .area * {\
+    vertical-align: middle\
+  }\
+  .query-history {\
+    width: 9em;\
+  }\
   #export-help-btn {\
     float: right;\
+    margin-top: 3px;\
   }\
   #autocomplete-results {\
     white-space: pre;\
@@ -120,6 +126,13 @@ function dataExport() {
     height: 1.3em;\
     border: 1px solid gray;\
   }\
+  .delete-btn {\
+    color: white;\
+    text-decoration: none;\
+    background-color: gray;\
+    padding: 1px 4px;\
+    border-radius: 10px;\
+  }\
   </style>\
   ';
 
@@ -128,8 +141,12 @@ function dataExport() {
   <div id="user-info" data-bind="text: userInfo"></div>\
   <div class="area">\
     <h1>Export query</h1>\
-    <label><input type="checkbox" data-bind="checked: queryAll, disable: queryTooling"> Include deleted and archived records?</label>\
-    <label title="With the tooling API you can query more metadata, but you cannot query regular data"><input type="checkbox" data-bind="checked: queryTooling, disable: queryAll"> Use Tooling API?</label>\
+    <label><input type="checkbox" data-bind="checked: queryAll, disable: queryTooling"> <span>Include deleted and archived records?</span></label>\
+    <label title="With the tooling API you can query more metadata, but you cannot query regular data"><input type="checkbox" data-bind="checked: queryTooling, disable: queryAll"> <span>Use Tooling API?</span></label>\
+    <label>\
+      <select data-bind="options: queryHistory, optionsCaption: \'Query history\', value: selectedHistoryEntry, event: {change: selectHistoryEntry}" class="query-history"></select>\
+      <a href="about:blank" data-bind="click: clearHistory" title="Clear query history" class="delete-btn">X</a>\
+    </label>\
     <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>\
     <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}">select Id from Account</textarea>\
     <div id="autocomplete-results"><span data-bind="text: autocompleteTitle"></span><span data-bind="foreach: autocompleteResults"><a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a></span></div>\
@@ -149,10 +166,10 @@ function dataExport() {
   </div>\
   <div class="area" id="result-area">\
     <h1>Export result</h1>\
-    <label><input type=radio name="data-format" value="table" data-bind="checked: dataFormat"> Table</label>\
-    <label><input type=radio name="data-format" value="excel" data-bind="checked: dataFormat"> Excel</label>\
-    <label><input type=radio name="data-format" value="csv" data-bind="checked: dataFormat"> CSV</label>\
-    <label><input type=radio name="data-format" value="json" data-bind="checked: dataFormat"> JSON</label>\
+    <label><input type=radio name="data-format" value="table" data-bind="checked: dataFormat"> <span>Table</span></label>\
+    <label><input type=radio name="data-format" value="excel" data-bind="checked: dataFormat"> <span>Excel</span></label>\
+    <label><input type=radio name="data-format" value="csv" data-bind="checked: dataFormat"> <span>CSV</span></label>\
+    <label><input type=radio name="data-format" value="json" data-bind="checked: dataFormat"> <span>JSON</span></label>\
     <button class="cancel-btn" data-bind="visible: exportResultVm().isWorking, click: stopExport">Stop</button>\
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + \'px\'}">\
       <textarea id="result-text" readonly data-bind="text: exportResultVm().resultText, visible: !exportResultVm().resultTable"></textarea>\
@@ -176,8 +193,20 @@ function dataExport() {
     dataFormat: ko.observable("excel"),
     autocompleteClick: null,
     exportResultVm: ko.computed(computeExportResultVm),
+    queryHistory: ko.observable(getQueryHistory()),
+    selectedHistoryEntry: ko.observable(),
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
+    },
+    selectHistoryEntry: function() {
+      if (vm.selectedHistoryEntry() != undefined) {
+        queryInput.value = vm.selectedHistoryEntry();
+        vm.selectedHistoryEntry(undefined);
+      }
+    },
+    clearHistory: function() {
+      clearQueryHistory();
+      vm.queryHistory([]);
     },
     doExport: doExport,
     stopExport: stopExport
@@ -516,6 +545,35 @@ function dataExport() {
     queryAutocompleteHandler();
   });
 
+  function getQueryHistory() {
+    var queryHistory;
+    try {
+      queryHistory = JSON.parse(localStorage.insextQueryHistory);
+    } catch(e) {}
+    if (!Array.isArray(queryHistory)) {
+      queryHistory = [];
+    }
+    return queryHistory;
+  }
+
+  function addToQueryHistory(query) {
+    var queryHistory = getQueryHistory();
+    var historyIndex = queryHistory.indexOf(query);
+    if (historyIndex > -1) {
+      queryHistory.splice(historyIndex, 1);
+    }
+    queryHistory.splice(0, 0, query);
+    if (queryHistory.length > 20) {
+      queryHistory.pop();
+    }
+    localStorage.insextQueryHistory = JSON.stringify(queryHistory);
+    return queryHistory;
+  }
+
+  function clearQueryHistory() {
+    localStorage.removeItem("insextQueryHistory");
+  }
+
   var exportProgress = {};
   function doExport() {
     var exportedTooling = vm.queryTooling();
@@ -539,6 +597,7 @@ function dataExport() {
         });
         return askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
       }
+      vm.queryHistory(addToQueryHistory(query));
       if (exportedRecords.length == 0) {
         exportResult({
           isWorking: false,
