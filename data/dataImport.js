@@ -5,10 +5,10 @@ function dataImport() {
   if (window.unsafeWindow && window.XPCNativeWrapper) {
     // Firefox
     // Use unsafeWindow to work around https://bugzilla.mozilla.org/show_bug.cgi?id=996069
-    popupWin = new XPCNativeWrapper(unsafeWindow.open("", "", "width=850,height=800,scrollbars=yes"));
+    popupWin = new XPCNativeWrapper(unsafeWindow.open("", "", "width=900,height=800,scrollbars=yes"));
   } else {
     // Chrome
-    popupWin = open("", "", "width=850,height=800,scrollbars=yes");
+    popupWin = open("", "", "width=900,height=800,scrollbars=yes");
   }
   window.addEventListener("pagehide", function() {
     // All JS runs in the parent window, and will stop working when the parent goes away. Therefore close the popup.
@@ -83,6 +83,7 @@ function dataImport() {
     font-weight: bold;\
     color: #4a4a56;\
     padding-left: 15px;\
+    white-space: nowrap;\
   }\
   .area * {\
     vertical-align: middle\
@@ -96,6 +97,13 @@ function dataImport() {
     left: -15px;\
     top: -15px;\
   }\
+  .area label.statusGroupEmpty {\
+    color: lightgray;\
+    font-weight: normal;\
+  }\
+  .batch-size {\
+    width: 3.4em;\
+  }\
   </style>\
   ';
 
@@ -107,6 +115,8 @@ function dataImport() {
     <label><span>Format:</span> <select data-bind="value: dataFormat"><option value="excel">Excel<option value="csv">CSV</select></label>\
     <label><span>Action:</span> <select data-bind="value: importAction"><option value="create">Insert<option value="update">Update<option value="delete">Delete</select></label>\
     <label><span>Object:</span> <input type="text" data-bind="value: importType" list="sobjectlist"></label>\
+    <label title="The number of records per batch. A higher value is faster but increases the risk of errors due to governor limits."><span>Batch size:</span> <input type="number" data-bind="value: batchSize" class="batch-size"></label>\
+    <label title="The number of batches to execute concurrently. A higher number is faster but increases the risk of errors due to lock congestion."><span>Threads:</span> <input type="number" data-bind="value: batchConcurrency" class="batch-size"></label>\
     <datalist id="sobjectlist" data-bind="foreach: sobjectList"><option data-bind="attr: {value: $data}"></datalist>\
     <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>\
     <textarea id="data" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}"></textarea>\
@@ -127,20 +137,32 @@ function dataImport() {
         <li>Enter the API name of the object to import</li>\
         <li>Press Import</li>\
       </ul>\
-      <p>Upsert is not supported. Bulk API is not supported. Batching is not supported (everything goes into one batch). Large data volumes may freeze or crash your browser.</p>\
+      <p>Upsert is not supported. Bulk API is not supported. Large data volumes may freeze or crash your browser.</p>\
     </div>\
   </div>\
   <div class="action-arrow">\
-    <div class="arrow-body"><button data-bind="click: doImport">Import</button><div style="color:white;font-weight:bold;font-size:1.4em;margin-top:.3em;text-shadow:2px 2px 3px red">BETA!</div></div>\
+    <div class="arrow-body"><button data-bind="click: doImport, disable: activeBatches() > 0">Import</button><div style="color:white;font-weight:bold;font-size:1.4em;margin-top:.3em;text-shadow:2px 2px 3px red">BETA!</div></div>\
     <div class="arrow-head"></div>\
   </div>\
   <div class="area">\
     <h1>Import result</h1>\
+    <label><input type=radio name="data-format" value="excel" data-bind="checked: dataResultFormat"> <span>Excel</span></label>\
+    <label><input type=radio name="data-format" value="csv" data-bind="checked: dataResultFormat"> <span>CSV</span></label>\
+    <div>\
+      <span>Status:</span>\
+      <label data-bind="css: {statusGroupEmpty: importData().counts.Queued == 0}"><input type=checkbox data-bind="checked: showStatus.Queued"> <span data-bind="text: importData().counts.Queued"></span> <span>Queued</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importData().counts.Processing == 0}"><input type=checkbox data-bind="checked: showStatus.Processing"> <span data-bind="text: importData().counts.Processing"></span> <span>Processing</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importData().counts.Succeeded == 0}"><input type=checkbox data-bind="checked: showStatus.Succeeded"> <span data-bind="text: importData().counts.Succeeded"></span> <span>Succeeded</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importData().counts.Failed == 0}"><input type=checkbox data-bind="checked: showStatus.Failed"> <span data-bind="text: importData().counts.Failed"></span> <span>Failed</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importData().counts.Canceled == 0}"><input type=checkbox data-bind="checked: showStatus.Canceled"> <span data-bind="text: importData().counts.Canceled"></span> <span>Canceled</span></label>\
+    </div>\
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + \'px\'}">\
-      <textarea id="import-result" readonly data-bind="value: importResult"></textarea>\
+      <textarea id="import-result" readonly data-bind="value: importResult()"></textarea>\
     </div>\
   </div>\
   ';
+
+  var importError = ko.observable(null);
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -152,7 +174,34 @@ function dataImport() {
     dataFormat: ko.observable("Excel"),
     importAction: ko.observable("create"),
     importType: ko.observable("Account"),
-    importResult: ko.observable(""),
+    batchSize: ko.observable("200"),
+    batchConcurrency: ko.observable("10"),
+    activeBatches: ko.observable(0),
+    dataResultFormat: ko.observable("excel"),
+    showStatus: {
+      Queued: ko.observable(true),
+      Processing: ko.observable(true),
+      Succeeded: ko.observable(true),
+      Failed: ko.observable(true),
+      Canceled: ko.observable(true)
+    },
+    importData: ko.observable({
+      counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0},
+      header: null,
+      data: null,
+      statusColumnIndex: -1
+    }),
+    importResult: function() {
+      if (importError()) {
+        return importError();
+      }
+      if (vm.importData().data == null) {
+        return "";
+      }
+      var statusColumnIndex = vm.importData().statusColumnIndex;
+      var filteredData = vm.importData().data.filter(function(row) { return vm.showStatus[row[statusColumnIndex]](); });
+      return csvSerialize([vm.importData().header].concat(filteredData), vm.dataResultFormat() == "excel" ? "\t" : ",");
+    },
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
     },
@@ -199,13 +248,13 @@ function dataImport() {
       data = csvParse(text, separator);
     } catch (e) {
       console.log(e);
-      vm.importResult("=== ERROR ===\n" + e.message);
+      importError("=== ERROR ===\n" + e.message);
       dataInput.setSelectionRange(e.offsetStart, e.offsetEnd);
       return;
     }
 
     if (data.length < 2) {
-      vm.importResult("=== ERROR ===\nNo records to import");
+      importError("=== ERROR ===\nNo records to import");
       return;
     }
 
@@ -214,7 +263,7 @@ function dataImport() {
 
     for (var c = 0; c < header.length; c++) {
       if (!/^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+:[a-zA-Z0-9_]+)?$/.test(header[c])) {
-        vm.importResult("=== ERROR ===\nInvalid column name: " + header[c]);
+        importError("=== ERROR ===\nInvalid column name: " + header[c]);
         return;
       }
       if (header[c].toLowerCase() == "id") {
@@ -226,17 +275,47 @@ function dataImport() {
     var sobjectType = vm.importType();
 
     if (!/^[a-zA-Z0-9_]+$/.test(sobjectType)) {
-      vm.importResult("=== ERROR ===\nInvalid object name: " + sobjectType);
+      importError("=== ERROR ===\nInvalid object name: " + sobjectType);
       return;
     }
 
     if (action != "create" && idColumn < 0) {
-      vm.importResult("=== ERROR ===\nThere is no ID column");
+      importError("=== ERROR ===\nThere is no ID column");
       return;
     }
 
+    var batchSize = +vm.batchSize();
+    if (!(batchSize > 0)) { // This also handles NaN
+      importError("=== ERROR ===\nBatch size must be a positive number");
+      return;
+    }
+
+    var batchConcurrency = +vm.batchConcurrency();
+    if (!(batchConcurrency > 0)) { // This also handles NaN
+      importError("=== ERROR ===\nBatch concurrency must be a positive number");
+      return;
+    }
+
+    var statusColumnIndex = header.length;
+    header.push("__Status");
+    var resultIdColumnIndex = header.length;
+    header.push("__Id");
+    var errorColumnIndex = header.length;
+    header.push("__Errors");
+
+    var batches = [];
+    var batchOffset = 0;
     var doc = window.document.implementation.createDocument(null, action);
     for (var r = 0; r < data.length; r++) {
+      if (r % batchSize == 0 && r != 0) {
+        batches.push({
+          batchXml: new XMLSerializer().serializeToString(doc),
+          batchOffset: batchOffset,
+          batchLength: batchSize
+        });
+        batchOffset = r;
+        doc = window.document.implementation.createDocument(null, action);
+      }
       var row = data[r];
       if (action == "delete") {
         var deleteId = doc.createElement("ID");
@@ -280,69 +359,107 @@ function dataImport() {
         }
         doc.documentElement.appendChild(sobjects);
       }
+      row[statusColumnIndex] = "Queued";
+      row[resultIdColumnIndex] = "";
+      row[errorColumnIndex] = "";
     }
-    var xml = new XMLSerializer().serializeToString(doc);
+    batches.push({
+      batchXml: new XMLSerializer().serializeToString(doc),
+      batchOffset: batchOffset,
+      batchLength: data.length - batchOffset
+    });
+
+    if (vm.activeBatches() > 0) {
+      importError("=== ERROR ===\nCannot start a new import while another is still in progress");
+      return;
+    }
 
     if (!popupWin.confirm("You are about to modify your data in Salesforce. This action cannot be undone.")) {
         return;
     }
 
-    vm.importResult("Importing...");
+    function updateResult() {
+      var counts = {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0};
+      data.forEach(function(row) {
+        counts[row[statusColumnIndex]]++;
+      });
+      vm.importData({counts: counts, header: header, data: data, statusColumnIndex: statusColumnIndex});
+    }
 
-    spinFor(askSalesforceSoap(xml).then(function(res) {
-      var results = res.querySelectorAll("Body result");
-      var successResults = [];
-      var errorResults = [];
-      header.push("__Id");
-      header.push("__Errors");
-      for (var i = 0; i < results.length; i++) {
-        var result = results[i];
-        var row = data[i];
-        row.push(result.querySelector("id").textContent);
-        var errorNodes = result.querySelectorAll("errors");
-        var errors = [];
-        for (var e = 0; e < errorNodes.length; e++) {
-          var errorNode = errorNodes[e];
-          var fieldNodes = errorNode.querySelectorAll("fields");
-          var fields = [];
-          for (var f = 0; f < fieldNodes.length; f++) {
-            var fieldNode = fieldNodes[f];
-            fields.push(fieldNode.textContent);
+    importError(null);
+    updateResult();
+
+    vm.activeBatches(batches.length);
+    for (var i = 0; i < batchConcurrency && batches.length > 0; i++) {
+      executeBatch();
+    }
+
+    function executeBatch() {
+      var batch = batches.shift();
+      for (var i = 0; i < batch.batchLength; i++) {
+        var row = data[batch.batchOffset + i];
+        row[statusColumnIndex] = "Processing";
+      }
+      updateResult();
+      spinFor(askSalesforceSoap(batch.batchXml).then(function(res) {
+        var results = res.querySelectorAll("Body result");
+        for (var i = 0; i < results.length; i++) {
+          var result = results[i];
+          var row = data[batch.batchOffset + i];
+          if (result.querySelector("success").textContent == "true") {
+            row[statusColumnIndex] = "Succeeded";
+          } else {
+            row[statusColumnIndex] = "Failed";
           }
-          var error = errorNode.querySelector("statusCode").textContent + ": " + errorNode.querySelector("message").textContent + " [" + fields.join(", ") + "]";
-          errors.push(error);
+          row[resultIdColumnIndex] = result.querySelector("id").textContent;
+          var errorNodes = result.querySelectorAll("errors");
+          var errors = [];
+          for (var e = 0; e < errorNodes.length; e++) {
+            var errorNode = errorNodes[e];
+            var fieldNodes = errorNode.querySelectorAll("fields");
+            var fields = [];
+            for (var f = 0; f < fieldNodes.length; f++) {
+              var fieldNode = fieldNodes[f];
+              fields.push(fieldNode.textContent);
+            }
+            var error = errorNode.querySelector("statusCode").textContent + ": " + errorNode.querySelector("message").textContent + " [" + fields.join(", ") + "]";
+            errors.push(error);
+          }
+          row[errorColumnIndex] = errors.join(", ");
         }
-        row.push(errors.join(", "));
-        if (result.querySelector("success").textContent == "true") {
-          successResults.push(row);
+      }, function(xhr) {
+        if (!xhr || xhr.readyState != 4) {
+          throw xhr; // Not an HTTP error response
+        }
+        var errorText;
+        if (xhr.responseXML != null) {
+          var soapFaults = xhr.responseXML.querySelectorAll("faultstring");
+          var errors = [];
+          for (var i = 0; i < soapFaults.length; i++) {
+            errors.push(soapFaults[i].textContent);
+          }
+          errorText = errors.join(", ");
         } else {
-          errorResults.push(row);
+          console.error(xhr);
+          errorText = "Connection to Salesforce failed" + (xhr.status != 0 ? " (HTTP " + xhr.status + ")" : "");
         }
-      }
-      var importResultText = "Import completed with " + successResults.length + " success(es) and " + errorResults.length + " error(s).";
-      if (successResults.length > 0) {
-        successResults.unshift(header);
-        importResultText += "\n\nSuccesses:\n" + csvSerialize(successResults, separator);
-      }
-      if (errorResults.length > 0) {
-        errorResults.unshift(header);
-        importResultText += "\n\nErrors:\n" + csvSerialize(errorResults, separator);
-      }
-      vm.importResult(importResultText+ "\n");
-    }, function(xhr) {
-      if (!xhr || xhr.readyState != 4) {
-        throw xhr; // Not an HTTP error response
-      }
-      var soapFaults = xhr.responseXML.querySelectorAll("faultstring");
-      var text = "=== ERROR ===\n";
-      for (var i = 0; i < soapFaults.length; i++) {
-        text += soapFaults[i].textContent + "\n";
-      }
-      vm.importResult(text);
-    }).catch(function(error) {
-      console.error(error);
-      vm.importResult("UNEXPECTED EXCEPTION: " + error);
-    }));
+        for (var i = 0; i < batch.batchLength; i++) {
+          var row = data[batch.batchOffset + i];
+          row[statusColumnIndex] = "Failed";
+          row[resultIdColumnIndex] = "";
+          row[errorColumnIndex] = errorText;
+        }
+      }).then(function() {
+        updateResult();
+        vm.activeBatches(vm.activeBatches() - 1);
+        if (batches.length > 0) {
+          executeBatch();
+        }
+      }).catch(function(error) {
+        console.error(error);
+        popupWin.alert("UNEXPECTED EXCEPTION: " + error);
+      }));
+    }
 
   }
 
