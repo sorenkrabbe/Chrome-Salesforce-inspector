@@ -262,7 +262,7 @@ function dataImport() {
     var idColumn = -1;
 
     for (var c = 0; c < header.length; c++) {
-      if (!/^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+:[a-zA-Z0-9_]+)?$/.test(header[c])) {
+      if (header[c][0] != "_" && !/^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+:[a-zA-Z0-9_]+)?$/.test(header[c])) {
         importError("=== ERROR ===\nInvalid column name: " + header[c]);
         return;
       }
