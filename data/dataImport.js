@@ -135,6 +135,7 @@ function dataImport() {
             <li>Empty cells insert null values.</li>\
             <li>Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>.</li>\
             <li>Columns starting with an underscore are ignored.</li>\
+            <li>You can use the result of an import to retry failed records. If the input contains a "__Status" column, records marked as "Succeeded" will not be imported.</li>\
           </ul>\
         </li>\
         <li>Select your input format</li>\
@@ -306,27 +307,53 @@ function dataImport() {
       return;
     }
 
-    var statusColumnIndex = header.length;
-    header.push("__Status");
-    var resultIdColumnIndex = header.length;
-    header.push("__Id");
-    var errorColumnIndex = header.length;
-    header.push("__Errors");
+    var statusColumnIndex = header.indexOf("__Status");
+    if (statusColumnIndex == -1) {
+      statusColumnIndex = header.length;
+      header.push("__Status");
+      data.forEach(function(row) {
+        row.push("");
+      });
+    }
+    var resultIdColumnIndex = header.indexOf("__Id");
+    if (resultIdColumnIndex == -1) {
+      resultIdColumnIndex = header.length;
+      header.push("__Id");
+      data.forEach(function(row) {
+        row.push("");
+      });
+    }
+    var errorColumnIndex = header.indexOf("__Errors");
+    if (errorColumnIndex == -1) {
+      errorColumnIndex = header.length;
+      header.push("__Errors");
+      data.forEach(function(row) {
+        row.push("");
+      });
+    }
 
     var batches = [];
-    var batchOffset = 0;
+    var batchRows = [];
+    var importedRecords = 0;
+    var skippedRecords = 0;
     var doc = window.document.implementation.createDocument(null, action);
     for (var r = 0; r < data.length; r++) {
-      if (r % batchSize == 0 && r != 0) {
+      if (batchRows.length == batchSize) {
         batches.push({
           batchXml: new XMLSerializer().serializeToString(doc),
-          batchOffset: batchOffset,
-          batchLength: batchSize
+          batchRows: batchRows
         });
-        batchOffset = r;
+        batchRows = [];
         doc = window.document.implementation.createDocument(null, action);
       }
       var row = data[r];
+      if (row[statusColumnIndex] == "Succeeded") {
+        skippedRecords++;
+        continue;
+      }
+      importedRecords++;
+      batchRows.push(row);
+      row[statusColumnIndex] = "Queued";
       if (action == "delete") {
         var deleteId = doc.createElement("ID");
         deleteId.textContent = row[idColumn];
@@ -369,14 +396,10 @@ function dataImport() {
         }
         doc.documentElement.appendChild(sobjects);
       }
-      row[statusColumnIndex] = "Queued";
-      row[resultIdColumnIndex] = "";
-      row[errorColumnIndex] = "";
     }
     batches.push({
       batchXml: new XMLSerializer().serializeToString(doc),
-      batchOffset: batchOffset,
-      batchLength: data.length - batchOffset
+      batchRows: batchRows
     });
 
     if (vm.activeBatches() > 0) {
@@ -384,8 +407,11 @@ function dataImport() {
       return;
     }
 
-    if (!popupWin.confirm("You are about to modify your data in Salesforce. This action cannot be undone.")) {
-        return;
+    if (!popupWin.confirm("You are about to modify your data in Salesforce. This action cannot be undone."
+      + " " + importedRecords + " records will be imported."
+      + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded." : ""))
+    ) {
+      return;
     }
 
     function updateResult() {
@@ -399,10 +425,9 @@ function dataImport() {
     function stopProcessing() {
       while (batches.length > 0) {
         var batch = batches.shift();
-        for (var i = 0; i < batch.batchLength; i++) {
-          var row = data[batch.batchOffset + i];
+        batch.batchRows.forEach(function(row) {
           row[statusColumnIndex] = "Canceled";
-        }
+        });
       }
       updateResult();
       vm.activeBatches(0);
@@ -418,16 +443,15 @@ function dataImport() {
 
     function executeBatch() {
       var batch = batches.shift();
-      for (var i = 0; i < batch.batchLength; i++) {
-        var row = data[batch.batchOffset + i];
+      batch.batchRows.forEach(function(row) {
         row[statusColumnIndex] = "Processing";
-      }
+      });
       updateResult();
       spinFor(askSalesforceSoap(batch.batchXml).then(function(res) {
         var results = res.querySelectorAll("Body result");
         for (var i = 0; i < results.length; i++) {
           var result = results[i];
-          var row = data[batch.batchOffset + i];
+          var row = batch.batchRows[i];
           if (result.querySelector("success").textContent == "true") {
             row[statusColumnIndex] = "Succeeded";
           } else {
@@ -465,12 +489,11 @@ function dataImport() {
           console.error(xhr);
           errorText = "Connection to Salesforce failed" + (xhr.status != 0 ? " (HTTP " + xhr.status + ")" : "");
         }
-        for (var i = 0; i < batch.batchLength; i++) {
-          var row = data[batch.batchOffset + i];
+        batch.batchRows.forEach(function(row) {
           row[statusColumnIndex] = "Failed";
           row[resultIdColumnIndex] = "";
           row[errorColumnIndex] = errorText;
-        }
+        });
       }).then(function() {
         updateResult();
         vm.activeBatches(vm.activeBatches() - 1);
