@@ -104,6 +104,11 @@ function dataImport() {
   .batch-size {\
     width: 3.4em;\
   }\
+  .cancel-btn {\
+    float: right;\
+    height: 1.3em;\
+    border: 1px solid gray;\
+  }\
   </style>\
   ';
 
@@ -148,6 +153,7 @@ function dataImport() {
     <h1>Import result</h1>\
     <label><input type=radio name="data-format" value="excel" data-bind="checked: dataResultFormat"> <span>Excel</span></label>\
     <label><input type=radio name="data-format" value="csv" data-bind="checked: dataResultFormat"> <span>CSV</span></label>\
+    <button class="cancel-btn" data-bind="visible: importData().counts.Queued > 0, click: stopImport">Stop</button>\
     <div>\
       <span>Status:</span>\
       <label data-bind="css: {statusGroupEmpty: importData().counts.Queued == 0}"><input type=checkbox data-bind="checked: showStatus.Queued"> <span data-bind="text: importData().counts.Queued"></span> <span>Queued</span></label>\
@@ -189,7 +195,8 @@ function dataImport() {
       counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0},
       header: null,
       data: null,
-      statusColumnIndex: -1
+      statusColumnIndex: -1,
+      stopProcessing: function() {}
     }),
     importResult: function() {
       if (importError()) {
@@ -205,7 +212,10 @@ function dataImport() {
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
     },
-    doImport: doImport
+    doImport: doImport,
+    stopImport: function() {
+      vm.importData().stopProcessing();
+    }
   };
 
   ko.applyBindings(vm, document.documentElement);
@@ -383,7 +393,19 @@ function dataImport() {
       data.forEach(function(row) {
         counts[row[statusColumnIndex]]++;
       });
-      vm.importData({counts: counts, header: header, data: data, statusColumnIndex: statusColumnIndex});
+      vm.importData({counts: counts, header: header, data: data, statusColumnIndex: statusColumnIndex, stopProcessing: stopProcessing});
+    }
+
+    function stopProcessing() {
+      while (batches.length > 0) {
+        var batch = batches.shift();
+        for (var i = 0; i < batch.batchLength; i++) {
+          var row = data[batch.batchOffset + i];
+          row[statusColumnIndex] = "Canceled";
+        }
+      }
+      updateResult();
+      vm.activeBatches(0);
     }
 
     importError(null);
