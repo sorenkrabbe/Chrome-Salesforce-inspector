@@ -148,7 +148,7 @@ function dataExport() {
       <a href="about:blank" data-bind="click: clearHistory" title="Clear query history" class="delete-btn">X</a>\
     </label>\
     <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>\
-    <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}">select Id from Account</textarea>\
+    <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}"></textarea>\
     <div id="autocomplete-results"><span data-bind="text: autocompleteTitle"></span><span data-bind="foreach: autocompleteResults"><a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a></span></div>\
     <div data-bind="visible: showHelp">\
       <p>Use for quick one-off data exports.</p>\
@@ -262,6 +262,7 @@ function dataExport() {
   }));
 
   var queryInput = document.querySelector("#query");
+  queryInput.value = vm.queryHistory()[0] || "select Id from Account";
 
   var resultBox = document.querySelector("#result-box");
   function recalculateHeight() {
