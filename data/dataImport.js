@@ -118,8 +118,9 @@ function dataImport() {
   <div class="area">\
     <h1>Input data</h1>\
     <label><span>Format:</span> <select data-bind="value: dataFormat"><option value="excel">Excel<option value="csv">CSV</select></label>\
-    <label><span>Action:</span> <select data-bind="value: importAction"><option value="create">Insert<option value="update">Update<option value="delete">Delete</select></label>\
+    <label><span>Action:</span> <select data-bind="value: importAction"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select></label>\
     <label><span>Object:</span> <input type="text" data-bind="value: importType" list="sobjectlist"></label>\
+    <label title="Used in upserts to determine if an existing record should be updated or a new record should be created" data-bind="visible: importAction() == \'upsert\'"><span>External ID:</span> <input type="text" data-bind="value: externalId"><!-- TODO create autocomplete list of fields with idLookup on field describe --></label>\
     <label title="The number of records per batch. A higher value is faster but increases the risk of errors due to governor limits."><span>Batch size:</span> <input type="number" data-bind="value: batchSize" class="batch-size"></label>\
     <label title="The number of batches to execute concurrently. A higher number is faster but increases the risk of errors due to lock congestion."><span>Threads:</span> <input type="number" data-bind="value: batchConcurrency" class="batch-size"></label>\
     <datalist id="sobjectlist" data-bind="foreach: sobjectList"><option data-bind="attr: {value: $data}"></datalist>\
@@ -139,11 +140,11 @@ function dataImport() {
           </ul>\
         </li>\
         <li>Select your input format</li>\
-        <li>Select an action (insert, update or delete)</li>\
+        <li>Select an action (insert, update, upsert or delete)</li>\
         <li>Enter the API name of the object to import</li>\
         <li>Press Import</li>\
       </ul>\
-      <p>Upsert is not supported. Bulk API is not supported. Large data volumes may freeze or crash your browser.</p>\
+      <p>Bulk API is not supported. Large data volumes may freeze or crash your browser.</p>\
     </div>\
   </div>\
   <div class="action-arrow">\
@@ -181,6 +182,7 @@ function dataImport() {
     dataFormat: ko.observable("Excel"),
     importAction: ko.observable("create"),
     importType: ko.observable("Account"),
+    externalId: ko.observable("Id"),
     batchSize: ko.observable("200"),
     batchConcurrency: ko.observable("10"),
     activeBatches: ko.observable(0),
@@ -269,20 +271,7 @@ function dataImport() {
       return;
     }
 
-    var header = data.shift();
-    var idColumn = -1;
-
-    for (var c = 0; c < header.length; c++) {
-      if (header[c][0] != "_" && !/^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+:[a-zA-Z0-9_]+)?$/.test(header[c])) {
-        importError("=== ERROR ===\nInvalid column name: " + header[c]);
-        return;
-      }
-      if (header[c].toLowerCase() == "id") {
-        idColumn = c;
-      }
-    }
-
-    var action = vm.importAction();
+    var importAction = vm.importAction();
     var sobjectType = vm.importType();
 
     if (!/^[a-zA-Z0-9_]+$/.test(sobjectType)) {
@@ -290,8 +279,22 @@ function dataImport() {
       return;
     }
 
-    if (action != "create" && idColumn < 0) {
-      importError("=== ERROR ===\nThere is no ID column");
+    var header = data.shift();
+    var inputIdColumnIndex = -1;
+    var idFieldName = importAction == "upsert" ? vm.externalId() : "Id";
+
+    for (var c = 0; c < header.length; c++) {
+      if (header[c][0] != "_" && !/^[a-zA-Z0-9_]+(:[a-zA-Z0-9_]+:[a-zA-Z0-9_]+)?$/.test(header[c])) {
+        importError("=== ERROR ===\nInvalid column name: " + header[c]);
+        return;
+      }
+      if (header[c].toLowerCase() == idFieldName.toLowerCase()) {
+        inputIdColumnIndex = c;
+      }
+    }
+
+    if (importAction != "create" && inputIdColumnIndex < 0) {
+      importError("=== ERROR ===\nThere is no " + idFieldName + " column");
       return;
     }
 
@@ -323,6 +326,14 @@ function dataImport() {
         row.push("");
       });
     }
+    var actionColumnIndex = header.indexOf("__Action");
+    if (actionColumnIndex == -1) {
+      actionColumnIndex = header.length;
+      header.push("__Action");
+      data.forEach(function(row) {
+        row.push("");
+      });
+    }
     var errorColumnIndex = header.indexOf("__Errors");
     if (errorColumnIndex == -1) {
       errorColumnIndex = header.length;
@@ -332,19 +343,31 @@ function dataImport() {
       });
     }
 
+    var batchRows, doc;
+    function startBatch() {
+      batchRows = [];
+      doc = window.document.implementation.createDocument(null, importAction);
+      if (importAction == "upsert") {
+        var extId = doc.createElement("externalIDFieldName");
+        extId.textContent = idFieldName;
+        doc.documentElement.appendChild(extId);
+      }
+    }
+    function endBatch() {
+      batches.push({
+        batchXml: new XMLSerializer().serializeToString(doc),
+        batchRows: batchRows
+      });
+    }
+
     var batches = [];
-    var batchRows = [];
     var importedRecords = 0;
     var skippedRecords = 0;
-    var doc = window.document.implementation.createDocument(null, action);
+    startBatch();
     for (var r = 0; r < data.length; r++) {
       if (batchRows.length == batchSize) {
-        batches.push({
-          batchXml: new XMLSerializer().serializeToString(doc),
-          batchRows: batchRows
-        });
-        batchRows = [];
-        doc = window.document.implementation.createDocument(null, action);
+        endBatch();
+        startBatch();
       }
       var row = data[r];
       if (row[statusColumnIndex] == "Succeeded") {
@@ -354,9 +377,9 @@ function dataImport() {
       importedRecords++;
       batchRows.push(row);
       row[statusColumnIndex] = "Queued";
-      if (action == "delete") {
+      if (importAction == "delete") {
         var deleteId = doc.createElement("ID");
-        deleteId.textContent = row[idColumn];
+        deleteId.textContent = row[inputIdColumnIndex];
         doc.documentElement.appendChild(deleteId);
       } else {
         var sobjects = doc.createElement("sObjects");
@@ -367,13 +390,15 @@ function dataImport() {
           if (header[c][0] != "_") {
             var columnName = header[c].split(":");
             if (row[c].trim() == "") {
-              var field = doc.createElement("fieldsToNull");
-              if (columnName.length == 1) { // Our regexp ensures there are always one or three elements in the array
-                field.textContent = columnName[0];
-              } else {
-                field.textContent = /__r$/.test(columnName[0]) ? columnName[0].replace(/__r$/, "__c") : columnName[0] + "Id";
+              if (c != inputIdColumnIndex) {
+                var field = doc.createElement("fieldsToNull");
+                if (columnName.length == 1) { // Our regexp ensures there are always one or three elements in the array
+                  field.textContent = columnName[0];
+                } else {
+                  field.textContent = /__r$/.test(columnName[0]) ? columnName[0].replace(/__r$/, "__c") : columnName[0] + "Id";
+                }
+                sobjects.appendChild(field);
               }
-              sobjects.appendChild(field);
             } else {
               if (columnName.length == 1) { // Our regexp ensures there are always one or three elements in the array
                 // For Mozilla reviewers: doc is a SOAP XML document.
@@ -397,10 +422,7 @@ function dataImport() {
         doc.documentElement.appendChild(sobjects);
       }
     }
-    batches.push({
-      batchXml: new XMLSerializer().serializeToString(doc),
-      batchRows: batchRows
-    });
+    endBatch();
 
     if (vm.activeBatches() > 0) {
       importError("=== ERROR ===\nCannot start a new import while another is still in progress");
@@ -454,8 +476,15 @@ function dataImport() {
           var row = batch.batchRows[i];
           if (result.querySelector("success").textContent == "true") {
             row[statusColumnIndex] = "Succeeded";
+            row[actionColumnIndex] =
+              importAction == "create" ? "Inserted"
+              : importAction == "update" ? "Updated"
+              : importAction == "upsert" ? (result.querySelector("created").textContent == "true" ? "Inserted" : "Updated")
+              : importAction == "delete" ? "Deleted"
+              : "Unknown";
           } else {
             row[statusColumnIndex] = "Failed";
+            row[actionColumnIndex] = "";
           }
           row[resultIdColumnIndex] = result.querySelector("id").textContent;
           var errorNodes = result.querySelectorAll("errors");
@@ -492,6 +521,7 @@ function dataImport() {
         batch.batchRows.forEach(function(row) {
           row[statusColumnIndex] = "Failed";
           row[resultIdColumnIndex] = "";
+          row[actionColumnIndex] = "";
           row[errorColumnIndex] = errorText;
         });
       }).then(function() {
