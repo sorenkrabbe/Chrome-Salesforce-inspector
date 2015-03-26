@@ -1,10 +1,8 @@
-var outputElement;
-var fieldDetailsByLabel = {};
-var metadataResponse = {};
-var describeAllObjects = {};
-var fieldSetupData = {};
-
 function showStdPageDetails() {
+  var fieldDetailsByLabel = {};
+  var metadataResponse = {};
+  var fieldSetupData = {};
+
   var recordId = getRecordIdFromUrl();
   return loadMetadataForRecordId(recordId)
     .then(function(res) {
@@ -23,12 +21,6 @@ function showStdPageDetails() {
     .catch(function(error) {
       alert(error);
     });
-}
-
-/*******************
- * Helper functions *
- ********************/
-
 
 
 /**
@@ -57,43 +49,33 @@ function fieldDetailsReady(){
 }
 
 
-/**
- *	extracts and returns the label string from a labelElement.
- */
-function getLabelFromLabelElement(labelElement){
-    // if there is a Help Text or not
-    return labelElement.firstElementChild ? labelElement.firstElementChild.firstChild.textContent : labelElement.textContent;
-}
-
 function showFieldDetails(labelElement){
     //var retUrlEncoded = encodeURIComponent(document.location.pathname);
     var output = document.createElement('div');
     
     output.classList.add('salesforce-inspector-details');
     
-    var fieldDetails = fieldDetailsByLabel[getLabelFromLabelElement(labelElement)];
+    // if there is a Help Text or not
+    var labelText = labelElement.firstElementChild ? labelElement.firstElementChild.firstChild.textContent : labelElement.textContent;
+    var fieldDetails = fieldDetailsByLabel[labelText];
     
     //Attempt to guess "true" field label. In some cases the UI and API label names don't match? Odd! However, by prepending the object type name to the UI label a match can sometimes be found (for example for Account.phone the UI label is "Phone" but the API defined label is "Account Phone"/"Kontotelefon")
-    var guessIndex = 0;
-    while (getLabelFromLabelElement(labelElement) != null && getLabelFromLabelElement(labelElement).length > 2 && fieldDetails == null && guessIndex <= 3) {
-        switch (guessIndex) {
-            case 0: //e.g. API "Account Type" vs UI "Type" (Account.type in EN)
-                fieldDetails = fieldDetailsByLabel[metadataResponse.label + " " + getLabelFromLabelElement(labelElement)];
-                break;
-            case 1: //e.g. API "Kontotype" vs UI "Type" (Account.type in DA)
-                fieldDetails = fieldDetailsByLabel[metadataResponse.label + "" + getLabelFromLabelElement(labelElement)];
-                break;
-            case 2: //e.g. API "Owner ID" vs UI "Account Owner" (Account.Owner)
-                var cleanedLabelName = getLabelFromLabelElement(labelElement).replace(metadataResponse.label, "").trim()
+    if (labelText != null && labelText.length > 2) {
+            if (fieldDetails == null) { //e.g. API "Account Type" vs UI "Type" (Account.type in EN)
+                fieldDetails = fieldDetailsByLabel[metadataResponse.label + " " + labelText];
+            }
+            if (fieldDetails == null) { //e.g. API "Kontotype" vs UI "Type" (Account.type in DA)
+                fieldDetails = fieldDetailsByLabel[metadataResponse.label + "" + labelText];
+            }
+            if (fieldDetails == null) { //e.g. API "Owner ID" vs UI "Account Owner" (Account.Owner)
+                var cleanedLabelName = labelText.replace(metadataResponse.label, "").trim()
                 if (cleanedLabelName.length > 2) { //Only try to append ID if the label still has content after stripping the object name
                     fieldDetails = fieldDetailsByLabel[cleanedLabelName + " ID"];
                 }
-                break;
-            case 3: //e.g. API "Parent Account ID" vs UI "Parent Account" (Account.Parent)
-                fieldDetails = fieldDetailsByLabel[getLabelFromLabelElement(labelElement) + " ID"];
-                break;
-        }
-        guessIndex++;
+            }
+            if (fieldDetails == null) { //e.g. API "Parent Account ID" vs UI "Parent Account" (Account.Parent)
+                fieldDetails = fieldDetailsByLabel[labelText + " ID"];
+            }
     }
     
     function Ea(name, attrs, children) {
@@ -186,4 +168,6 @@ function makeFieldDetailsSticky(e){
     if (detailsElement != null) {
       detailsElement.classList.add('sticky');
     }
+}
+
 }
