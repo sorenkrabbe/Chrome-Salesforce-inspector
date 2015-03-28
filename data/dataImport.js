@@ -447,12 +447,12 @@ function dataImport() {
     function stopProcessing() {
       while (batches.length > 0) {
         var batch = batches.shift();
+        vm.activeBatches(vm.activeBatches() - 1);
         batch.batchRows.forEach(function(row) {
           row[statusColumnIndex] = "Canceled";
         });
       }
       updateResult();
-      vm.activeBatches(0);
     }
 
     importError(null);
