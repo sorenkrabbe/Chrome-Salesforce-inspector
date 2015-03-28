@@ -539,7 +539,7 @@ function dataImport() {
   }
 
   function csvSerialize(table, separator) {
-    return table.map(function(row) { return row.map(function(text) { return "\"" + ("" + (text == null ? "" : text)).replace("\"", "\"\"") + "\""; }).join(separator); }).join("\r\n");
+    return table.map(function(row) { return row.map(function(text) { return "\"" + ("" + (text == null ? "" : text)).split("\"").join("\"\"") + "\""; }).join(separator); }).join("\r\n");
   }
 
   function csvParse(csv, separator) {
