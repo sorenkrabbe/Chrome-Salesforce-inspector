@@ -109,6 +109,17 @@ function dataImport() {
     height: 1.3em;\
     border: 1px solid gray;\
   }\
+  .char-btn {\
+    color: white;\
+    text-decoration: none;\
+    background-color: gray;\
+    display: inline-block;\
+    width: 14px;\
+    height: 14px;\
+    border-radius: 7px;\
+    line-height: 14px;\
+    text-align: center;\
+  }\
   </style>\
   ';
 
@@ -119,7 +130,10 @@ function dataImport() {
     <h1>Input data</h1>\
     <label><span>Format:</span> <select data-bind="value: dataFormat"><option value="excel">Excel<option value="csv">CSV</select></label>\
     <label><span>Action:</span> <select data-bind="value: importAction"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select></label>\
-    <label><span>Object:</span> <input type="text" data-bind="value: importType" list="sobjectlist"></label>\
+    <label>\
+      <span>Object:</span> <input type="text" data-bind="value: importType" list="sobjectlist">\
+      <a href="about:blank" class="char-btn" data-bind="click: showDescribe" title="Show field info for the selected object">i</a>\
+    </label>\
     <label title="Used in upserts to determine if an existing record should be updated or a new record should be created" data-bind="visible: importAction() == \'upsert\'"><span>External ID:</span> <input type="text" data-bind="value: externalId"><!-- TODO create autocomplete list of fields with idLookup on field describe --></label>\
     <label title="The number of records per batch. A higher value is faster but increases the risk of errors due to governor limits."><span>Batch size:</span> <input type="number" data-bind="value: batchSize" class="batch-size"></label>\
     <label title="The number of batches to execute concurrently. A higher number is faster but increases the risk of errors due to lock congestion."><span>Threads:</span> <input type="number" data-bind="value: batchConcurrency" class="batch-size"></label>\
@@ -214,6 +228,12 @@ function dataImport() {
     },
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
+    },
+    showDescribe: function() {
+      showAllData({
+        recordAttributes: {type: vm.importType(), url: null},
+        useToolingApi: false
+      });
     },
     doImport: doImport,
     stopImport: function() {

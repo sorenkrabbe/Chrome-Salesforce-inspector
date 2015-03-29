@@ -98,6 +98,7 @@ function dataExport() {
   }\
   .area label {\
     padding-left: 10px;\
+    white-space: nowrap;\
   }\
   .area * {\
     vertical-align: middle\
@@ -126,12 +127,20 @@ function dataExport() {
     height: 1.3em;\
     border: 1px solid gray;\
   }\
-  .delete-btn {\
+  .char-btn {\
     color: white;\
     text-decoration: none;\
     background-color: gray;\
-    padding: 1px 4px;\
-    border-radius: 10px;\
+    display: inline-block;\
+    width: 14px;\
+    height: 14px;\
+    border-radius: 7px;\
+    line-height: 14px;\
+    text-align: center;\
+  }\
+  .describe-btn {\
+    float: left;\
+    margin-right: 3px;\
   }\
   </style>\
   ';
@@ -145,10 +154,11 @@ function dataExport() {
     <label title="With the tooling API you can query more metadata, but you cannot query regular data"><input type="checkbox" data-bind="checked: queryTooling, disable: queryAll"> <span>Use Tooling API?</span></label>\
     <label>\
       <select data-bind="options: queryHistory, optionsCaption: \'Query history\', value: selectedHistoryEntry, event: {change: selectHistoryEntry}" class="query-history"></select>\
-      <a href="about:blank" data-bind="click: clearHistory" title="Clear query history" class="delete-btn">X</a>\
+      <a href="about:blank" data-bind="click: clearHistory" title="Clear query history" class="char-btn">X</a>\
     </label>\
     <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>\
     <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}"></textarea>\
+    <a href="about:blank" class="char-btn describe-btn" data-bind="click: showDescribe, attr: {title: \'Show field info for the \' + sobjectName() + \' object\'}">i</a>\
     <div id="autocomplete-results"><span data-bind="text: autocompleteTitle"></span><span data-bind="foreach: autocompleteResults"><a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a></span></div>\
     <div data-bind="visible: showHelp">\
       <p>Use for quick one-off data exports.</p>\
@@ -195,8 +205,15 @@ function dataExport() {
     exportResultVm: ko.computed(computeExportResultVm),
     queryHistory: ko.observable(getQueryHistory()),
     selectedHistoryEntry: ko.observable(),
+    sobjectName: ko.observable(""),
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
+    },
+    showDescribe: function() {
+      showAllData({
+        recordAttributes: {type: vm.sobjectName(), url: null},
+        useToolingApi: vm.queryTooling()
+      });
     },
     selectHistoryEntry: function() {
       if (vm.selectedHistoryEntry() != undefined) {
@@ -302,6 +319,7 @@ function dataExport() {
     // Find out what sobject we are querying, by using the word after the "from" keyword.
     // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
     var sobjectName = (/(^|\s)from\s*([a-zA-Z0-9_]*)/.exec(query) || ["", "", ""])[2];
+    vm.sobjectName(sobjectName);
     var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
     maybeGetFields(sobjectDescribe);
 

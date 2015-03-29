@@ -403,7 +403,11 @@ function showAllData(recordDesc) {
           recordDataPromise = askSalesforce(sobjectDescribe.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
         }
       } else if ("recordAttributes" in recordDesc) {
-        recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
+        if (!recordDesc.recordAttributes.url) {
+          recordDataPromise = Promise.resolve({}); // No record url
+        } else {
+          recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
+        }
       } else {
         throw "unknown input for showAllData";
       }
