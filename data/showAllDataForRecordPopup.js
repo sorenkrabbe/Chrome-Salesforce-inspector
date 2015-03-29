@@ -173,7 +173,12 @@ function showAllData(recordDesc) {
           <!-- ko if: !isId() && !showEdit() --><span data-bind="text: dataValue()" class="value-text"></span><!-- /ko -->\
           <textarea data-bind="visible: showEdit(), value: dataValue"></textarea>\
         </td>\
-        <td data-bind="text: fieldTypeDesc" class="field-type"></td>\
+        <td class="field-type">\
+          <span data-bind="text: fieldTypeDesc, visible: !referenceTo"></span>\
+          <span data-bind="foreach: referenceTo">\
+            <a href="about:blank" data-bind="text: $data, click: $parent.showReference"></a>\
+          </span>\
+        </td>\
         <td class="field-setup"><a href="about:blank" data-bind="visible: setupLink(), attr: {href: setupLink()}" target="_blank">Setup</a></td>\
       </tr>\
     </tbody>\
@@ -208,7 +213,7 @@ function showAllData(recordDesc) {
   var vm = {
     spinnerCount: ko.observable(0),
     recordHeading: function() {
-      return recordData() ? "(" + recordData().Name + " / " + recordData().Id + ")" : "Loading all data..."
+      return recordData() ? "(" + (recordData().Name || objectData().label) + " / " + (recordData().Id || objectData().keyPrefix) + ")" : "Loading all data..."
     },
     objectName: function() {
       return objectData() && objectData().name;
@@ -291,6 +296,7 @@ function showAllData(recordDesc) {
       fieldLabel: fieldDescribe.label,
       fieldName: fieldDescribe.name,
       fieldTypeDesc: fieldTypeDesc,
+      referenceTo: fieldDescribe.type == "reference" ? fieldDescribe.referenceTo : null,
       fieldIsCalculated: fieldDescribe.calculated,
       dataValue: ko.observable(""),
       setDataValue: function(recordData) {
@@ -331,6 +337,12 @@ function showAllData(recordDesc) {
       },
       showRecordId: function() {
         showAllData({recordId: fieldVm.dataValue()});
+      },
+      showReference: function() {
+        showAllData({
+          recordAttributes: {type: this, url: null},
+          useToolingApi: false
+        });
       },
       visible: function() {
         var value = vm.fieldRowsFilter().trim().toLowerCase();
