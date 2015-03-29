@@ -178,13 +178,18 @@ function dataImport() {
       <label data-bind="css: {statusGroupEmpty: importData().counts.Failed == 0}"><input type=checkbox data-bind="checked: showStatus.Failed"> <span data-bind="text: importData().counts.Failed"></span> <span>Failed</span></label>\
       <label data-bind="css: {statusGroupEmpty: importData().counts.Canceled == 0}"><input type=checkbox data-bind="checked: showStatus.Canceled"> <span data-bind="text: importData().counts.Canceled"></span> <span>Canceled</span></label>\
     </div>\
+    <div data-bind="if: importResult().hasMore">\
+      <span data-bind="text: importResult().hasMore"></span>\
+      <a href="about:blank" data-bind="click: showMore">Show more</a>\
+    </div>\
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + \'px\'}">\
-      <textarea id="import-result" readonly data-bind="value: importResult()"></textarea>\
+      <textarea id="import-result" readonly data-bind="value: importResult().text"></textarea>\
     </div>\
   </div>\
   ';
 
   var importError = ko.observable(null);
+  var maxResults = ko.observable(0);
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -224,7 +229,18 @@ function dataImport() {
       }
       var statusColumnIndex = vm.importData().statusColumnIndex;
       var filteredData = vm.importData().data.filter(function(row) { return vm.showStatus[row[statusColumnIndex]](); });
-      return csvSerialize([vm.importData().header].concat(filteredData), vm.dataResultFormat() == "excel" ? "\t" : ",");
+      var hasMore;
+      if (filteredData.length > maxResults()) {
+        hasMore = "Showing " + maxResults() + " of " + filteredData.length + " rows";
+        filteredData = filteredData.slice(0, maxResults());
+      }
+      return {
+        text: csvSerialize([vm.importData().header].concat(filteredData), vm.dataResultFormat() == "excel" ? "\t" : ","),
+        hasMore: hasMore
+      };
+    },
+    showMore: function() {
+      maxResults(maxResults() * 5);
     },
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
@@ -475,6 +491,7 @@ function dataImport() {
       updateResult();
     }
 
+    maxResults(1000);
     importError(null);
     updateResult();
 
