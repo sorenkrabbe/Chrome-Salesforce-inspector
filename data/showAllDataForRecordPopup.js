@@ -109,6 +109,9 @@ function showAllData(recordDesc) {
   .closeLnk:hover {\
     background: #00d9ff;\
   }\
+  #fieldDetailsView td {\
+    white-space: pre;\
+  }\
   .filter-input {\
     width: 20em;\
   }\
@@ -236,7 +239,14 @@ function showAllData(recordDesc) {
       vm.fieldDetails(null);
     },
     showObjectMetadata: function() {
-      showAllFieldMetadata(objectData());
+      var objectDescribe = objectData();
+      var map = {};
+      for (var key in objectDescribe) {
+        if (key != "fields") {
+          map[key] = objectDescribe[key];
+        }
+      }
+      showAllFieldMetadata(map);
     },
     canEdit: function() {
       return objectData() && objectData().updateable && recordData() && recordData().Id;
@@ -334,7 +344,7 @@ function showAllData(recordDesc) {
   function showAllFieldMetadata(allFieldMetadata) {
     var fieldDetailVms = [];
     for (var key in allFieldMetadata) {
-      var value = JSON.stringify(allFieldMetadata[key]);
+      var value = JSON.stringify(allFieldMetadata[key], null, "  ");
       fieldDetailVms.push({
         key: key,
         value: value,
