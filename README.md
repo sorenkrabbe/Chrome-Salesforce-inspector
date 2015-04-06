@@ -21,6 +21,14 @@ Installation
 - Install from Firefox Add-ons: https://addons.mozilla.org/firefox/addon/salesforce-inspector/
 
 
+Unit tests
+-----
+1. Set up a Developer Edition org with the customizations described in `test/org/`.
+2. Set up a server at `https://localhost:8080` pointing a the root of this repository.
+3. Open the Visualforce page you just created.
+4. Open your browser's developer tools console.
+5. Wait until "Salesforce Inspector unit test finished" is logged, and verify that no error messages are logged (HTTP 4xx messages are OK)
+
 About
 -----
 By Søren Krabbe (sk@sokr.dk) and Jesper Kristensen.

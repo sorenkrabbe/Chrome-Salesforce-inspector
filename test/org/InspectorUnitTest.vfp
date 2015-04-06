@@ -1,0 +1,14 @@
+<apex:page showHeader="false" standardStylesheets="false" controller="InspectorUnitTest">
+    <h1>Salesforce Inspector Unit Test</h1>
+    <script>var session = "{!$API.Session_ID}"</script>
+    <script src="https://localhost:8080/addon/data/knockout-3.2.0.js"></script>
+    <script src="https://localhost:8080/addon/data/chromePopup.js"></script>
+    <script src="https://localhost:8080/addon/data/showAllDataForRecordPopup.js"></script>
+    <script src="https://localhost:8080/addon/data/dataExport.js"></script>
+    <script src="https://localhost:8080/addon/data/dataImport.js"></script>
+    <script src="https://localhost:8080/addon/data/showStdPageDetails.js"></script>
+    
+    <script src="https://localhost:8080/test/dataExportTest.js"></script>
+    <script src="https://localhost:8080/test/dataImportTest.js"></script>
+    <script src="https://localhost:8080/test/testFramework.js"></script>
+</apex:page>

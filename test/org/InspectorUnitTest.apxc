@@ -1,0 +1,22 @@
+public class InspectorUnitTest {
+    
+    @RemoteAction
+    public static List<Inspector_Test__c> setTestRecords(List<Inspector_Test__c> records) {
+        delete [select Id from Inspector_Test__c];
+        for (Inspector_Test__c record : records) {
+            insert record;
+        }
+        return records;
+    }
+    
+    @RemoteAction
+    public static void setTestRecordCount(Integer count) {
+        delete [select Id from Inspector_Test__c];
+        List<Inspector_Test__c> records = new List<Inspector_Test__c>();
+        for (Integer i = 0; i < count; i++) {
+            records.add(new Inspector_Test__c());
+        }
+        insert records;
+    }
+    
+}
