@@ -120,6 +120,27 @@ function dataImport() {
     line-height: 14px;\
     text-align: center;\
   }\
+  #confirm-background {\
+    position: fixed;\
+    top: 0;\
+    right: 0;\
+    bottom: 0;\
+    left: 0;\
+    background: rgba(0,0,0,0.8);\
+    z-index: 99999;\
+  }\
+  \
+  #confirm-dialog {\
+    width: 400px;\
+    position: relative;\
+    margin: 10% auto;\
+    border-radius: 10px;\
+    background: #fff;\
+    padding: 20px;\
+  }\
+  .dialog-buttons {\
+    text-align: center;\
+  }\
   </style>\
   ';
 
@@ -130,16 +151,19 @@ function dataImport() {
     <h1>Input data</h1>\
     <label><span>Format:</span> <select data-bind="value: dataFormat"><option value="excel">Excel<option value="csv">CSV</select></label>\
     <label><span>Action:</span> <select data-bind="value: importAction"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select></label>\
-    <label>\
-      <span>Object:</span> <input type="text" data-bind="value: importType" list="sobjectlist">\
-      <a href="about:blank" class="char-btn" data-bind="click: showDescribe" title="Show field info for the selected object">i</a>\
-    </label>\
-    <label title="Used in upserts to determine if an existing record should be updated or a new record should be created" data-bind="visible: importAction() == \'upsert\'"><span>External ID:</span> <input type="text" data-bind="value: externalId"><!-- TODO create autocomplete list of fields with idLookup on field describe --></label>\
+    <label><span>Object:</span> <input type="text" data-bind="value: importType" list="sobjectlist"></label>\
+    <label title="Used in upserts to determine if an existing record should be updated or a new record should be created" data-bind="visible: importAction() == \'upsert\'"><span>External ID:</span> <input type="text" data-bind="value: externalId" list="idlookuplist"></label>\
     <label title="The number of records per batch. A higher value is faster but increases the risk of errors due to governor limits."><span>Batch size:</span> <input type="number" data-bind="value: batchSize" class="batch-size"></label>\
     <label title="The number of batches to execute concurrently. A higher number is faster but increases the risk of errors due to lock congestion."><span>Threads:</span> <input type="number" data-bind="value: batchConcurrency" class="batch-size"></label>\
     <datalist id="sobjectlist" data-bind="foreach: sobjectList"><option data-bind="attr: {value: $data}"></datalist>\
+    <datalist id="idlookuplist" data-bind="foreach: idLookupList()"><option data-bind="attr: {value: $data}"></datalist>\
+    <datalist id="columnlist" data-bind="foreach: columnList()"><option data-bind="attr: {value: $data}"></datalist>\
     <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>\
     <textarea id="data" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}"></textarea>\
+    <a href="about:blank" class="char-btn" data-bind="click: showDescribe" title="Show field info for the selected object">i</a>\
+    <label>\
+      <span>Available columns:</span> <input type="text" list="columnlist">\
+    </label>\
     <div data-bind="visible: showHelp">\
       <p>Use for quick one-off data imports. Support is currently limited and may destroy your data.</p>\
       <ul>\
@@ -186,10 +210,48 @@ function dataImport() {
       <textarea id="import-result" readonly data-bind="value: importResult().text"></textarea>\
     </div>\
   </div>\
+  <div data-bind="if: confirmPopup()">\
+    <div id="confirm-background">\
+      <div id="confirm-dialog">\
+        <h1>Import</h1>\
+        <p>You are about to modify your data in Salesforce. This action cannot be undone.</p>\
+        <p data-bind="text: confirmPopup().text"></p>\
+        <div class="dialog-buttons">\
+          <button data-bind="click: confirmPopupYes">Import</button>\
+          <button data-bind="click: confirmPopupNo">Cancel</button>\
+        </div>\
+      </div>\
+    </div>\
+  </div>\
   ';
+
+  var dataInput = document.querySelector("#data");
+  var dataInputVm = {
+    setSelectionRange: function(offsetStart, offsetEnd) { dataInput.setSelectionRange(offsetStart, offsetEnd); },
+    getValue: function() { return dataInput.value; }
+  };
+
+  var vm = dataImportVm(dataInputVm);
+  ko.applyBindings(vm, document.documentElement);
+
+  var resultBox = document.querySelector("#result-box");
+  function recalculateHeight() {
+    vm.resultBoxOffsetTop(resultBox.offsetTop);
+  }
+  dataInput.addEventListener("mousemove", recalculateHeight);
+  popupWin.addEventListener("mouseup", recalculateHeight);
+  popupWin.addEventListener("resize", function() {
+    vm.winInnerHeight(popupWin.innerHeight);
+    recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
+  });
+
+}
+
+function dataImportVm(dataInput) {
 
   var importError = ko.observable(null);
   var maxResults = ko.observable(0);
+  var sobjectDataDescribes = ko.observable({});
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -198,12 +260,15 @@ function dataImport() {
     winInnerHeight: ko.observable(0),
     resultBoxOffsetTop: ko.observable(0),
     sobjectList: ko.observable([]),
+    idLookupList: idLookupList,
+    columnList: columnList,
     dataFormat: ko.observable("Excel"),
     importAction: ko.observable("create"),
     importType: ko.observable("Account"),
     externalId: ko.observable("Id"),
     batchSize: ko.observable("200"),
     batchConcurrency: ko.observable("10"),
+    confirmPopup: ko.observable(null),
     activeBatches: ko.observable(0),
     dataResultFormat: ko.observable("excel"),
     showStatus: {
@@ -222,10 +287,10 @@ function dataImport() {
     }),
     importResult: function() {
       if (importError()) {
-        return importError();
+        return {text: importError(), hasMore: false};
       }
       if (vm.importData().data == null) {
-        return "";
+        return {text: "", hasMore: false};
       }
       var statusColumnIndex = vm.importData().statusColumnIndex;
       var filteredData = vm.importData().data.filter(function(row) { return vm.showStatus[row[statusColumnIndex]](); });
@@ -238,6 +303,13 @@ function dataImport() {
         text: csvSerialize([vm.importData().header].concat(filteredData), vm.dataResultFormat() == "excel" ? "\t" : ","),
         hasMore: hasMore
       };
+    },
+    confirmPopupYes: function() {
+      vm.confirmPopup().action();
+      vm.confirmPopup(null);
+    },
+    confirmPopupNo: function() {
+      vm.confirmPopup(null);
     },
     showMore: function() {
       maxResults(maxResults() * 5);
@@ -257,40 +329,102 @@ function dataImport() {
     }
   };
 
-  ko.applyBindings(vm, document.documentElement);
-
-  var dataInput = document.querySelector("#data");
-
-  var resultBox = document.querySelector("#result-box");
-  function recalculateHeight() {
-    vm.resultBoxOffsetTop(resultBox.offsetTop);
-  }
-  dataInput.addEventListener("mousemove", recalculateHeight);
-  popupWin.addEventListener("mouseup", recalculateHeight);
-  popupWin.addEventListener("resize", function() {
-    vm.winInnerHeight(popupWin.innerHeight);
-    recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
-  });
-
   function spinFor(promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
-    promise.then(stopSpinner, stopSpinner);
+    promise.catch(function (e) { console.error("spinFor", e); }).then(stopSpinner, stopSpinner);
   }
   function stopSpinner() {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
+  /**
+   * sobjectDescribes is a map.
+   * Keys are lowercased sobject API names.
+   * Values are DescribeGlobalSObjectResult objects with two extra properties:
+   *   - The "fields" property contains and array of DescribeFieldResult objects of all fields on the given sobject.
+   *     The "fields" property does not exist if fields are not yet loaded.
+   *   - The "fieldsRequest" contains a boolean, which is true if fields are loaded or a request to load them is in progress.
+   */
+  function maybeGetFields(sobjectDescribe) {
+    if (!sobjectDescribe.fieldsRequest) {
+      console.log("getting fields for " + sobjectDescribe.name);
+      sobjectDescribe.fieldsRequest = true;
+      spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(res) {
+        sobjectDescribe.fields = res.fields;
+        sobjectDataDescribes.valueHasMutated();
+      }, function() {
+        sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
+      }));
+    }
+  }
   spinFor(askSalesforce("/services/data/v33.0/sobjects/").then(function(res) {
-    vm.sobjectList(res.sobjects.map(function(sobjectDescribe) { return sobjectDescribe.name; }));
+    vm.sobjectList(res.sobjects.filter(function(sobjectDescribe) { return sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable; }).map(function(sobjectDescribe) { return sobjectDescribe.name; }));
+    res.sobjects.forEach(function(sobjectDescribe) {
+      sobjectDataDescribes()[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
+    });
+    sobjectDataDescribes.valueHasMutated();
   }));
 
   spinFor(askSalesforceSoap("<getUserInfo/>").then(function(res) {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
+  function idLookupList() {
+    var sobjectName = vm.importType();
+    var sobjectDescribe = sobjectDataDescribes()[sobjectName.toLowerCase()];
+
+    if (!sobjectDescribe) {
+      return [];
+    }
+    if (!sobjectDescribe.fields) {
+      maybeGetFields(sobjectDescribe);
+      return [];
+    }
+    return sobjectDescribe.fields.filter(function(field) { return field.idLookup; }).map(function(field) { return field.name; });
+  }
+
+  function columnList() {
+    var sobjectName = vm.importType();
+    var sobjectDescribe = sobjectDataDescribes()[sobjectName.toLowerCase()];
+    var importAction = vm.importAction();
+    var idFieldName = importAction == "upsert" ? vm.externalId() : "Id";
+
+    var res = [idFieldName];
+    if (sobjectDescribe) {
+      if (sobjectDescribe.fields) {
+        sobjectDescribe.fields.forEach(function(field) {
+          if (field.createable || field.updateable) {
+            res.push(field.name);
+            field.referenceTo.forEach(function(referenceSobjectName) {
+              var referenceSobjectDescribe = sobjectDataDescribes()[referenceSobjectName.toLowerCase()];
+              if (referenceSobjectDescribe) {
+                if (referenceSobjectDescribe.fields) {
+                  referenceSobjectDescribe.fields.forEach(function(referenceField) {
+                    if (referenceField.idLookup) {
+                      res.push(field.relationshipName + ":" + referenceSobjectDescribe.name + ":" + referenceField.name);
+                    }
+                  });
+                } else {
+                  maybeGetFields(referenceSobjectDescribe);
+                }
+              }
+            });
+          }
+        });
+      } else {
+        maybeGetFields(sobjectDescribe);
+      }
+    }
+    res.push("__Status");
+    res.push("__Id");
+    res.push("__Action");
+    res.push("__Errors");
+    return res;
+  }
+
   function doImport() {
 
-    var text = dataInput.value;
+    var text = dataInput.getValue();
     var separator = vm.dataFormat() == "excel" ? "\t" : ",";
     var data;
     try {
@@ -465,12 +599,11 @@ function dataImport() {
       return;
     }
 
-    if (!popupWin.confirm("You are about to modify your data in Salesforce. This action cannot be undone."
-      + " " + importedRecords + " records will be imported."
-      + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded." : ""))
-    ) {
-      return;
-    }
+    vm.confirmPopup({
+      text: importedRecords + " records will be imported."
+        + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded." : ""),
+      action: startProcessing
+    });
 
     function updateResult() {
       var counts = {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0};
@@ -491,13 +624,15 @@ function dataImport() {
       updateResult();
     }
 
-    maxResults(1000);
-    importError(null);
-    updateResult();
+    function startProcessing() {
+      maxResults(1000);
+      importError(null);
+      updateResult();
 
-    vm.activeBatches(batches.length);
-    for (var i = 0; i < batchConcurrency && batches.length > 0; i++) {
-      executeBatch();
+      vm.activeBatches(batches.length);
+      for (var i = 0; i < batchConcurrency && batches.length > 0; i++) {
+        executeBatch();
+      }
     }
 
     function executeBatch() {
@@ -568,8 +703,8 @@ function dataImport() {
           executeBatch();
         }
       }).catch(function(error) {
-        console.error(error);
-        popupWin.alert("UNEXPECTED EXCEPTION: " + error);
+        console.error("Unexpected exception", error);
+        importError("UNEXPECTED EXCEPTION: " + error);
       }));
     }
 
@@ -651,4 +786,6 @@ function dataImport() {
       }
     }
   }
+
+  return vm;
 }

@@ -35,7 +35,6 @@ function dataExport() {
     display:block;\
     width: 100%;\
     resize: vertical;\
-    white-space: pre;\
     word-wrap: normal;\
     font-size: 11px;\
   }\
@@ -57,12 +56,13 @@ function dataExport() {
     overflow: auto;\
   }\
   #query {\
-    height: 4em;\
+    height: 5em;\
     margin-top: 3px;\
   }\
   #result-text {\
     height: calc(100% - 2px);\
     resize: none;\
+    white-space: pre;\
   }\
   .area {\
     background-color: #F8F8F8;\
@@ -111,11 +111,11 @@ function dataExport() {
     margin-top: 3px;\
   }\
   #autocomplete-results {\
-    white-space: pre;\
+    white-space: nowrap;\
     overflow: hidden;\
   }\
-  #autocomplete-results a {\
-    padding-left: 5px;\
+  #autocomplete-results.expanded {\
+    white-space: normal;\
   }\
   #spinner {\
     position: absolute;\
@@ -138,10 +138,6 @@ function dataExport() {
     line-height: 14px;\
     text-align: center;\
   }\
-  .describe-btn {\
-    float: left;\
-    margin-right: 3px;\
-  }\
   </style>\
   ';
 
@@ -158,15 +154,17 @@ function dataExport() {
     </label>\
     <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>\
     <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + \'px\'}"></textarea>\
-    <a href="about:blank" class="char-btn describe-btn" data-bind="click: showDescribe, attr: {title: \'Show field info for the \' + sobjectName() + \' object\'}">i</a>\
-    <div id="autocomplete-results"><span data-bind="text: autocompleteTitle"></span><span data-bind="foreach: autocompleteResults"><a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a></span></div>\
+    <div id="autocomplete-results" data-bind="css: {expanded: expandAutocomplete}">\
+      <a href="about:blank" class="char-btn" data-bind="click: showDescribe, visible: sobjectName(), attr: {title: \'Show field info for the \' + sobjectName() + \' object\'}">i</a>\
+      <a href="about:blank" class="char-btn" data-bind="click: toggleExpand, text: expandAutocomplete() ? \'-\' : \'+\'" title="Show all suggestions or only the first line"></a>\
+      <span data-bind="text: autocompleteTitle"></span>\
+      <span data-bind="foreach: autocompleteResults">\
+        <a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a>\
+      </span>\
+    </div>\
     <div data-bind="visible: showHelp">\
-      <p>Use for quick one-off data exports.</p>\
-      <ul>\
-        <li>Enter a <a href="http://www.salesforce.com/us/developer/docs/soql_sosl/" target="_blank">SOQL query</a> in the box above</li>\
-        <li>Select your output format</li>\
-        <li>Press Export</li>\
-      </ul>\
+      <p>Use for quick one-off data exports. Enter a <a href="http://www.salesforce.com/us/developer/docs/soql_sosl/" target="_blank">SOQL query</a> in the box above and press Export.</p>\
+      <p>Press Ctrl+Space to insert all field name autosuggestions or to load suggestions for field values.</p>\
       <p>Supports the full SOQL language. The columns in the CSV output depend on the returned data. Using subqueries may cause the output to grow rapidly. Bulk API is not supported. Large data volumes may freeze or crash your browser.</p>\
     </div>\
   </div>\
@@ -183,11 +181,81 @@ function dataExport() {
     <button class="cancel-btn" data-bind="visible: exportResultVm().isWorking, click: stopExport">Stop</button>\
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + \'px\'}">\
       <textarea id="result-text" readonly data-bind="text: exportResultVm().resultText, visible: !exportResultVm().resultTable"></textarea>\
-      <table data-bind="dom: exportResultVm().resultTable, visible: exportResultVm().resultTable"></table>\
+      <table data-bind="if: exportResultVm().resultTable">\
+        <thead>\
+          <tr>\
+            <th>+</th>\
+            <!-- ko foreach: exportResultVm().resultTable.header -->\
+              <th data-bind="text: $data"></th>\
+            <!-- /ko -->\
+          </tr>\
+        </thead>\
+        <tbody data-bind="foreach: exportResultVm().resultTable.data">\
+          <tr>\
+            <td><a href="about:blank" title="Show all data" data-bind="click: openAllData">+</a></td>\
+            <!-- ko foreach: cells -->\
+              <td data-bind="text: $data"></td>\
+            <!-- /ko -->\
+          </tr>\
+        </tnody>\
+      </table>\
     </div>\
   </div>\
   ';
 
+  var queryInput = document.querySelector("#query");
+
+  var queryInputVm = {
+    setValue: function(v) { queryInput.value = v; },
+    getValue: function() { return queryInput.value; },
+    getSelStart: function() { return queryInput.selectionStart; },
+    getSelEnd: function() { return queryInput.selectionEnd; },
+    insertText: function(text, selStart, selEnd) {
+      queryInput.focus();
+      queryInput.setRangeText(text, selStart, selEnd, "end");
+    }
+  };
+
+  var queryHistoryStorage = {
+    get: function() { return localStorage.insextQueryHistory; },
+    set: function(v) { localStorage.insextQueryHistory = v; },
+    clear: function() { localStorage.removeItem("insextQueryHistory"); }
+  };
+
+  var vm = dataExportVm(queryInputVm, queryHistoryStorage);
+  ko.applyBindings(vm, document.documentElement);
+
+  function queryAutocompleteEvent() {
+    vm.queryAutocompleteHandler();
+  }
+  queryInput.addEventListener("input", queryAutocompleteEvent);
+  queryInput.addEventListener("select", queryAutocompleteEvent);
+  // There is no event for when caret is moved without any selection or value change, so use keyup and mouseup for that.
+  queryInput.addEventListener("keyup", queryAutocompleteEvent);
+  queryInput.addEventListener("mouseup", queryAutocompleteEvent);
+
+  // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
+  queryInput.addEventListener("keypress", function(e) {
+    if (e.charCode == 32 /* space */ && e.ctrlKey) {
+      e.preventDefault();
+      vm.queryAutocompleteHandler({ctrlSpace: true});
+    }
+  });
+
+  var resultBox = document.querySelector("#result-box");
+  function recalculateHeight() {
+    vm.resultBoxOffsetTop(resultBox.offsetTop);
+  }
+  queryInput.addEventListener("mousemove", recalculateHeight);
+  popupWin.addEventListener("mouseup", recalculateHeight);
+  popupWin.addEventListener("resize", function() {
+    vm.winInnerHeight(popupWin.innerHeight);
+    recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
+  });
+
+}
+
+function dataExportVm(queryInput, queryHistoryStorage) {
   var exportResult = ko.observable({isWorking: false, exportStatus: "", exportedRecords: [], exportedTooling: false});
 
   var vm = {
@@ -206,8 +274,12 @@ function dataExport() {
     queryHistory: ko.observable(getQueryHistory()),
     selectedHistoryEntry: ko.observable(),
     sobjectName: ko.observable(""),
+    expandAutocomplete: ko.observable(false),
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
+    },
+    toggleExpand: function() {
+      vm.expandAutocomplete(!vm.expandAutocomplete());
     },
     showDescribe: function() {
       showAllData({
@@ -217,7 +289,7 @@ function dataExport() {
     },
     selectHistoryEntry: function() {
       if (vm.selectedHistoryEntry() != undefined) {
-        queryInput.value = vm.selectedHistoryEntry();
+        queryInput.setValue(vm.selectedHistoryEntry());
         vm.selectedHistoryEntry(undefined);
       }
     },
@@ -225,15 +297,14 @@ function dataExport() {
       clearQueryHistory();
       vm.queryHistory([]);
     },
+    queryAutocompleteHandler: queryAutocompleteHandler,
     doExport: doExport,
     stopExport: stopExport
   };
 
-  ko.applyBindings(vm, document.documentElement);
-
   function spinFor(promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
-    promise.then(stopSpinner, stopSpinner);
+    promise.catch(function (e) { console.error("spinFor", e); }).then(stopSpinner, stopSpinner);
   }
   function stopSpinner() {
     vm.spinnerCount(vm.spinnerCount() - 1);
@@ -249,12 +320,14 @@ function dataExport() {
    */
   var sobjectDataDescribes = {};
   var sobjectToolingDescribes = {};
+  var describeState = 0;
   function maybeGetFields(sobjectDescribe) {
-    if (sobjectDescribe && !sobjectDescribe.fields && !sobjectDescribe.fieldsRequest) {
+    if (!sobjectDescribe.fieldsRequest) {
       console.log("getting fields for " + sobjectDescribe.name);
       sobjectDescribe.fieldsRequest = true;
       spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(res) {
         sobjectDescribe.fields = res.fields;
+        describeState++;
         queryAutocompleteHandler();
       }, function() {
         sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
@@ -265,12 +338,14 @@ function dataExport() {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectDataDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
+    describeState++;
     queryAutocompleteHandler();
   }));
   spinFor(askSalesforce("/services/data/v33.0/tooling/sobjects/").then(function(res) {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectToolingDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
+    describeState++;
     queryAutocompleteHandler();
   }));
 
@@ -278,19 +353,7 @@ function dataExport() {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
-  var queryInput = document.querySelector("#query");
-  queryInput.value = vm.queryHistory()[0] || "select Id from Account";
-
-  var resultBox = document.querySelector("#result-box");
-  function recalculateHeight() {
-    vm.resultBoxOffsetTop(resultBox.offsetTop);
-  }
-  queryInput.addEventListener("mousemove", recalculateHeight);
-  popupWin.addEventListener("mouseup", recalculateHeight);
-  popupWin.addEventListener("resize", function() {
-    vm.winInnerHeight(popupWin.innerHeight);
-    recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
-  });
+  queryInput.setValue(vm.queryHistory()[0] || "select Id from Account");
 
   /**
    * SOQL query autocomplete handling.
@@ -299,34 +362,41 @@ function dataExport() {
    * Autocompletes sobject names after the "from" keyword.
    * Autocompletes field names, if the "from" keyword exists followed by a valid object name.
    * Supports relationship fields.
-   * Autocompletes picklist values.
+   * Autocompletes field values (picklist values, date constants, boolean values).
+   * Autocompletes any textual field value by performing a Salesforce API query when Ctrl+Space is pressed.
+   * Inserts all autocomplete field suggestions when Ctrl+Space is pressed.
    * Does not yet support subqueries.
    */
-  function queryAutocompleteHandler() {
+  var autocompleteState = "";
+  var autocompleteProgress = {};
+  function queryAutocompleteHandler(e) {
     var sobjectDescribes = vm.queryTooling() ? sobjectToolingDescribes : sobjectDataDescribes;
-    var query = queryInput.value;
-    var selStart = queryInput.selectionStart;
-    var selEnd = queryInput.selectionEnd;
+    var query = queryInput.getValue();
+    var selStart = queryInput.getSelStart();
+    var selEnd = queryInput.getSelEnd();
+    var ctrlSpace = e && e.ctrlSpace;
 
-    vm.autocompleteTitle("\u00A0");
-    vm.autocompleteResults([]);
+    // Skip the calculation when no change is made. This improves performance and prevents async operations (Ctrl+Space) from being canceled when they should not be.
+    var newAutocompleteState = [vm.queryTooling(), describeState, query, selStart, selEnd].join("$");
+    if (newAutocompleteState == autocompleteState && !ctrlSpace) {
+      return;
+    }
+    autocompleteState = newAutocompleteState;
+
+    // Cancel any async operation since its results will no longer be relevant.
+    if (autocompleteProgress.abort) {
+      autocompleteProgress.abort();
+    }
+
     vm.autocompleteClick = function(item) {
-      queryInput.focus();
-      queryInput.setRangeText(item.value, selStart, selEnd, "end");
+      queryInput.insertText(item.value + item.suffix, selStart, selEnd);
       queryAutocompleteHandler();
     };
 
-    // Find out what sobject we are querying, by using the word after the "from" keyword.
-    // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
-    var sobjectName = (/(^|\s)from\s*([a-zA-Z0-9_]*)/.exec(query) || ["", "", ""])[2];
-    vm.sobjectName(sobjectName);
-    var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
-    maybeGetFields(sobjectDescribe);
-
     // Find the token we want to autocomplete. This is the selected text, or the last word before the cursor.
-    var searchTerm = (selStart != selEnd
+    var searchTerm = selStart != selEnd
       ? query.substring(selStart, selEnd)
-      : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0]).toLowerCase();
+      : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0];
     selStart = selEnd - searchTerm.length;
 
     // If we are just after the "from" keyword, autocomplete the sobject name
@@ -334,120 +404,267 @@ function dataExport() {
       var ar = [];
       for (var sName in sobjectDescribes) {
         var sobjectDescribe = sobjectDescribes[sName];
-        if (sobjectDescribe.name.toLowerCase().indexOf(searchTerm) > -1 || sobjectDescribe.label.toLowerCase().indexOf(searchTerm) > -1) {
-          ar.push({value: sobjectDescribe.name, title: sobjectDescribe.label});
+        if (sobjectDescribe.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || sobjectDescribe.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1) {
+          ar.push({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " "});
         }
       }
+      vm.sobjectName("");
       vm.autocompleteTitle("Objects:");
       vm.autocompleteResults(ar);
       return;
     }
 
-    if (sobjectDescribe && sobjectDescribe.fields) {
+    // Find out what sobject we are querying, by using the word after the "from" keyword.
+    // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
+    var fromKeywordMatch = /(^|\s)from\s*([a-zA-Z0-9_]*)/.exec(query);
+    if (!fromKeywordMatch) {
+      vm.sobjectName("");
+      vm.autocompleteTitle("\"from\" keyword not found");
+      vm.autocompleteResults([]);
+      return;
+    }
+    var sobjectName = fromKeywordMatch[2];
+    var isBeforeFrom = selStart > fromKeywordMatch.index + 1;
+    vm.sobjectName(sobjectName);
+    var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
 
-      /*
-       * The context of a field is used to support queries on relationship fields.
-       *
-       * For example: If the cursor is at the end of the query "select Id from Contact where Account.Owner.Usern"
-       * then the the searchTerm we want to autocomplete is "Usern", the contextPath is "Account.Owner." and the sobjectName is "Contact"
-       *
-       * When autocompleting picklist values in the query "select Id from Contact where Account.Type = 'Cus"
-       * then the searchTerm we want to autocomplete is "Cus", the fieldName is "Type", the contextPath is "Account." and the sobjectName is "Contact"
-       */
+    if (!sobjectDescribe) {
+      vm.autocompleteTitle("Unknown object: " + sobjectName);
+      vm.autocompleteResults([]);
+      return;
+    }
+    if (!sobjectDescribe.fields) {
+      maybeGetFields(sobjectDescribe);
+      vm.autocompleteTitle("Loading metadata for object: " + sobjectName);
+      vm.autocompleteResults([]);
+      return;
+    }
 
-      var contextEnd = selStart;
+    /*
+     * The context of a field is used to support queries on relationship fields.
+     *
+     * For example: If the cursor is at the end of the query "select Id from Contact where Account.Owner.Usern"
+     * then the the searchTerm we want to autocomplete is "Usern", the contextPath is "Account.Owner." and the sobjectName is "Contact"
+     *
+     * When autocompleting field values in the query "select Id from Contact where Account.Type = 'Cus"
+     * then the searchTerm we want to autocomplete is "Cus", the fieldName is "Type", the contextPath is "Account." and the sobjectName is "Contact"
+     */
 
-      // If we are within a string, autocomplete picklist values
-      var isInString = query.substring(0, selStart).match(/\s*[<>=!]+\s*'([^' ]*)$/);
-      var fieldName = null;
-      if (isInString) {
-        var fieldEnd = selStart - isInString[0].length;
-        fieldName = query.substring(0, fieldEnd).match(/[a-zA-Z0-9_]*$/)[0].toLowerCase();
-        contextEnd = fieldEnd - fieldName.length;
-        selStart -= isInString[1].length;
-      }
+    var contextEnd = selStart;
 
-      /*
-      contextSobjectDescribes is a set of describe results for the relevant context sobjects.
-      Example: "select Subject, Who.Name from Task"
-      The context sobjects for "Subject" is {"Task"}.
-      The context sobjects for "Who" is {"Task"}.
-      The context sobjects for "Name" is {"Contact", "Lead"}.
-      */
-      var contextSobjectDescribes = [sobjectDescribe];
-      var contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0].toLowerCase();
-      if (contextPath) {
-        var contextFields = contextPath.split(".");
-        contextFields.pop(); // always empty
-        contextFields.forEach(function(referenceFieldName) {
-          var newContextSobjectDescribes = new Set();
-          contextSobjectDescribes.forEach(function(sobjectDescribe) {
-            sobjectDescribe.fields
-              .filter(function(field) { return field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName; })
-              .forEach(function(field) {
-                field.referenceTo.forEach(function(referencedSobjectName) {
-                  var referencedSobjectDescribe = sobjectDescribes[referencedSobjectName.toLowerCase()];
-                  maybeGetFields(referencedSobjectDescribe);
-                  if (referencedSobjectDescribe && referencedSobjectDescribe.fields) {
+    // If we are on the right hand side of a comparison operator, autocomplete field values
+    var isFieldValue = query.substring(0, selStart).match(/\s*[<>=!]+\s*('?[^'\s]*)$/);
+    var fieldName = null;
+    if (isFieldValue) {
+      var fieldEnd = selStart - isFieldValue[0].length;
+      fieldName = query.substring(0, fieldEnd).match(/[a-zA-Z0-9_]*$/)[0];
+      contextEnd = fieldEnd - fieldName.length;
+      selStart -= isFieldValue[1].length;
+    }
+
+    /*
+    contextSobjectDescribes is a set of describe results for the relevant context sobjects.
+    Example: "select Subject, Who.Name from Task"
+    The context sobjects for "Subject" is {"Task"}.
+    The context sobjects for "Who" is {"Task"}.
+    The context sobjects for "Name" is {"Contact", "Lead"}.
+    */
+    var contextSobjectDescribes = [sobjectDescribe];
+    var contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0];
+    var isLoading = false;
+    if (contextPath) {
+      var contextFields = contextPath.split(".");
+      contextFields.pop(); // always empty
+      contextFields.forEach(function(referenceFieldName) {
+        var newContextSobjectDescribes = new Set();
+        contextSobjectDescribes.forEach(function(sobjectDescribe) {
+          sobjectDescribe.fields
+            .filter(function(field) { return field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase(); })
+            .forEach(function(field) {
+              field.referenceTo.forEach(function(referencedSobjectName) {
+                var referencedSobjectDescribe = sobjectDescribes[referencedSobjectName.toLowerCase()];
+                if (referencedSobjectDescribe) {
+                  if (referencedSobjectDescribe.fields) {
                     newContextSobjectDescribes.add(referencedSobjectDescribe);
+                  } else {
+                    maybeGetFields(referencedSobjectDescribe);
+                    isLoading = true;
                   }
-                });
-              });
-          });
-          contextSobjectDescribes = [];
-          newContextSobjectDescribes.forEach(function(d) { contextSobjectDescribes.push(d); });
-        });
-      }
-
-      if (contextSobjectDescribes.length > 0) {
-        if (isInString) {
-          // Autocomplete picklist values
-          var fieldNames = contextSobjectDescribes
-            .map(function(sobjectDescribe) {
-              return sobjectDescribe.fields
-                .filter(function(field) { return field.name.toLowerCase() == fieldName; })
-                .map(function(field) { return sobjectDescribe.name + "." + field.name; })
-                .join(", ");
-            })
-            .join(", ");
-          var ar = [];
-          contextSobjectDescribes.forEach(function(sobjectDescribe) {
-            sobjectDescribe.fields
-              .filter(function(field) { return field.name.toLowerCase() == fieldName; })
-              .forEach(function(field) {
-                field.picklistValues
-                  .filter(function(pickVal) { return pickVal.value.toLowerCase().indexOf(searchTerm) > -1 || pickVal.label.toLowerCase().indexOf(searchTerm) > -1; })
-                  .forEach(function(pickVal) {
-                    ar.push({value: pickVal.value, title: pickVal.label});
-                  });
-              });
-          });
-          vm.autocompleteTitle((fieldNames || "Field") + " values:");
-          vm.autocompleteResults(ar);
-        } else {
-          // Autocomplete field names
-          var ar = [];
-          contextSobjectDescribes.forEach(function(sobjectDescribe) {
-            sobjectDescribe.fields
-              .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm) > -1 || field.label.toLowerCase().indexOf(searchTerm) > -1; })
-              .forEach(function(field) {
-                ar.push({value: field.name, title: field.label});
-                if (field.type == "reference") {
-                  ar.push({value: field.relationshipName + ".", title: field.label});
                 }
               });
+            });
+        });
+        contextSobjectDescribes = [];
+        newContextSobjectDescribes.forEach(function(d) { contextSobjectDescribes.push(d); });
+      });
+    }
+
+    if (contextSobjectDescribes.length == 0) {
+      vm.autocompleteTitle(isLoading ? "Loading metadata..." : "Unknown field: " + sobjectName + "." + contextPath);
+      vm.autocompleteResults([]);
+      return;
+    }
+
+    if (isFieldValue) {
+      // Autocomplete field values
+      var contextValueFields = [];
+      contextSobjectDescribes.forEach(function(sobjectDescribe) {
+        sobjectDescribe.fields
+          .filter(function(field) { return field.name.toLowerCase() == fieldName.toLowerCase(); })
+          .forEach(function(field) {
+            contextValueFields.push({sobjectDescribe: sobjectDescribe, field: field});
           });
-          vm.autocompleteTitle(contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:");
-          vm.autocompleteResults(ar);
-        }
+      });
+      if (contextValueFields.length == 0) {
+        vm.autocompleteTitle("Unknown field: " + sobjectDescribe.name + "." + contextPath + fieldName);
+        vm.autocompleteResults([]);
+        return;
       }
+      var fieldNames = contextValueFields.map(function(contextValueField) { return contextValueField.sobjectDescribe.name + "." + contextValueField.field.name; }).join(", ");
+      if (ctrlSpace) {
+        // Since this performs a Salesforce API call, we ask the user to opt in by pressing Ctrl+Space
+        if (contextValueFields.length > 1) {
+          vm.autocompleteTitle("Multiple possible fields: " + fieldNames);
+          vm.autocompleteResults([]);
+          return;
+        }
+        var sobjectDescribe = contextValueFields[0].sobjectDescribe;
+        var field = contextValueFields[0].field;
+        var queryMethod = vm.queryTooling() ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+        var acQuery = "select " + field.name + " from " + sobjectDescribe.name + " where " + field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + field.name + " limit 100";
+        spinFor(askSalesforce("/services/data/v33.0/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
+          .catch(function(xhr) {
+            vm.autocompleteTitle("Error: " + (xhr && xhr.responseText));
+            return null;
+          })
+          .then(function queryHandler(data) {
+            autocompleteProgress = {};
+            if (!data) {
+              return;
+            }
+            var ar = [];
+            data.records.forEach(function(record) {
+              var value = record[field.name];
+              if (value) {
+                ar.push({value: "'" + value + "'", title: value, suffix: " "});
+              }
+            });
+            vm.autocompleteTitle(fieldNames + " values:");
+            vm.autocompleteResults(ar);
+          }));
+        vm.autocompleteTitle("Loading " + fieldNames + " values...");
+        vm.autocompleteResults([]);
+        return;
+      }
+      var ar = [];
+      contextValueFields.forEach(function(contextValueField) {
+        var field = contextValueField.field;
+        field.picklistValues.forEach(function(pickVal) {
+          ar.push({value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " "});
+        });
+        if (field.type == "boolean") {
+          ar.push({value: "true", title: "true", suffix: " "});
+          ar.push({value: "false", title: "false", suffix: " "});
+        }
+        if (field.type == "date" || field.type == "datetime") {
+          function pad(n, d) {
+            return ("000" + n).slice(-d);
+          }
+          var d = new Date();
+          if (field.type == "date") {
+            ar.push({value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2), title: "Today", suffix: " "});
+          }
+          if (field.type == "datetime") {
+            ar.push({value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2) + "T"
+              + pad(d.getHours(), 2) + ":" + pad(d.getMinutes(), 2) + ":" + pad(d.getSeconds(), 2) + "." + pad(d.getMilliseconds(), 3)
+              + (d.getTimezoneOffset() <= 0 ? "+" : "-") + pad(Math.floor(Math.abs(d.getTimezoneOffset()) / 60), 2)
+              + ":" + pad(Math.abs(d.getTimezoneOffset()) % 60, 2), title: "Now", suffix: " "});
+          }
+          // from http://www.salesforce.com/us/developer/docs/soql_sosl/Content/sforce_api_calls_soql_select_dateformats.htm Spring 15
+          ar.push({value: "YESTERDAY", title: "Starts 12:00:00 the day before and continues for 24 hours.", suffix: " "});
+          ar.push({value: "TODAY", title: "Starts 12:00:00 of the current day and continues for 24 hours.", suffix: " "});
+          ar.push({value: "TOMORROW", title: "Starts 12:00:00 after the current day and continues for 24 hours.", suffix: " "});
+          ar.push({value: "LAST_WEEK", title: "Starts 12:00:00 on the first day of the week before the most recent first day of the week and continues for seven full days. First day of the week is determined by your locale.", suffix: " "});
+          ar.push({value: "THIS_WEEK", title: "Starts 12:00:00 on the most recent first day of the week before the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " "});
+          ar.push({value: "NEXT_WEEK", title: "Starts 12:00:00 on the most recent first day of the week after the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " "});
+          ar.push({value: "LAST_MONTH", title: "Starts 12:00:00 on the first day of the month before the current day and continues for all the days of that month.", suffix: " "});
+          ar.push({value: "THIS_MONTH", title: "Starts 12:00:00 on the first day of the month that the current day is in and continues for all the days of that month.", suffix: " "});
+          ar.push({value: "NEXT_MONTH", title: "Starts 12:00:00 on the first day of the month after the month that the current day is in and continues for all the days of that month.", suffix: " "});
+          ar.push({value: "LAST_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the last 90 days.", suffix: " "});
+          ar.push({value: "NEXT_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the next 90 days.", suffix: " "});
+          ar.push({value: "LAST_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the last n days.", suffix: " "});
+          ar.push({value: "NEXT_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the next n days.", suffix: " "});
+          ar.push({value: "NEXT_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next week and continues for the next n weeks.", suffix: " "});
+          ar.push({value: "LAST_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous week and continues for the last n weeks.", suffix: " "});
+          ar.push({value: "NEXT_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next month and continues for the next n months.", suffix: " "});
+          ar.push({value: "LAST_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous month and continues for the last n months.", suffix: " "});
+          ar.push({value: "THIS_QUARTER", title: "Starts 12:00:00 of the current quarter and continues to the end of the current quarter.", suffix: " "});
+          ar.push({value: "LAST_QUARTER", title: "Starts 12:00:00 of the previous quarter and continues to the end of that quarter.", suffix: " "});
+          ar.push({value: "NEXT_QUARTER", title: "Starts 12:00:00 of the next quarter and continues to the end of that quarter.", suffix: " "});
+          ar.push({value: "NEXT_N_QUARTERS:n", title: "Starts 12:00:00 of the next quarter and continues to the end of the nth quarter.", suffix: " "});
+          ar.push({value: "LAST_N_QUARTERS:n", title: "Starts 12:00:00 of the previous quarter and continues to the end of the previous nth quarter.", suffix: " "});
+          ar.push({value: "THIS_YEAR", title: "Starts 12:00:00 on January 1 of the current year and continues through the end of December 31 of the current year.", suffix: " "});
+          ar.push({value: "LAST_YEAR", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of that year.", suffix: " "});
+          ar.push({value: "NEXT_YEAR", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of that year.", suffix: " "});
+          ar.push({value: "NEXT_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of the nth year.", suffix: " "});
+          ar.push({value: "LAST_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of the previous nth year.", suffix: " "});
+          ar.push({value: "THIS_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the current fiscal quarter and continues through the end of the last day of the fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "LAST_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "NEXT_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "NEXT_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of the nth fiscal quarter. The fiscal year is defined in the company profile under Setup atCompany Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "LAST_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of the previous nth fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "THIS_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the current fiscal year and continues through the end of the last day of the fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "LAST_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "NEXT_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "NEXT_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of the nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          ar.push({value: "LAST_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of the previous nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+        }
+        if (field.nillable) {
+          ar.push({value: "null", title: "null", suffix: " "});
+        }
+      });
+      ar = ar.filter(function(res) { return res.value.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || res.title.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1; });
+      vm.autocompleteTitle(fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"));
+      vm.autocompleteResults(ar);
+      return;
+    } else {
+      // Autocomplete field names and functions
+      if (ctrlSpace) {
+        var ar = [];
+        contextSobjectDescribes.forEach(function(sobjectDescribe) {
+          sobjectDescribe.fields
+            .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || field.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1; })
+            .forEach(function(field) {
+              ar.push(contextPath + field.name);
+            });
+        });
+        if (ar.length > 0) {
+          queryInput.insertText(ar.join(", ") + (isBeforeFrom ? " " : ", "), selStart - contextPath.length, selEnd);
+        }
+        queryAutocompleteHandler();
+        return;
+      }
+      var ar = [];
+      contextSobjectDescribes.forEach(function(sobjectDescribe) {
+        sobjectDescribe.fields
+          .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || field.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1; })
+          .forEach(function(field) {
+            ar.push({value: field.name, title: field.label, suffix: isBeforeFrom ? " " : ", "});
+            if (field.relationshipName) {
+              ar.push({value: field.relationshipName + ".", title: field.label, suffix: ""});
+            }
+          });
+      });
+      ["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"]
+        .filter(function (fn) { return fn.toLowerCase().indexOf(searchTerm.toLowerCase()) == 0; })
+        .forEach(function(fn) {
+          ar.push({value: fn, title: fn + "()", suffix: "("});
+        });
+      vm.autocompleteTitle(contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:");
+      vm.autocompleteResults(ar);
+      return;
     }
   }
-  queryInput.addEventListener("input", queryAutocompleteHandler);
-  queryInput.addEventListener("select", queryAutocompleteHandler);
-  // There is no event for when caret is moved without any selection or value change, so use keyup and mouseup for that.
-  queryInput.addEventListener("keyup", queryAutocompleteHandler);
-  queryInput.addEventListener("mouseup", queryAutocompleteHandler);
 
   function computeExportResultVm() {
     if (exportResult().exportStatus != null) {
@@ -464,7 +681,6 @@ function dataExport() {
         resultText: JSON.stringify(expRecords, null, "  ")
       };
     }
-    var table = [];
     /*
     Discover what columns should be in our CSV file.
     We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
@@ -490,10 +706,10 @@ function dataExport() {
       }
       discoverColumns(record, "");
     }
-    table.push(header);
     /*
     Now we have the columns, we add the records to the CSV table.
     */
+    var table = [];
     for (var i = 0; i < expRecords.length; i++) {
       var record = expRecords[i];
       var row = [];
@@ -517,45 +733,22 @@ function dataExport() {
       table.push(row);
     }
     if (vm.dataFormat() == "table") {
-      // Here we do raw DOM manipulation. Consider refactoring into using Knockout.js data binding.
-      var trs = [];
+      var data = [];
       for (var r = 0; r < table.length; r++) {
-        var row = table[r];
-        var tr = document.createElement("tr");
-        if (true) {
-          var td = document.createElement(r == 0 ? "th" : "td");
-          if (r == 0) {
-            td.textContent = "+";
-          } else {
-            var a = document.createElement("a");
-            a.href = "about:blank";
-            a.textContent = "+";
-            a.title = "Show all data";
-            a.sfRecordAttributes = expRecords[r - 1].attributes;
-            a.addEventListener("click", function(e) {
-              e.preventDefault();
-              showAllData({recordAttributes: e.target.sfRecordAttributes, useToolingApi: exportResult().exportedTooling});
-            });
-            td.appendChild(a);
-          }
-          tr.appendChild(td);
-        }
-        row.forEach(function(cell) {
-          var td = document.createElement(r == 0 ? "th" : "td");
-          td.textContent = cell;
-          tr.appendChild(td);
+        data.push({
+          cells: table[r],
+          openAllData: function() { showAllData(this); }.bind({recordAttributes: expRecords[r].attributes, useToolingApi: exportResult().exportedTooling})
         });
-        trs.push(tr);
       }
       return {
         isWorking: exportResult().isWorking,
-        resultTable: trs
+        resultTable: {header: header, data: data}
       };
     } else {
       var separator = vm.dataFormat() == "excel" ? "\t" : ",";
       return {
         isWorking: exportResult().isWorking,
-        resultText: csvSerialize(table, separator)
+        resultText: csvSerialize([header].concat(table), separator)
       };
     }
   }
@@ -567,7 +760,7 @@ function dataExport() {
   function getQueryHistory() {
     var queryHistory;
     try {
-      queryHistory = JSON.parse(localStorage.insextQueryHistory);
+      queryHistory = JSON.parse(queryHistoryStorage.get());
     } catch(e) {}
     if (!Array.isArray(queryHistory)) {
       queryHistory = [];
@@ -585,12 +778,12 @@ function dataExport() {
     if (queryHistory.length > 20) {
       queryHistory.pop();
     }
-    localStorage.insextQueryHistory = JSON.stringify(queryHistory);
+    queryHistoryStorage.set(JSON.stringify(queryHistory));
     return queryHistory;
   }
 
   function clearQueryHistory() {
-    localStorage.removeItem("insextQueryHistory");
+    queryHistoryStorage.clear();
   }
 
   var exportProgress = {};
@@ -603,7 +796,7 @@ function dataExport() {
       exportedRecords: exportedRecords,
       exportedTooling: exportedTooling
     });
-    var query = queryInput.value;
+    var query = queryInput.getValue();
     var queryMethod = exportedTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
     spinFor(askSalesforce("/services/data/v33.0/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
       exportedRecords = exportedRecords.concat(data.records);
@@ -668,4 +861,5 @@ function dataExport() {
     return table.map(function(row) { return row.map(function(text) { return "\"" + ("" + (text == null ? "" : text)).split("\"").join("\"\"") + "\""; }).join(separator); }).join("\r\n");
   }
 
+  return vm;
 }
