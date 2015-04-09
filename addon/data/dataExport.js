@@ -1,4 +1,4 @@
-function dataExport() {
+function dataExport(options) {
   // Load a blank page and then inject the HTML to work around https://bugzilla.mozilla.org/show_bug.cgi?id=792479
   // An empty string as URL loads about:blank synchronously
   var popupWin;
@@ -222,7 +222,7 @@ function dataExport() {
     clear: function() { localStorage.removeItem("insextQueryHistory"); }
   };
 
-  var vm = dataExportVm(queryInputVm, queryHistoryStorage);
+  var vm = dataExportVm(options, queryInputVm, queryHistoryStorage);
   ko.applyBindings(vm, document.documentElement);
 
   function queryAutocompleteEvent() {
@@ -255,7 +255,8 @@ function dataExport() {
 
 }
 
-function dataExportVm(queryInput, queryHistoryStorage) {
+function dataExportVm(options, queryInput, queryHistoryStorage) {
+  options = options || {};
   var exportResult = ko.observable({isWorking: false, exportStatus: "", exportedRecords: [], exportedTooling: false});
 
   var vm = {
@@ -353,7 +354,7 @@ function dataExportVm(queryInput, queryHistoryStorage) {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
-  queryInput.setValue(vm.queryHistory()[0] || "select Id from Account");
+  queryInput.setValue(options.query || vm.queryHistory()[0] || "select Id from Account");
 
   /**
    * SOQL query autocomplete handling.

@@ -138,6 +138,14 @@ function showAllData(recordDesc) {
   .object-actions {\
     float: right;\
   }\
+  .child-list {\
+    text-align: right;\
+    width: 4em;\
+  }\
+  .child-setup {\
+    text-align: right;\
+    width: 4em;\
+  }\
   </style>\
   ';
 
@@ -183,6 +191,25 @@ function showAllData(recordDesc) {
       </tr>\
     </tbody>\
   </table>\
+  <hr>\
+  <table>\
+    <thead>\
+      <th class="child-name">Relationship Name</th>\
+      <th class="child-object">Child Object</th>\
+      <th class="child-field">Field</th>\
+      <th class="child-list">List</th>\
+      <th class="child-setup">Setup</th>\
+    </thead>\
+    <tbody id="dataTableBody" data-bind="foreach: childRows">\
+      <tr data-bind="visible: visible()">\
+        <td data-bind="text: childName, click: openDetails" tabindex="0" class="child-name"></td>\
+        <td class="child-object"><a href="about:blank" data-bind="text: childObject, click: showChildObject"></a></td>\
+        <td data-bind="text: childField" class="child-field"></td>\
+        <td class="child-list"><a href="about:blank" data-bind="click: queryList, visible: $parent.canView()" title="Export records in this related list">List</a></td>\
+        <td class="child-setup"><a href="about:blank" data-bind="visible: setupLink(), attr: {href: setupLink()}" target="_blank">Setup</a></td>\
+      </tr>\
+    </tbody>\
+  </table>\
   <div data-bind="if: fieldDetails()">\
     <div id="fieldDetailsView">\
       <div class="container">\
@@ -224,6 +251,7 @@ function showAllData(recordDesc) {
     errorMessages: ko.observableArray(),
     fieldRowsFilter: ko.observable(""),
     fieldRows: ko.observableArray(),
+    childRows: ko.observableArray(),
     sortByLabel: function() {
       sortFieldRows("label", function(r) { return r.fieldLabel; });
     },
@@ -247,7 +275,7 @@ function showAllData(recordDesc) {
       var objectDescribe = objectData();
       var map = {};
       for (var key in objectDescribe) {
-        if (key != "fields") {
+        if (key != "fields" && key != "childRelationships") {
           map[key] = objectDescribe[key];
         }
       }
@@ -353,6 +381,39 @@ function showAllData(recordDesc) {
     return fieldVm;
   }
 
+  function ChildRow(childDescribe, sobjectDescribe) {
+    var childVm = {
+      childName: childDescribe.relationshipName,
+      childObject: childDescribe.childSObject,
+      childField: childDescribe.field,
+      visible: function() {
+        var value = vm.fieldRowsFilter().trim().toLowerCase();
+        var row = childVm.childName + "," + childVm.childObject + "," + childVm.childField;
+        return !value || row.toLowerCase().indexOf(value) != -1;
+      },
+      openDetails: function() {
+        var map = {};
+        for (var key in childDescribe) {
+          map[key] = childDescribe[key];
+        }
+        showAllFieldMetadata(map);
+      },
+      showChildObject: function() {
+        showAllData({
+          recordAttributes: {type: childDescribe.childSObject, url: null},
+          useToolingApi: false
+        });
+      },
+      setupLink: function() {
+        return getFieldSetupLink(fieldIds(), {name: childDescribe.childSObject}, {name: childDescribe.field, custom: childDescribe.field.endsWith("__c")});
+      },
+      queryList: function() {
+        dataExport({query: "select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'"});
+      }
+    };
+    return childVm;
+  }
+
   function showAllFieldMetadata(allFieldMetadata) {
     var fieldDetailVms = [];
     for (var key in allFieldMetadata) {
@@ -413,6 +474,10 @@ function showAllData(recordDesc) {
     vm.fieldRows.removeAll();
     sobjectDescribe.fields.forEach(function(fieldDescribe) {
       vm.fieldRows.push(new FieldRow(fieldDescribe, sobjectDescribe));
+    });
+    vm.childRows.removeAll();
+    sobjectDescribe.childRelationships.forEach(function(childDescribe) {
+      vm.childRows.push(new ChildRow(childDescribe, sobjectDescribe));
     });
     
     // Fetch record data using record retrieve call

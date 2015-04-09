@@ -1,4 +1,5 @@
 function* dataExportTest() {
+  console.log("TEST dataExportVm");
 
   var queryInput = {value: "", selectionStart: 0, selectionEnd: 0};
   function setQuery(a, b, c) {
@@ -25,7 +26,7 @@ function* dataExportTest() {
     clear: function() { queryHistory = undefined; }
   };
 
-  var vm = dataExportVm(queryInputVm, queryHistoryStorage);
+  var vm = dataExportVm({}, queryInputVm, queryHistoryStorage);
 
   function waitForSpinner() {
     return new Promise(function(resolve, reject) {

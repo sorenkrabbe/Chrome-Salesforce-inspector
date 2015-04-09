@@ -156,7 +156,7 @@ function loadMetadataForRecordId(recordId) {
 }
 
 function loadFieldSetupData(sobjectName) {
-  return askSalesforce("/services/data/v33.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField where EntityDefinitionId = '" + sobjectName + "'")).then(function(res) {
+  return askSalesforce("/services/data/v33.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField")).then(function(res) {
     var fieldIds = {};
     res.records.forEach(function(customField) {
       fieldIds[customField.FullName] = customField.Id;

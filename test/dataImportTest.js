@@ -1,4 +1,6 @@
 function* dataImportTest() {
+  console.log("TEST dataImportVm");
+
   var queryInput = {value: "", selectionStart: 0, selectionEnd: 0};
   function setQuery(a, b, c) {
     queryInput.value = a + b + c;
