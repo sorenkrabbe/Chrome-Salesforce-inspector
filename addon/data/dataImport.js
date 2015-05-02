@@ -193,14 +193,14 @@ function dataImport() {
     <h1>Import result</h1>\
     <label><input type=radio name="data-format" value="excel" data-bind="checked: dataResultFormat"> <span>Excel</span></label>\
     <label><input type=radio name="data-format" value="csv" data-bind="checked: dataResultFormat"> <span>CSV</span></label>\
-    <button class="cancel-btn" data-bind="visible: importData().counts.Queued > 0, click: stopImport">Stop</button>\
+    <button class="cancel-btn" data-bind="visible: importResult().counts.Queued > 0, click: stopImport">Stop</button>\
     <div>\
       <span>Status:</span>\
-      <label data-bind="css: {statusGroupEmpty: importData().counts.Queued == 0}"><input type=checkbox data-bind="checked: showStatus.Queued"> <span data-bind="text: importData().counts.Queued"></span> <span>Queued</span></label>\
-      <label data-bind="css: {statusGroupEmpty: importData().counts.Processing == 0}"><input type=checkbox data-bind="checked: showStatus.Processing"> <span data-bind="text: importData().counts.Processing"></span> <span>Processing</span></label>\
-      <label data-bind="css: {statusGroupEmpty: importData().counts.Succeeded == 0}"><input type=checkbox data-bind="checked: showStatus.Succeeded"> <span data-bind="text: importData().counts.Succeeded"></span> <span>Succeeded</span></label>\
-      <label data-bind="css: {statusGroupEmpty: importData().counts.Failed == 0}"><input type=checkbox data-bind="checked: showStatus.Failed"> <span data-bind="text: importData().counts.Failed"></span> <span>Failed</span></label>\
-      <label data-bind="css: {statusGroupEmpty: importData().counts.Canceled == 0}"><input type=checkbox data-bind="checked: showStatus.Canceled"> <span data-bind="text: importData().counts.Canceled"></span> <span>Canceled</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importResult().counts.Queued == 0}"><input type=checkbox data-bind="checked: showStatus.Queued"> <span data-bind="text: importResult().counts.Queued"></span> <span>Queued</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importResult().counts.Processing == 0}"><input type=checkbox data-bind="checked: showStatus.Processing"> <span data-bind="text: importResult().counts.Processing"></span> <span>Processing</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importResult().counts.Succeeded == 0}"><input type=checkbox data-bind="checked: showStatus.Succeeded"> <span data-bind="text: importResult().counts.Succeeded"></span> <span>Succeeded</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importResult().counts.Failed == 0}"><input type=checkbox data-bind="checked: showStatus.Failed"> <span data-bind="text: importResult().counts.Failed"></span> <span>Failed</span></label>\
+      <label data-bind="css: {statusGroupEmpty: importResult().counts.Canceled == 0}"><input type=checkbox data-bind="checked: showStatus.Canceled"> <span data-bind="text: importResult().counts.Canceled"></span> <span>Canceled</span></label>\
     </div>\
     <div data-bind="if: importResult().hasMore">\
       <span data-bind="text: importResult().hasMore"></span>\
@@ -252,6 +252,12 @@ function dataImportVm(dataInput) {
   var importError = ko.observable(null);
   var maxResults = ko.observable(0);
   var sobjectDataDescribes = ko.observable({});
+  var importData = ko.observable({
+    header: null,
+    data: null,
+    statusColumnIndex: -1,
+    stopProcessing: function() {}
+  });
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -262,7 +268,7 @@ function dataImportVm(dataInput) {
     sobjectList: ko.observable([]),
     idLookupList: idLookupList,
     columnList: columnList,
-    dataFormat: ko.observable("Excel"),
+    dataFormat: ko.observable("excel"),
     importAction: ko.observable("create"),
     importType: ko.observable("Account"),
     externalId: ko.observable("Id"),
@@ -278,29 +284,27 @@ function dataImportVm(dataInput) {
       Failed: ko.observable(true),
       Canceled: ko.observable(true)
     },
-    importData: ko.observable({
-      counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0},
-      header: null,
-      data: null,
-      statusColumnIndex: -1,
-      stopProcessing: function() {}
-    }),
     importResult: function() {
+      var counts = {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0};
       if (importError()) {
-        return {text: importError(), hasMore: false};
+        return {counts: counts, text: importError(), hasMore: null};
       }
-      if (vm.importData().data == null) {
-        return {text: "", hasMore: false};
+      if (importData().data == null) {
+        return {counts: counts, text: "", hasMore: null};
       }
-      var statusColumnIndex = vm.importData().statusColumnIndex;
-      var filteredData = vm.importData().data.filter(function(row) { return vm.showStatus[row[statusColumnIndex]](); });
-      var hasMore;
+      var statusColumnIndex = importData().statusColumnIndex;
+      importData().data.forEach(function(row) {
+        counts[row[statusColumnIndex]]++;
+      });
+      var filteredData = importData().data.filter(function(row) { return vm.showStatus[row[statusColumnIndex]](); });
+      var hasMore = null;
       if (filteredData.length > maxResults()) {
         hasMore = "Showing " + maxResults() + " of " + filteredData.length + " rows";
         filteredData = filteredData.slice(0, maxResults());
       }
       return {
-        text: csvSerialize([vm.importData().header].concat(filteredData), vm.dataResultFormat() == "excel" ? "\t" : ","),
+        counts: counts,
+        text: csvSerialize([importData().header].concat(filteredData), vm.dataResultFormat() == "excel" ? "\t" : ","),
         hasMore: hasMore
       };
     },
@@ -325,7 +329,7 @@ function dataImportVm(dataInput) {
     },
     doImport: doImport,
     stopImport: function() {
-      vm.importData().stopProcessing();
+      importData().stopProcessing();
     }
   };
 
@@ -606,11 +610,7 @@ function dataImportVm(dataInput) {
     });
 
     function updateResult() {
-      var counts = {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0};
-      data.forEach(function(row) {
-        counts[row[statusColumnIndex]]++;
-      });
-      vm.importData({counts: counts, header: header, data: data, statusColumnIndex: statusColumnIndex, stopProcessing: stopProcessing});
+      importData({header: header, data: data, statusColumnIndex: statusColumnIndex, stopProcessing: stopProcessing});
     }
 
     function stopProcessing() {
