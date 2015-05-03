@@ -6,6 +6,7 @@
     <script src="https://localhost:8080/addon/data/showAllDataForRecordPopup.js"></script>
     <script src="https://localhost:8080/addon/data/dataExport.js"></script>
     <script src="https://localhost:8080/addon/data/dataImport.js"></script>
+    <script src="https://localhost:8080/addon/data/apiExplore.js"></script>
     <script src="https://localhost:8080/addon/data/showStdPageDetails.js"></script>
     
     <script src="https://localhost:8080/test/dataExportTest.js"></script>

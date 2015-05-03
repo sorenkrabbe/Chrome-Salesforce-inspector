@@ -50,6 +50,7 @@ function init() {
             <button id="showAllDataBtn">Show all data (a)</button>\
             <button id="dataExportBtn">Data Export (e)</button>\
             <button id="dataImportBtn">Data Import (i)</button>\
+            <button id="apiExploreBtn">Explore API (x)</button>\
             <div class="meta"><a href="#" id="aboutLnk">About</a></div>\
         </div>\
     </div>';
@@ -79,23 +80,28 @@ function init() {
         }
     }
     function keyListener(e) {
-        if (e.charCode == 109 /*m*/) {
+        if (e.charCode == "m".charCodeAt(0)) {
             showStdPageDetails();
             closePopup();
             e.preventDefault();
         }
-        if (e.charCode == 97 /*a*/) {
+        if (e.charCode == "a".charCodeAt(0)) {
             showAllData({recordId: getRecordIdFromUrl()});
             closePopup();
             e.preventDefault();
         }
-        if (e.charCode == 101 /*e*/) {
+        if (e.charCode == "e".charCodeAt(0)) {
             dataExport();
             closePopup();
             e.preventDefault();
         }
-        if (e.charCode == 105 /*i*/) {
+        if (e.charCode == "i".charCodeAt(0)) {
             dataImport();
+            closePopup();
+            e.preventDefault();
+        }
+        if (e.charCode == "x".charCodeAt(0)) {
+            apiExplore();
             closePopup();
             e.preventDefault();
         }
@@ -128,6 +134,10 @@ function init() {
     });
     document.querySelector('#dataImportBtn').addEventListener('click', function() {
         dataImport();
+        closePopup();
+    });
+    document.querySelector('#apiExploreBtn').addEventListener('click', function() {
+        apiExplore();
         closePopup();
     });
     document.querySelector('#aboutLnk').addEventListener('click', function(){ 

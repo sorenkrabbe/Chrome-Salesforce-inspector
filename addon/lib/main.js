@@ -22,6 +22,7 @@ if (this.require) {
       self.data.url("showAllDataForRecordPopup.js"),
       self.data.url("dataExport.js"),
       self.data.url("dataImport.js"),
+      self.data.url("apiExplore.js"),
       self.data.url("showStdPageDetails.js")
     ],
     onAttach: function startListening(worker) {

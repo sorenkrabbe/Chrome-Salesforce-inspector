@@ -19,6 +19,7 @@
         "data/showAllDataForRecordPopup.js",
         "data/dataExport.js",
         "data/dataImport.js",
+        "data/apiExplore.js",
         "data/showStdPageDetails.js"
       ]
     }
