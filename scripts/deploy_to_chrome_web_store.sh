@@ -33,11 +33,11 @@ log_message "1) Prepare application app package";
 VERSION_NUMBER=$(jq '.version' version.json | tr -d '"');
 
 log_message "1.1) Set version number in app files (version $VERSION_NUMBER)"
-sed -i -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" manifest.json
-# TODO: Write git commit id into app files?
+sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/manifest.json
+sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/data/chromePopup.js
 
 log_message "1.2) Create ZIP file"
-zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* version.json docs\* test\* README.md 
+zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* version.json docs\* test\* README.md \*.bak
 
 log_message "2) Push to chrome web store"
 
@@ -46,8 +46,7 @@ CHROME_ACCESS_TOKEN=$( \
      curl "https://www.googleapis.com/oauth2/v3/token" \
           -s -d "client_id=$CHROME_CLIENT_ID&client_secret=$CHROME_CLIENT_SECRET&refresh_token=$CHROME_REFRESH_TOKEN&grant_type=refresh_token" \
      | jq '.access_token')
-
-if [[ $CHROME_ACCESS_TOKEN == "" ]]
+if [[ $CHROME_ACCESS_TOKEN == null ]]
 then
      log_error "2.1.1) Login to google failed!";
      exit 1;
