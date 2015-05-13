@@ -57,3 +57,8 @@
     font-size: 12px;
     text-align: right;
 }
+.version {
+    float: left;
+    font-size: 0.8em;
+    margin-top: 0.2em;
+}

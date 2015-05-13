@@ -51,7 +51,7 @@ function init() {
             <button id="dataExportBtn">Data Export (e)</button>\
             <button id="dataImportBtn">Data Import (i)</button>\
             <button id="apiExploreBtn">Explore API (x)</button>\
-            <div class="meta"><a href="#" id="aboutLnk">About</a></div>\
+            <div class="meta"><div class="version">(v<!--##VERSION##-->)</div><a href="#" id="aboutLnk">About</a></div>\
         </div>\
     </div>';
     var rootEl = f.firstChild;

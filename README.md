@@ -29,9 +29,17 @@ Unit tests
 4. Open your browser's developer tools console.
 5. Wait until "Salesforce Inspector unit test finished" is logged, and verify that no error messages are logged (HTTP 4xx messages are OK)
 
+Release
+-------
+Version number must be manually incremented in [version.json](version.json) file
+
+**Chrome:** When commit message contains *#releaseIt* the revision will be packaged and uploaded to Chrome Web Store ready for manual release to the masses.
+
+**Firefox:** Manually so far
+
 About
 -----
-By Søren Krabbe (sk@sokr.dk) and Jesper Kristensen.
+By Søren Krabbe (soren.krabbe@capgemini.com) and Jesper Kristensen
 
 License
 -----
