@@ -37,7 +37,7 @@ sed -i -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" manifest.json
 # TODO: Write git commit id into app files?
 
 log_message "1.2) Create ZIP file"
-zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* version.json
+zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* version.json docs\* test\* README.md 
 
 log_message "2) Push to chrome web store"
 
