@@ -1,4 +1,8 @@
+#insext, #insext * {
+    box-sizing: content-box;
+}
 #insext {
+    z-index: 1000;
     display: block;
     position: fixed;
     top: 205px;
@@ -16,9 +20,6 @@
     z-index: 1;
     box-shadow: 1px 1px 5px;
     padding: 11px;
-    display: none;
-}
-#insext.insext-active .insext-popup {
     display: block;
 }
 #insext .insext-btn {
@@ -53,11 +54,17 @@
 #insext button {
     width: 100%;
 }
-#insext div.meta {
+#insext-spinner {
+	position: absolute;
+}
+#insext-showStdPageDetailsBtn[disabled] {
+	color: gray;
+}
+#insext .insext-meta {
     font-size: 12px;
     text-align: right;
 }
-.version {
+#insext .insext-version {
     float: left;
     font-size: 0.8em;
     margin-top: 0.2em;

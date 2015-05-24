@@ -17,9 +17,6 @@ function showStdPageDetails() {
         }, function() {
           // Don't fail if the user does not have access to the tooling API.
         });
-    })
-    .catch(function(error) {
-      alert(error);
     });
 
 

@@ -35,12 +35,6 @@
 	text-align: center;
 	line-height: 30px;
 }
-#insext-spinner {
-	position: absolute;
-}
-#showStdPageDetailsBtn[disabled] {
-	color: gray;
-}
 .insext-unchecked {
 	text-decoration: line-through;
 	color: gray;
