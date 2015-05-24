@@ -1,7 +1,7 @@
 {
   "name": "Salesforce inspector",
   "description": "Productivity tools for Salesforce administrators and developers to inspect data and metadata directly from the Salesforce UI.",
-  "version": "<!--##VERSION##-->",
+  "version": "0.5",
   "permissions": [
     "https://*.salesforce.com/*",
     "https://*.visual.force.com/*"
