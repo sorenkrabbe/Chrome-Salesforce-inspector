@@ -178,6 +178,13 @@ function openPopup() {
     closePopup();
   }
 
+  var isDevConsole = document.querySelector('body.ApexCSIPage');
+  if (isDevConsole) {
+    document.querySelector('#insext-showStdPageDetailsBtn').style.display = "none";
+    document.querySelector('#insext-showAllDataBtn').style.display = "none";
+  } else {
+    document.querySelector('#insext-apiExploreBtn').style.display = "none";
+  }
   if (detailsShown || !recordId) {
     document.querySelector('#insext-showStdPageDetailsBtn').disabled = true;
   }
