@@ -124,15 +124,32 @@ function openPopup() {
   function removeConflictingFocus(e) {
     e.target.blur();
   }
-  
+
+  // Find record ID from URL
+  var urlSearch = document.location.search;
+  var recordId = null;
+  var match = document.location.search.match(/(\?|&)id=([a-zA-Z0-9]*)(&|$)/);
+  if (match) {
+    recordId = match[2];
+  } else {
+    match = document.location.pathname.match(/\/([a-zA-Z0-9]*)(\/|$)/);
+    if (match) {
+      recordId = match[1];
+    }
+  }
+  if (recordId.length != 3 && recordId.length != 15 && recordId.length != 18) {
+    recordId = null;
+  }
+
+  // Click handlers for the buttons
   function showStdPageDetailsClick() {
-    if (detailsShown) {
+    if (detailsShown || !recordId) {
       return;
     }
     document.querySelector('#insext-showStdPageDetailsBtn').disabled = true;
     detailsShown = true;
     document.querySelector("#insext-spinner").removeAttribute("hidden");
-    showStdPageDetails()
+    showStdPageDetails(recordId)
       .catch(function(error) {
         alert(error);
         detailsShown = false;
@@ -142,7 +159,10 @@ function openPopup() {
       });
   }
   function showAllDataClick() {
-    showAllData({recordId: getRecordIdFromUrl()});
+    if (!recordId) {
+      return;
+    }
+    showAllData({recordId: recordId});
     closePopup();
   }
   function dataExportClick() {
@@ -158,8 +178,11 @@ function openPopup() {
     closePopup();
   }
 
-  if (detailsShown) {
+  if (detailsShown || !recordId) {
     document.querySelector('#insext-showStdPageDetailsBtn').disabled = true;
+  }
+  if (!recordId) {
+    document.querySelector('#insext-showAllDataBtn').disabled = true;
   }
   document.querySelector('#insext-showStdPageDetailsBtn').addEventListener('click', showStdPageDetailsClick);
   document.querySelector('#insext-showAllDataBtn').addEventListener('click', showAllDataClick);
@@ -169,13 +192,6 @@ function openPopup() {
   document.querySelector('#insext-aboutLnk').addEventListener('click', function(){ 
     open('https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'); 
   });
-}
-function getRecordIdFromUrl() {
-  var urlSearch = document.location.search;
-  var recordId = urlSearch.indexOf('?id=') > -1 ? urlSearch.substring(urlSearch.indexOf('?id=') + '?id='.length)
-    : urlSearch.indexOf('&id=') > -1 ? urlSearch.substring(urlSearch.indexOf('&id=') + '&id='.length)
-    : document.location.pathname.substring(1);
-  return /[a-zA-Z0-9]*/.exec(recordId)[0];
 }
 
 function loadMetadataForRecordId(recordId) {

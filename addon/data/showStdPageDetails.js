@@ -1,9 +1,8 @@
-function showStdPageDetails() {
+function showStdPageDetails(recordId) {
   var fieldDetailsByLabel = {};
   var metadataResponse = {};
   var fieldSetupData = {};
 
-  var recordId = getRecordIdFromUrl();
   return loadMetadataForRecordId(recordId)
     .then(function(res) {
       metadataResponse = res;

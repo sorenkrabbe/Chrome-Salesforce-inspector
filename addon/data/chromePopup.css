@@ -57,7 +57,8 @@
 #insext-spinner {
 	position: absolute;
 }
-#insext-showStdPageDetailsBtn[disabled] {
+#insext-showStdPageDetailsBtn[disabled],
+#insext-showAllDataBtn[disabled] {
 	color: gray;
 }
 #insext .insext-meta {
