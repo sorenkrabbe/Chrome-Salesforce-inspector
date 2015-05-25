@@ -587,16 +587,16 @@ function dataImportVm(dataInput) {
               }
             } else {
               if (columnName.length == 1) { // Our regexp ensures there are always one or three elements in the array
-                // For Mozilla reviewers: doc is a SOAP XML document.
+                // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
                 var field = doc.createElement(columnName[0]);
                 field.textContent = row[c];
               } else {
                 var subType = doc.createElement("type");
                 subType.textContent = columnName[1];
-                // For Mozilla reviewers: doc is a SOAP XML document.
+                // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
                 var subField = doc.createElement(columnName[2]);
                 subField.textContent = row[c];
-                // For Mozilla reviewers: doc is a SOAP XML document.
+                // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
                 var field = doc.createElement(columnName[0]);
                 field.appendChild(subType);
                 field.appendChild(subField);
