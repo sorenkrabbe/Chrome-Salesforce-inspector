@@ -246,8 +246,21 @@ function dataExport(options) {
   function recalculateHeight() {
     vm.resultBoxOffsetTop(resultBox.offsetTop);
   }
-  queryInput.addEventListener("mousemove", recalculateHeight);
-  popupWin.addEventListener("mouseup", recalculateHeight);
+  if (this.self && self.port) {
+    // Firefox
+    // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
+    new MutationObserver(recalculateHeight).observe(queryInput, {attributes: true});
+  } else {
+    // Chrome
+    // Chrome does not fire a resize event and does not allow us to get notified when the browser changes the style.height attribute.
+    // Instead we listen to a few events which are often fired at the same time.
+    // This is not required in Firefox, and Mozilla reviewers don't like it for performance reasons, so we only do this in Chrome via browser detection.
+    queryInput.addEventListener("mousemove", recalculateHeight);
+    popupWin.addEventListener("mouseup", recalculateHeight);
+  }
+  vm.showHelp.subscribe(recalculateHeight);
+  vm.autocompleteResults.subscribe(recalculateHeight);
+  vm.expandAutocomplete.subscribe(recalculateHeight);
   popupWin.addEventListener("resize", function() {
     vm.winInnerHeight(popupWin.innerHeight);
     recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
