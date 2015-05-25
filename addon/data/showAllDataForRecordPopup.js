@@ -221,7 +221,7 @@ function showAllData(recordDesc) {
             <thead><tr><th>Key</th><th>Value</th></tr></thead>\
             <tbody data-bind="foreach: fieldDetails().rows">\
               <tr data-bind="visible: visible()">\
-                <td data-bind="text: key"></td>\
+                <td><a href="about:blank" data-bind="click: $parent.fieldDetailsFilterClick" title="Show fields with this property">🔍</a> <span data-bind="text: key"></span></td>\
                 <td data-bind="text: value"></td>\
               </tr>\
             </tbody>\
@@ -280,6 +280,10 @@ function showAllData(recordDesc) {
         }
       }
       showAllFieldMetadata(map);
+    },
+    fieldDetailsFilterClick: function(field) {
+      vm.closeFieldDetails();
+      vm.fieldRowsFilter(field.key + "=" + field.value);
     },
     canEdit: function() {
       return objectData() && objectData().updateable && recordData() && recordData().Id;
@@ -373,9 +377,20 @@ function showAllData(recordDesc) {
         });
       },
       visible: function() {
-        var value = vm.fieldRowsFilter().trim().toLowerCase();
-        var row = fieldVm.fieldLabel + "," + fieldVm.fieldName + "," + fieldVm.dataValue() + "," + fieldVm.fieldTypeDesc;
-        return !value || row.toLowerCase().indexOf(value) != -1;
+        var values = vm.fieldRowsFilter().trim().split(/[ \t]+/);
+        return values.every(function(value) {
+          var pair = value.split("=");
+          if (pair.length == 2) {
+            try {
+              return fieldDescribe[pair[0]] === JSON.parse(pair[1]);
+            } catch(e) {
+              return false;
+            }
+          } else {
+            var row = fieldVm.fieldLabel + "," + fieldVm.fieldName + "," + fieldVm.dataValue() + "," + fieldVm.fieldTypeDesc;
+            return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
+          }
+        });
       }
     };
     return fieldVm;
@@ -387,9 +402,20 @@ function showAllData(recordDesc) {
       childObject: childDescribe.childSObject,
       childField: childDescribe.field,
       visible: function() {
-        var value = vm.fieldRowsFilter().trim().toLowerCase();
-        var row = childVm.childName + "," + childVm.childObject + "," + childVm.childField;
-        return !value || row.toLowerCase().indexOf(value) != -1;
+        var values = vm.fieldRowsFilter().trim().split(/[ \t]+/);
+        return values.every(function(value) {
+          var pair = value.split("=");
+          if (pair.length == 2) {
+            try {
+              return childDescribe[pair[0]] === JSON.parse(pair[1]);
+            } catch(e) {
+              return false;
+            }
+          } else {
+            var row = childVm.childName + "," + childVm.childObject + "," + childVm.childField;
+            return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
+          }
+        });
       },
       openDetails: function() {
         var map = {};
