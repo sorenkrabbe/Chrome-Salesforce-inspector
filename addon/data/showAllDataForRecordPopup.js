@@ -324,6 +324,8 @@ function showAllData(recordDesc) {
       return toolingFieldDefinitions()[fieldDescribe.name] && toolingFieldDefinitions()[fieldDescribe.name].Metadata.description;
     }
 
+    var dataTypedValue = undefined;
+
     var fieldVm = {
       fieldLabel: fieldDescribe.label,
       fieldName: fieldDescribe.name,
@@ -332,8 +334,9 @@ function showAllData(recordDesc) {
       fieldIsCalculated: fieldDescribe.calculated,
       dataValue: ko.observable(""),
       setDataValue: function(recordData) {
+        dataTypedValue = recordData[fieldDescribe.name];
         if (recordData[fieldDescribe.name] != null) {
-          fieldVm.dataValue("" + recordData[fieldDescribe.name]);
+          fieldVm.dataValue("" + dataTypedValue);
         }
       },
       saveDataValue: function(recordData) {
@@ -363,7 +366,7 @@ function showAllData(recordDesc) {
         for (var key in fieldDescribe) {
           map[key] = fieldDescribe[key];
         }
-        map.dataValue = fieldVm.dataValue();
+        map.dataValue = dataTypedValue;
         map.description = fieldDescription();
         showAllFieldMetadata(map);
       },
