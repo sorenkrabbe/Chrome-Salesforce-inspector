@@ -197,7 +197,7 @@ function dataExport(options) {
               <td data-bind="text: $data"></td>\
             <!-- /ko -->\
           </tr>\
-        </tnody>\
+        </tbody>\
       </table>\
     </div>\
   </div>\
