@@ -162,6 +162,27 @@ function* dataExportTest() {
   assertEquals("\"from\" keyword not found", vm.autocompleteTitle());
   assertEquals([], getValues(vm.autocompleteResults()));
 
+  // Autocomplete field name when cursor is just after the "from" keyword
+  setQuery("select Id, nam", "", "from Account");
+  assertEquals("Account fields:", vm.autocompleteTitle());
+  assertEquals(["Name"], getValues(vm.autocompleteResults()));
+  vm.autocompleteClick(vm.autocompleteResults()[0]);
+  assertEquals("select Id, Name, from Account", queryInput.value);
+
+  // Autocomplete upper case
+  setQuery("SELECT ID, NAM", "", " FROM ACCOUNT");
+  assertEquals("Account fields:", vm.autocompleteTitle());
+  assertEquals(["Name"], getValues(vm.autocompleteResults()));
+  vm.autocompleteClick(vm.autocompleteResults()[0]);
+  assertEquals("SELECT ID, Name,  FROM ACCOUNT", queryInput.value);
+
+  // Autocomplete with "from" substring before the from keyword
+  setQuery("select Id, FieldFrom, FromField, nam", "", " from Account");
+  assertEquals("Account fields:", vm.autocompleteTitle());
+  assertEquals(["Name"], getValues(vm.autocompleteResults()));
+  vm.autocompleteClick(vm.autocompleteResults()[0]);
+  assertEquals("select Id, FieldFrom, FromField, Name,  from Account", queryInput.value);
+
   // Autocomplete field value
   setQuery("select Id from Account where owner.profile.name = admini", "", "");
   assertEquals("Loading metadata...", vm.autocompleteTitle());

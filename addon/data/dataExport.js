@@ -428,17 +428,26 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       return;
     }
 
+      var sobjectName, isAfterFrom;
     // Find out what sobject we are querying, by using the word after the "from" keyword.
     // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
-    var fromKeywordMatch = /(^|\s)from\s*([a-zA-Z0-9_]*)/.exec(query);
-    if (!fromKeywordMatch) {
-      vm.sobjectName("");
-      vm.autocompleteTitle("\"from\" keyword not found");
-      vm.autocompleteResults([]);
-      return;
+    var fromKeywordMatch = /(^|\s)from\s+([a-z0-9_]*)/i.exec(query);
+    if (fromKeywordMatch) {
+      sobjectName = fromKeywordMatch[2];
+      isAfterFrom = selStart > fromKeywordMatch.index + 1;
+    } else {
+      // We still want to find the from keyword if the user is typing just before the keyword, and there is no space.
+      fromKeywordMatch = /^from\s+([a-z0-9_]*)/i.exec(query.substring(selEnd));
+      if (fromKeywordMatch) {
+        sobjectName = fromKeywordMatch[1];
+        isAfterFrom = false;
+      } else {
+        vm.sobjectName("");
+        vm.autocompleteTitle("\"from\" keyword not found");
+        vm.autocompleteResults([]);
+        return;
+      }
     }
-    var sobjectName = fromKeywordMatch[2];
-    var isBeforeFrom = selStart > fromKeywordMatch.index + 1;
     vm.sobjectName(sobjectName);
     var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
 
@@ -653,7 +662,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
             });
         });
         if (ar.length > 0) {
-          queryInput.insertText(ar.join(", ") + (isBeforeFrom ? " " : ", "), selStart - contextPath.length, selEnd);
+          queryInput.insertText(ar.join(", ") + (isAfterFrom ? " " : ", "), selStart - contextPath.length, selEnd);
         }
         queryAutocompleteHandler();
         return;
@@ -663,7 +672,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         sobjectDescribe.fields
           .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || field.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1; })
           .forEach(function(field) {
-            ar.push({value: field.name, title: field.label, suffix: isBeforeFrom ? " " : ", "});
+            ar.push({value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", "});
             if (field.relationshipName) {
               ar.push({value: field.relationshipName + ".", title: field.label, suffix: ""});
             }
