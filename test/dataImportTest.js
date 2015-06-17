@@ -82,7 +82,7 @@ function* dataImportTest() {
   assertEquals(0, vm.activeBatches());
   assertEquals({Queued: 0, Processing: 0, Succeeded: 3, Failed: 1, Canceled: 0}, vm.importResult().counts);
   assertEquals('"Name","Checkbox__c","Number__c","Lookup__r:Inspector_Test__c:Name","__Status","__Id","__Action","__Errors"\r\n"test3","false","300.03","","Succeeded","123456789012345678","Inserted",""\r\n"test4","false","400.04","test1","Succeeded","123456789012345678","Inserted",""\r\n"test5","true","500.05","","Succeeded","123456789012345678","Inserted",""\r\n"test6","true","600.06","notfound","Failed","","","INVALID_FIELD: Foreign key external ID: notfound not found for field Name in entity Inspector_Test__c []"', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
     {Name: "test2", Checkbox__c: true, Number__c: 200.02, Lookup__r: null},
@@ -105,7 +105,7 @@ function* dataImportTest() {
   yield waitForSpinner();
   assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
   assertEquals('"Name"\t"Number__c"\t"__Status"\t"__Id"\t"__Action"\t"__Errors"\r\n"test6"\t"600.06"\t"Succeeded"\t"123456789012345678"\t"Inserted"\t""\r\n"test7"\t"700.07"\t"Succeeded"\t"123456789012345678"\t"Inserted"\t""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
     {Name: "test2", Checkbox__c: true, Number__c: 200.02, Lookup__r: null},
@@ -117,7 +117,7 @@ function* dataImportTest() {
   ], records);
 
   // Update csv
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
   vm.dataFormat("csv");
   vm.importAction("update");
   vm.dataResultFormat("csv");
@@ -129,7 +129,7 @@ function* dataImportTest() {
   yield waitForSpinner();
   assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
   assertEquals('"Id","Name","Number__c","__Status","__Id","__Action","__Errors"\r\n"' + records[4].Id + '","test5update","500.50","Succeeded","' + records[4].Id + '","Updated",""\r\n"' + records[5].Id + '","test6update","600.60","Succeeded","' + records[5].Id + '","Updated",""', vm.importResult().text);
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
     {Name: "test2", Checkbox__c: true, Number__c: 200.02, Lookup__r: null},
@@ -141,7 +141,7 @@ function* dataImportTest() {
   ], records);
 
   // Delete csv (with ignored column and status column)
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
   vm.dataFormat("csv");
   vm.importAction("delete");
   vm.dataResultFormat("csv");
@@ -154,7 +154,7 @@ function* dataImportTest() {
   yield waitForSpinner();
   assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
   assertEquals('"Id","_foo*","__Status","__Id","__Action","__Errors"\r\n"' + records[5].Id + '","foo","Succeeded","' + records[5].Id + '","Deleted",""\r\n"' + records[6].Id + '","foo","Succeeded","","",""', vm.importResult().text);
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
     {Name: "test2", Checkbox__c: true, Number__c: 200.02, Lookup__r: null},
@@ -177,7 +177,7 @@ function* dataImportTest() {
   yield waitForSpinner();
   assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
   assertEquals('"Name","Number__c","__Status","__Id","__Action","__Errors"\r\n"test2","222","Succeeded","123456789012345678","Updated",""\r\n"test6","666","Succeeded","123456789012345678","Inserted",""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
     {Name: "test2", Checkbox__c: true, Number__c: 222, Lookup__r: null},
@@ -205,7 +205,7 @@ function* dataImportTest() {
   yield waitForSpinner();
   assertEquals({Queued: 0, Processing: 0, Succeeded: 16, Failed: 0, Canceled: 0}, vm.importResult().counts);
   assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Succeeded","123456789012345678","Inserted",""\r\n"test11","Succeeded","123456789012345678","Inserted",""\r\n"test12","Succeeded","123456789012345678","Inserted",""\r\n"test13","Succeeded","123456789012345678","Inserted",""\r\n"test14","Succeeded","123456789012345678","Inserted",""\r\n"test15","Succeeded","123456789012345678","Inserted",""\r\n"test16","Succeeded","123456789012345678","Inserted",""\r\n"test17","Succeeded","123456789012345678","Inserted",""\r\n"test18","Succeeded","123456789012345678","Inserted",""\r\n"test19","Succeeded","123456789012345678","Inserted",""\r\n"test20","Succeeded","123456789012345678","Inserted",""\r\n"test21","Succeeded","123456789012345678","Inserted",""\r\n"test22","Succeeded","123456789012345678","Inserted",""\r\n"test23","Succeeded","123456789012345678","Inserted",""\r\n"test24","Succeeded","123456789012345678","Inserted",""\r\n"test25","Succeeded","123456789012345678","Inserted",""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test10"}, {Name: "test11"}, {Name: "test12"}, {Name: "test13"}, {Name: "test14"}, {Name: "test15"}, {Name: "test16"}, {Name: "test17"}, {Name: "test18"}, {Name: "test19"}, {Name: "test20"}, {Name: "test21"}, {Name: "test22"}, {Name: "test23"}, {Name: "test24"}, {Name: "test25"}
   ], records);
@@ -233,7 +233,7 @@ function* dataImportTest() {
   assertEquals(0, vm.activeBatches());
   assertEquals({Queued: 0, Processing: 0, Succeeded: 6, Failed: 0, Canceled: 10}, vm.importResult().counts);
 assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Succeeded","123456789012345678","Inserted",""\r\n"test11","Succeeded","123456789012345678","Inserted",""\r\n"test12","Succeeded","123456789012345678","Inserted",""\r\n"test13","Succeeded","123456789012345678","Inserted",""\r\n"test14","Succeeded","123456789012345678","Inserted",""\r\n"test15","Succeeded","123456789012345678","Inserted",""\r\n"test16","Canceled","","",""\r\n"test17","Canceled","","",""\r\n"test18","Canceled","","",""\r\n"test19","Canceled","","",""\r\n"test20","Canceled","","",""\r\n"test21","Canceled","","",""\r\n"test22","Canceled","","",""\r\n"test23","Canceled","","",""\r\n"test24","Canceled","","",""\r\n"test25","Canceled","","",""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test10"}, {Name: "test11"}, {Name: "test12"}, {Name: "test13"}, {Name: "test14"}, {Name: "test15"}
   ], records);
@@ -289,7 +289,7 @@ assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Succee
   yield waitForSpinner();
   assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 2, Canceled: 0}, vm.importResult().counts);
   assertEquals('"Name","unknownfield","__Status","__Id","__Action","__Errors"\r\n"test2","222","Failed","","","INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."\r\n"test6","666","Failed","","","INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."', vm.importResult().text);
-  records = getRecords(yield askSalesforce("/services/data/v33.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
+  records = getRecords(yield askSalesforce("/services/data/v34.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([], records);
 
   // Big result

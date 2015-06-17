@@ -204,8 +204,8 @@ function openPopup() {
 function loadMetadataForRecordId(recordId) {
   return Promise
     .all([
-      askSalesforce('/services/data/v33.0/sobjects/'),
-      askSalesforce('/services/data/v33.0/tooling/sobjects/')
+      askSalesforce('/services/data/v34.0/sobjects/'),
+      askSalesforce('/services/data/v34.0/tooling/sobjects/')
     ])
     .then(function(responses) {
       var currentObjKeyPrefix = recordId.substring(0, 3);
@@ -222,7 +222,7 @@ function loadMetadataForRecordId(recordId) {
 }
 
 function loadFieldSetupData(sobjectName) {
-  return askSalesforce("/services/data/v33.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField")).then(function(res) {
+  return askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField")).then(function(res) {
     var fieldIds = {};
     res.records.forEach(function(customField) {
       fieldIds[customField.FullName] = customField.Id;
@@ -290,7 +290,7 @@ function askSalesforceSoap(request) {
       return;
     }
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/33.0?cache=' + Math.random(), true);
+    xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/34.0?cache=' + Math.random(), true);
     xhr.setRequestHeader('Content-Type', "text/xml");
     xhr.setRequestHeader('SOAPAction', '""');
     xhr.onreadystatechange = function() {
