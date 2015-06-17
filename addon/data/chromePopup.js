@@ -222,10 +222,11 @@ function loadMetadataForRecordId(recordId) {
 }
 
 function loadFieldSetupData(sobjectName) {
-  return askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Id, FullName from CustomField")).then(function(res) {
+  return askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix, EntityDefinition.QualifiedApiName from CustomField")).then(function(res) {
     var fieldIds = {};
     res.records.forEach(function(customField) {
-      fieldIds[customField.FullName] = customField.Id;
+      // We build the API name from NamespacePrefix and DeveloperName, since we cannot query FullName when we query more than one field.
+      fieldIds[customField.EntityDefinition.QualifiedApiName + "." + (customField.NamespacePrefix ? customField.NamespacePrefix + "__" : "") + customField.DeveloperName + "__c"] = customField.Id;
     });
     return fieldIds;
   });
