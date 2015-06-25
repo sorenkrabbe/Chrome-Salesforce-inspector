@@ -3,7 +3,23 @@ function showStdPageDetails(recordId) {
   var metadataResponse = {};
   var fieldSetupData = {};
 
-  return loadMetadataForRecordId(recordId)
+  return Promise
+      .all([
+        askSalesforce('/services/data/v34.0/sobjects/'),
+        askSalesforce('/services/data/v34.0/tooling/sobjects/')
+      ])
+      .then(function(responses) {
+        var currentObjKeyPrefix = recordId.substring(0, 3);
+        for (var x = 0; x < responses.length; x++) {
+          var generalMetadataResponse = responses[x];
+          for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
+            if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
+              return askSalesforce(generalMetadataResponse.sobjects[i].urls.describe);
+            }
+          }
+        }
+        throw 'Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix;
+      })
     .then(function(res) {
       metadataResponse = res;
       

@@ -33,11 +33,21 @@ function showAllData(recordDesc) {
     word-wrap: break-word;\
     white-space: pre-wrap;\
   }\
-  tr.calculated {\
-    color: #777777;\
+  .value-blank {\
+    color: #aaa;\
     font-style: italic;\
   }\
-  tr:hover, tr.calculated:hover {\
+  .value-unknown {\
+    color: #aaa;\
+    font-style: italic;\
+  }\
+  tr.fieldCalculated {\
+    font-style: italic;\
+  }\
+  tr.fieldHidden, tr.fieldHidden td[tabindex], tr.fieldHidden a[href] {\
+    color: #777;\
+  }\
+  tr:hover {\
     background-color: lightblue;\
   }\
   th {\
@@ -80,7 +90,7 @@ function showAllData(recordDesc) {
   }\
   \
   #fieldDetailsView > div.container {\
-    width: 400px;\
+    width: 600px;\
     height: 500px;\
     position: relative;\
     margin: 10% auto;\
@@ -111,6 +121,15 @@ function showAllData(recordDesc) {
   }\
   #fieldDetailsView td {\
     white-space: pre;\
+  }\
+  #fieldDetailsView .isString {\
+    color: #990;\
+  }\
+  #fieldDetailsView .isNumber {\
+    color: #909;\
+  }\
+  #fieldDetailsView .isBoolean {\
+    color: #099;\
   }\
   .filter-input {\
     width: 20em;\
@@ -173,17 +192,19 @@ function showAllData(recordDesc) {
       <th class="field-setup">Setup</th>\
     </thead>\
     <tbody id="dataTableBody" data-bind="foreach: fieldRows">\
-      <tr data-bind="css: {calculated: fieldIsCalculated}, visible: visible()">\
-        <td data-bind="text: fieldLabel" class="field-label"></td>\
+      <tr data-bind="css: {fieldCalculated: fieldIsCalculated(), fieldHidden: fieldIsHidden()}, visible: visible()">\
+        <td data-bind="text: fieldLabel()" class="field-label"></td>\
         <td data-bind="text: fieldName, attr: {title: summary()}, click: openDetails" tabindex="0" class="field-name"></td>\
         <td class="field-value">\
-          <!-- ko if: isId() && !showEdit() --><a href="about:blank" data-bind="text: dataValue(), click: showRecordId" class="value-text"></a><!-- /ko -->\
-          <!-- ko if: !isId() && !showEdit() --><span data-bind="text: dataValue()" class="value-text"></span><!-- /ko -->\
-          <textarea data-bind="visible: showEdit(), value: dataValue"></textarea>\
+          <!-- ko if: isId() && !showEdit() --><a href="about:blank" data-bind="text: dataStringValue(), click: showRecordId" class="value-text"></a><!-- /ko -->\
+          <!-- ko if: !isId() && !showEdit() --><span data-bind="text: dataStringValue()" class="value-text"></span><!-- /ko -->\
+          <!-- ko if: !hasDataValue() --><span class="value-unknown">(Unknown)</span><!-- /ko -->\
+          <!-- ko if: hasBlankValue() --><span class="value-blank">(Blank)</span><!-- /ko -->\
+          <textarea data-bind="visible: showEdit(), value: dataStringValue"></textarea>\
         </td>\
         <td class="field-type">\
-          <span data-bind="text: fieldTypeDesc, visible: !referenceTo"></span>\
-          <span data-bind="foreach: referenceTo">\
+          <span data-bind="text: fieldTypeDesc(), visible: !referenceTypes()"></span>\
+          <span data-bind="foreach: referenceTypes()">\
             <a href="about:blank" data-bind="text: $data, click: $parent.showReference"></a>\
           </span>\
         </td>\
@@ -221,8 +242,8 @@ function showAllData(recordDesc) {
             <thead><tr><th>Key</th><th>Value</th></tr></thead>\
             <tbody data-bind="foreach: fieldDetails().rows">\
               <tr data-bind="visible: visible()">\
-                <td><a href="about:blank" data-bind="click: $parent.fieldDetailsFilterClick" title="Show fields with this property">🔍</a> <span data-bind="text: key"></span></td>\
-                <td data-bind="text: value"></td>\
+                <td><a href="about:blank" data-bind="click: $parent.fieldDetailsFilterClick, visible: $parent.fieldDetails().showFilterButton" title="Show fields with this property">🔍</a> <span data-bind="text: key"></span></td>\
+                <td data-bind="text: value, css: {isString: isString, isNumber: isNumber, isBoolean: isBoolean}"></td>\
               </tr>\
             </tbody>\
           </table>\
@@ -234,16 +255,23 @@ function showAllData(recordDesc) {
 
   var objectData = ko.observable(null);
   var recordData = ko.observable(null);
-  var toolingFieldDefinitions = ko.observable({});
   var fieldIds = ko.observable({});
 
   var vm = {
     spinnerCount: ko.observable(0),
     recordHeading: function() {
-      return recordData() ? "(" + (recordData().Name || objectData().label) + " / " + (recordData().Id || objectData().keyPrefix) + ")" : "Loading all data..."
+      if (recordData()) {
+        return "(" + recordData().Name + " / " + recordData().Id + ")";
+      }
+      if (objectData()) {
+        return"(" + objectData().label + " / " + objectData().keyPrefix + ")";
+      }
+      return "Loading all data...";
     },
+    sobjectName: ko.observable(),
     objectName: function() {
-      return objectData() && objectData().name;
+      // Get with correct case if available, otherwise just return the input.
+      return objectData() ? objectData().name : vm.sobjectName();
     },
     title: function() {
       return (objectData() ? "ALL DATA: " + objectData().name + " " : "") + vm.recordHeading();
@@ -253,16 +281,16 @@ function showAllData(recordDesc) {
     fieldRows: ko.observableArray(),
     childRows: ko.observableArray(),
     sortByLabel: function() {
-      sortFieldRows("label", function(r) { return r.fieldLabel; });
+      sortFieldRows("label");
     },
     sortByName: function() {
-      sortFieldRows("name", function(r) { return r.fieldName; });
+      sortFieldRows("name");
     },
     sortByValue: function() {
-      sortFieldRows("dataValue", function(r) { return "" + r.dataValue(); });
+      sortFieldRows("dataValue");
     },
     sortByType: function() {
-      sortFieldRows("type", function(r) { return r.fieldTypeDesc; });
+      sortFieldRows("type");
     },
     fieldDetailsFilterFocus: ko.observable(false),
     fieldDetailsFilter: ko.observable(""),
@@ -273,17 +301,13 @@ function showAllData(recordDesc) {
     },
     showObjectMetadata: function() {
       var objectDescribe = objectData();
-      var map = {};
-      for (var key in objectDescribe) {
-        if (key != "fields" && key != "childRelationships") {
-          map[key] = objectDescribe[key];
-        }
-      }
-      showAllFieldMetadata(map);
+      var props = {};
+      addProperties(props, objectDescribe, "", {fields: true, childRelationships: true});
+      showAllFieldMetadata(objectDescribe.name, props, false);
     },
     fieldDetailsFilterClick: function(field) {
       vm.closeFieldDetails();
-      vm.fieldRowsFilter(field.key + "=" + field.value);
+      vm.fieldRowsFilter(field.key + "=" + JSON.stringify(field.value));
     },
     canEdit: function() {
       return objectData() && objectData().updateable && recordData() && recordData().Id;
@@ -312,66 +336,125 @@ function showAllData(recordDesc) {
     }
   };
 
-  function FieldRow(fieldDescribe, sobjectDescribe) {
-    var fieldTypeDesc =
-      fieldDescribe.type == "reference"
-        ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
-        : fieldDescribe.type
-          + (fieldDescribe.length != 0 ? " (" + fieldDescribe.length + ")" : "")
-          + (fieldDescribe.precision != 0 || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
-          + (fieldDescribe.calculated ? "*" : "");
-    function fieldDescription() {
-      return toolingFieldDefinitions()[fieldDescribe.name] && toolingFieldDefinitions()[fieldDescribe.name].Metadata.description;
+  function FieldRow(fieldName) {
+    function fieldProperties() {
+      var props = {};
+      if (typeof fieldVm.dataTypedValue() != "undefined") {
+        addProperties(props, {dataValue: fieldVm.dataTypedValue()}, "", {});
+      }
+      if (fieldVm.fieldDescribe()) {
+      addProperties(props, fieldVm.fieldDescribe(), "desc.", {});
+      }
+      if (fieldVm.entityParticle()) {
+        addProperties(props, fieldVm.entityParticle(), "part.", {});
+      }
+      return props;
     }
 
-    var dataTypedValue = undefined;
-
     var fieldVm = {
-      fieldLabel: fieldDescribe.label,
-      fieldName: fieldDescribe.name,
-      fieldTypeDesc: fieldTypeDesc,
-      referenceTo: fieldDescribe.type == "reference" ? fieldDescribe.referenceTo : null,
-      fieldIsCalculated: fieldDescribe.calculated,
-      dataValue: ko.observable(""),
-      setDataValue: function(recordData) {
-        dataTypedValue = recordData[fieldDescribe.name];
-        if (recordData[fieldDescribe.name] != null) {
-          fieldVm.dataValue("" + dataTypedValue);
+      fieldDescribe: ko.observable(),
+      dataTypedValue: ko.observable(),
+      dataStringValue: ko.observable(""),
+      entityParticle: ko.observable(),
+
+      fieldLabel: function() {
+        if (fieldVm.fieldDescribe()) {
+          return fieldVm.fieldDescribe().label;
         }
+        if (fieldVm.entityParticle()) {
+          return fieldVm.entityParticle().Label;
+        }
+        return "Unknown Label";
+      },
+      fieldName: fieldName,
+      fieldTypeDesc: function() {
+        var fieldDescribe = fieldVm.fieldDescribe();
+        if (fieldDescribe) {
+          return fieldDescribe.type == "reference"
+          ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
+          : (fieldDescribe.type || "")
+            + (fieldDescribe.length ? " (" + fieldDescribe.length + ")" : "")
+            + (fieldDescribe.precision || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
+            + (fieldDescribe.calculated ? "*" : "");
+        }
+        var particle = fieldVm.entityParticle();
+        if (particle) {
+          return particle.DataType == "reference" && particle.FieldDefinition.ReferenceTo.referenceTo
+          ? "[" + particle.FieldDefinition.ReferenceTo.referenceTo.join(", ") + "]"
+          : (particle.DataType || "")
+            + (particle.Length ? " (" + particle.Length + ")" : "")
+            + (particle.Precision || particle.Scale ? " (" + particle.Precision + ", " + particle.Scale + ")" : "")
+            + (particle.IsCalculated ? "*" : "");
+        }
+        return "(Unknown)";
+      },
+      referenceTypes: function() {
+        var fieldDescribe = fieldVm.fieldDescribe();
+        if (fieldDescribe) {
+          return fieldDescribe.type == "reference" ? fieldDescribe.referenceTo : null;
+        }
+        var particle = fieldVm.entityParticle();
+        if (particle) {
+          return particle.DataType == "reference" ? particle.FieldDefinition.ReferenceTo.referenceTo : null;
+        }
+        return [];
+      },
+      fieldIsCalculated: function() {
+        if (fieldVm.fieldDescribe()) {
+          return fieldVm.fieldDescribe().calculated;
+        }
+        if (fieldVm.entityParticle()) {
+          return fieldVm.entityParticle().IsCalculated;
+        }
+        return false;
+      },
+      fieldIsHidden: function() {
+        return !fieldVm.fieldDescribe();
+      },
+      hasDataValue: function() {
+        return typeof fieldVm.dataTypedValue() != "undefined";
+      },
+      hasBlankValue: function() {
+        return fieldVm.dataTypedValue() === null;
       },
       saveDataValue: function(recordData) {
-        if (fieldDescribe.updateable) {
-          recordData[fieldDescribe.name] = fieldVm.dataValue() == "" ? null : fieldVm.dataValue();
+        if (fieldVm.fieldDescribe() && fieldVm.fieldDescribe().updateable) {
+          recordData[fieldVm.fieldDescribe().name] = fieldVm.dataStringValue() == "" ? null : fieldVm.dataStringValue();
         }
       },
       setupLink: function() {
-        return getFieldSetupLink(fieldIds(), sobjectDescribe, fieldDescribe);
+        var custom = fieldVm.fieldDescribe() ? fieldVm.fieldDescribe().custom : fieldName.endsWith("__c");
+        return getFieldSetupLink(fieldIds(), {name: vm.objectName()}, {name: fieldName, custom: custom});
       },
       summary: function() {
-        return fieldDescribe.name + "\n"
-          + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
-          + (fieldDescription() ? "Description: " + fieldDescription() + "\n" : "")
-          + (fieldDescribe.inlineHelpText ? "Help text: " + fieldDescribe.inlineHelpText + "\n" : "")
-          + (fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(function(pickval) { return pickval.value; }).join(", ") + "\n" : "")
-          ;
+        var fieldDescribe = fieldVm.fieldDescribe();
+        if (fieldDescribe) {
+          return fieldName + "\n"
+            + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
+            + (fieldDescribe.inlineHelpText ? "Help text: " + fieldDescribe.inlineHelpText + "\n" : "")
+            + (fieldDescribe.picklistValues && fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(function(pickval) { return pickval.value; }).join(", ") + "\n" : "")
+            ;
+        }
+        // Entity particle does not contain any of this information
+        return fieldName + "\n(Details not available)";
       },
       showEdit: function() {
-        return vm.isEditing() && fieldDescribe.updateable;
+        return vm.isEditing() && fieldVm.fieldDescribe() && fieldVm.fieldDescribe().updateable;
       },
       isId: function() {
-        return fieldDescribe.type == "reference" && fieldVm.dataValue();
+        if (fieldVm.fieldDescribe()) {
+          return fieldVm.fieldDescribe().type == "reference" && !!fieldVm.dataTypedValue();
+        }
+        if (fieldVm.entityParticle()) {
+          return fieldVm.entityParticle().DataType == "reference" && !!fieldVm.dataTypedValue();
+        }
+        return false;
       },
       openDetails: function() {
-        var map = {};
-        for (var key in fieldDescribe) {
-          map[key] = fieldDescribe[key];
-        }
-        map.dataValue = dataTypedValue;
-        map.description = fieldDescription();
-        showAllFieldMetadata(map);
+        showAllFieldMetadata(fieldName, fieldProperties(), true);
       },
       showRecordId: function() {
-        showAllData({recordId: fieldVm.dataValue()});
+        showAllData({recordId: fieldVm.dataTypedValue()});
       },
       showReference: function() {
         showAllData({
@@ -379,18 +462,24 @@ function showAllData(recordDesc) {
           useToolingApi: false
         });
       },
+      sortKeys: {
+        label: function() { return fieldVm.fieldLabel().trim(); },
+        name: function() { return fieldVm.fieldName.trim(); },
+        dataValue: function() { return fieldVm.hasDataValue() ? fieldVm.dataStringValue().trim() : "\uFFFD"; },
+        type: function() { return fieldVm.fieldTypeDesc().trim(); }
+      },
       visible: function() {
         var values = vm.fieldRowsFilter().trim().split(/[ \t]+/);
         return values.every(function(value) {
           var pair = value.split("=");
           if (pair.length == 2) {
             try {
-              return fieldDescribe[pair[0]] === JSON.parse(pair[1]);
+              return fieldProperties()[pair[0]] === JSON.parse(pair[1]);
             } catch(e) {
               return false;
             }
           } else {
-            var row = fieldVm.fieldLabel + "," + fieldVm.fieldName + "," + fieldVm.dataValue() + "," + fieldVm.fieldTypeDesc;
+            var row = fieldVm.fieldLabel() + "," + fieldVm.fieldName + "," + fieldVm.dataStringValue() + "," + fieldVm.fieldTypeDesc();
             return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
           }
         });
@@ -399,7 +488,13 @@ function showAllData(recordDesc) {
     return fieldVm;
   }
 
-  function ChildRow(childDescribe, sobjectDescribe) {
+  function ChildRow(childDescribe) {
+    function childProperties() {
+      var props = {};
+      addProperties(props, childDescribe, "child.", {});
+      return props;
+    }
+
     var childVm = {
       childName: childDescribe.relationshipName,
       childObject: childDescribe.childSObject,
@@ -410,7 +505,7 @@ function showAllData(recordDesc) {
           var pair = value.split("=");
           if (pair.length == 2) {
             try {
-              return childDescribe[pair[0]] === JSON.parse(pair[1]);
+              return childProperties()[pair[0]] === JSON.parse(pair[1]);
             } catch(e) {
               return false;
             }
@@ -421,11 +516,7 @@ function showAllData(recordDesc) {
         });
       },
       openDetails: function() {
-        var map = {};
-        for (var key in childDescribe) {
-          map[key] = childDescribe[key];
-        }
-        showAllFieldMetadata(map);
+        showAllFieldMetadata(childDescribe.relationshipName, childProperties(), true);
       },
       showChildObject: function() {
         showAllData({
@@ -443,30 +534,47 @@ function showAllData(recordDesc) {
     return childVm;
   }
 
-  function showAllFieldMetadata(allFieldMetadata) {
+  function addProperties(map, object, prefix, ignore) {
+    for (var key in object) {
+      var value = object[key];
+      if (ignore[key]) {
+      } else if (value && typeof value == "object") {
+        addProperties(map, value, prefix + key + ".", {});
+      } else {
+        map[prefix + key] = value;
+      }
+    }
+  }
+  function showAllFieldMetadata(name, allFieldMetadata, showFilterButton) {
     var fieldDetailVms = [];
     for (var key in allFieldMetadata) {
-      var value = JSON.stringify(allFieldMetadata[key], null, "  ");
+      var value = allFieldMetadata[key];
       fieldDetailVms.push({
         key: key,
         value: value,
+        isString: typeof value == "string",
+        isNumber: typeof value == "number",
+        isBoolean: typeof value == "boolean",
         visible: function() {
           var value = vm.fieldDetailsFilter().trim().toLowerCase();
           return !value || this.toLowerCase().indexOf(value) != -1;
         }.bind(key + "," + value)
       });
     }
-    vm.fieldDetails({rows: fieldDetailVms, name: allFieldMetadata.name});
+    vm.fieldDetails({rows: fieldDetailVms, name: name, showFilterButton: showFilterButton});
     vm.fieldDetailsFilterFocus(true);
   }
 
-  var sortCol = "";
-  var sortDir = -1;
-  function sortFieldRows(col, value) {
+  var sortCol = "name";
+  var sortDir = 1;
+  function sortFieldRows(col) {
     sortDir = col == sortCol ? -sortDir : 1;
     sortCol = col;
+    resortFieldRows();
+  }
+  function resortFieldRows() {
     vm.fieldRows.sort(function(a, b) {
-      return sortDir * value(a).trim().localeCompare(value(b).trim());
+      return sortDir * a.sortKeys[sortCol]().localeCompare(b.sortKeys[sortCol]());
     });
   }
 
@@ -488,67 +596,131 @@ function showAllData(recordDesc) {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  // Fetch object data using object describe call
-  var sobjectDescribePromise;
+  var sobjectInfoPromise;
   if ("recordId" in recordDesc) {
-    sobjectDescribePromise = loadMetadataForRecordId(recordDesc.recordId);
+    sobjectInfoPromise = Promise
+      .all([
+        askSalesforce('/services/data/v34.0/sobjects/'),
+        askSalesforce('/services/data/v34.0/tooling/sobjects/')
+      ])
+      .then(function(responses) {
+        var currentObjKeyPrefix = recordDesc.recordId.substring(0, 3);
+        for (var x = 0; x < responses.length; x++) {
+          var generalMetadataResponse = responses[x];
+          for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
+            var sobject = generalMetadataResponse.sobjects[i];
+            if (sobject.keyPrefix == currentObjKeyPrefix) {
+              var sobjectInfo = {};
+              sobjectInfo.sobjectName = sobject.name;
+              sobjectInfo.sobjectDescribePromise = askSalesforce(sobject.urls.describe);
+              if (recordDesc.recordId.length < 15) {
+                sobjectInfo.recordDataPromise = null; // Just a prefix, don't attempt to load the record
+              } else if (!sobject.retrieveable) {
+                sobjectInfo.recordDataPromise = null;
+                vm.errorMessages.push("This object does not support showing all data");
+              } else {
+                sobjectInfo.recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
+              }
+              return sobjectInfo;
+            }
+          }
+        }
+        throw 'Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix;
+      });
   } else if ("recordAttributes" in recordDesc) {
-    sobjectDescribePromise = askSalesforce("/services/data/v34.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+    var sobjectInfo = {};
+    sobjectInfo.sobjectName = recordDesc.recordAttributes.type;
+    sobjectInfo.sobjectDescribePromise = askSalesforce("/services/data/v34.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+    if (!recordDesc.recordAttributes.url) {
+      sobjectInfo.recordDataPromise = null; // No record url
+    } else {
+      sobjectInfo.recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
+    }
+    sobjectInfoPromise = Promise.resolve(sobjectInfo);
   } else {
     throw "unknown input for showAllData";
   }
-  spinFor("getting metadata", sobjectDescribePromise.then(function(sobjectDescribe) {
-    // Display the retrieved object data
-    objectData(sobjectDescribe);
-    vm.fieldRows.removeAll();
-    sobjectDescribe.fields.forEach(function(fieldDescribe) {
-      vm.fieldRows.push(new FieldRow(fieldDescribe, sobjectDescribe));
-    });
-    vm.childRows.removeAll();
-    sobjectDescribe.childRelationships.forEach(function(childDescribe) {
-      vm.childRows.push(new ChildRow(childDescribe, sobjectDescribe));
-    });
-    
+  spinFor("describing global", sobjectInfoPromise.then(function(sobjectInfo) {
+
+    vm.sobjectName(sobjectInfo.sobjectName);
+
+    var fieldMap = {};
+
+    // Fetch object data using object describe call
+    spinFor("describing object", sobjectInfo.sobjectDescribePromise.then(function(sobjectDescribe) {
+      // Display the retrieved object data
+      objectData(sobjectDescribe);
+      sobjectDescribe.fields.forEach(function(fieldDescribe) {
+        var fieldRow = fieldMap[fieldDescribe.name];
+        if (!fieldRow) {
+          fieldRow = new FieldRow(fieldDescribe.name);
+          vm.fieldRows.push(fieldRow);
+          fieldMap[fieldDescribe.name] = fieldRow;
+        }
+        fieldRow.fieldDescribe(fieldDescribe);
+      });
+      resortFieldRows();
+      sobjectDescribe.childRelationships.forEach(function(childDescribe) {
+        vm.childRows.push(new ChildRow(childDescribe));
+      });
+    }));
+
     // Fetch record data using record retrieve call
-    if (sobjectDescribe.retrieveable) {
-      var recordDataPromise;
-      if ("recordId" in recordDesc) {
-        if (recordDesc.recordId.length < 15) {
-          recordDataPromise = Promise.resolve({}); // Just a prefix, don't attempt to load the record
-        } else {
-          recordDataPromise = askSalesforce(sobjectDescribe.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
+    if (sobjectInfo.recordDataPromise) {
+      spinFor("retrieving record", sobjectInfo.recordDataPromise.then(function(res) {
+        for (var name in res) {
+          if (name != "attributes") {
+            var fieldRow = fieldMap[name];
+            if (!fieldRow) {
+              fieldRow = new FieldRow(name);
+              vm.fieldRows.push(fieldRow);
+              fieldMap[name] = fieldRow;
+            }
+            fieldRow.dataTypedValue(res[name]);
+            fieldRow.dataStringValue(res[name] == null ? "" : "" + res[name]);
+          }
         }
-      } else if ("recordAttributes" in recordDesc) {
-        if (!recordDesc.recordAttributes.url) {
-          recordDataPromise = Promise.resolve({}); // No record url
-        } else {
-          recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
-        }
-      } else {
-        throw "unknown input for showAllData";
-      }
-      spinFor("getting record data", recordDataPromise.then(function(res) {
-        vm.fieldRows().forEach(function(fieldRow) {
-          fieldRow.setDataValue(res);
-        });
+        resortFieldRows();
         recordData(res);
       }));
-    } else {
-      recordData({}); // Hides the loading indicator
-      vm.errorMessages.push("This object does not support showing all data");
     }
 
-    // Fetch extra field metadata (field descriptions) using Tooling API call
-    spinFor("getting field descriptions", askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Metadata from FieldDefinition where EntityDefinitionId = '" + sobjectDescribe.name + "'"))
+    // Fetch fields using Tooling API call, which contains fields not readable by the current user, but fails if the user does not have access to the Tooling API, and is much less stable.
+    // These fields are not queried since Salesforce returns an error for some objects if these fields are incluced in the query: IsApiFilterable, IsApiSortable, IsApiGroupable, FieldDefinition.IsApiFilterable, FieldDefinition.IsApiSortable, FieldDefinition.IsApiGroupable, FieldDefinition.DataType, IsCompactLayoutable, FieldDefinition.IsCompactLayoutable
+    spinFor("querying tooling particles", askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select\
+      Id, DurableId, QualifiedApiName, EntityDefinitionId, FieldDefinitionId, NamespacePrefix, DeveloperName, MasterLabel, Label, Length, DataType, ServiceDataTypeId, ExtraTypeInfo, IsCalculated, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, Precision, Scale, IsFieldHistoryTracked, IsListVisible,\
+      FieldDefinition.Id, FieldDefinition.DurableId, FieldDefinition.QualifiedApiName, FieldDefinition.EntityDefinitionId, FieldDefinition.NamespacePrefix, FieldDefinition.DeveloperName, FieldDefinition.MasterLabel, FieldDefinition.Label, FieldDefinition.Length, FieldDefinition.ServiceDataTypeId, FieldDefinition.ExtraTypeInfo, FieldDefinition.IsCalculated, FieldDefinition.IsHighScaleNumber, FieldDefinition.IsHtmlFormatted, FieldDefinition.IsNameField, FieldDefinition.IsNillable, FieldDefinition.IsWorkflowFilterable, FieldDefinition.Precision, FieldDefinition.Scale, FieldDefinition.IsFieldHistoryTracked, FieldDefinition.IsListFilterable, FieldDefinition.IsListSortable, FieldDefinition.IsListVisible, FieldDefinition.ControllingFieldDefinitionId, FieldDefinition.LastModifiedDate, FieldDefinition.LastModifiedById, FieldDefinition.PublisherId, FieldDefinition.RunningUserFieldAccessId, FieldDefinition.RelationshipName, FieldDefinition.ReferenceTo, FieldDefinition.ReferenceTargetField,\
+      ServiceDataType.Id, ServiceDataType.DurableId, ServiceDataType.Name, ServiceDataType.IsComplex, ServiceDataType.ServiceId, ServiceDataType.Namespace, ServiceDataType.NamespacePrefix,\
+      FieldDefinition.Publisher.Id, FieldDefinition.Publisher.DurableId, FieldDefinition.Publisher.Name, FieldDefinition.Publisher.NamespacePrefix, FieldDefinition.Publisher.IsSalesforce\
+      from EntityParticle where EntityDefinition.QualifiedApiName = '" + sobjectInfo.sobjectName + "'"))
       .then(function(res) {
-        var map = {};
-        res.records.forEach(function(fd) {
-          map[fd.QualifiedApiName] = fd;
+        res.records.forEach(function(entityParticle) {
+          var fieldRow = fieldMap[entityParticle.QualifiedApiName];
+          if (!fieldRow) {
+            fieldRow = new FieldRow(entityParticle.QualifiedApiName);
+            vm.fieldRows.push(fieldRow);
+            fieldMap[entityParticle.QualifiedApiName] = fieldRow;
+          }
+          fieldRow.entityParticle(entityParticle);
         });
-        toolingFieldDefinitions(map);
+        resortFieldRows();
       }));
+    /*
+    // Uncomment this code to test if the query works for all objects in an org. If it fails for some objects, it may be fixable by querying less fields.
+    spinFor("testing", askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName from EntityDefinition ")).then(function(res) {
+      res.records.forEach(function(record) {
+        spinFor("testing for " + record.QualifiedApiName, askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select\
+      Id, DurableId, QualifiedApiName, EntityDefinitionId, FieldDefinitionId, NamespacePrefix, DeveloperName, MasterLabel, Label, Length, DataType, ServiceDataTypeId, ExtraTypeInfo, IsCalculated, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, Precision, Scale, IsFieldHistoryTracked, IsListVisible,\
+      FieldDefinition.Id, FieldDefinition.DurableId, FieldDefinition.QualifiedApiName, FieldDefinition.EntityDefinitionId, FieldDefinition.NamespacePrefix, FieldDefinition.DeveloperName, FieldDefinition.MasterLabel, FieldDefinition.Label, FieldDefinition.Length, FieldDefinition.ServiceDataTypeId, FieldDefinition.ExtraTypeInfo, FieldDefinition.IsCalculated, FieldDefinition.IsHighScaleNumber, FieldDefinition.IsHtmlFormatted, FieldDefinition.IsNameField, FieldDefinition.IsNillable, FieldDefinition.IsWorkflowFilterable, FieldDefinition.Precision, FieldDefinition.Scale, FieldDefinition.IsFieldHistoryTracked, FieldDefinition.IsListFilterable, FieldDefinition.IsListSortable, FieldDefinition.IsListVisible, FieldDefinition.ControllingFieldDefinitionId, FieldDefinition.LastModifiedDate, FieldDefinition.LastModifiedById, FieldDefinition.PublisherId, FieldDefinition.RunningUserFieldAccessId, FieldDefinition.RelationshipName, FieldDefinition.ReferenceTo, FieldDefinition.ReferenceTargetField,\
+      ServiceDataType.Id, ServiceDataType.DurableId, ServiceDataType.Name, ServiceDataType.IsComplex, ServiceDataType.ServiceId, ServiceDataType.Namespace, ServiceDataType.NamespacePrefix,\
+      FieldDefinition.Publisher.Id, FieldDefinition.Publisher.DurableId, FieldDefinition.Publisher.Name, FieldDefinition.Publisher.NamespacePrefix, FieldDefinition.Publisher.IsSalesforce\
+      from EntityParticle where EntityDefinition.QualifiedApiName = '" + record.QualifiedApiName + "'")));
+      });
+    }));
+    */
 
-    spinFor("getting setup links", loadFieldSetupData(sobjectDescribe.name).then(function(res) {
+    // Fetch field ids to build links to field setup ui pages
+    spinFor("getting setup links", loadFieldSetupData(sobjectInfo.sobjectName).then(function(res) {
       fieldIds(res);
     }));
 
