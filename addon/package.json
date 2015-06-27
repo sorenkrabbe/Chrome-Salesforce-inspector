@@ -3,7 +3,7 @@
   "title": "Salesforce inspector",
   "id": "jid1-DBcuAQpfLMcvOQ",
   "description": "Productivity tools for Salesforce administrators and developers to inspect data and metadata directly from the Salesforce UI.",
-  "version": "0.6",
+  "version": "0.7",
   "permissions": {
     "private-browsing": true
   }
