@@ -165,6 +165,18 @@ function showAllData(recordDesc) {
     text-align: right;\
     width: 4em;\
   }\
+  .char-btn {\
+    color: white;\
+    text-decoration: none;\
+    background-color: gray;\
+    display: inline-block;\
+    width: 14px;\
+    height: 14px;\
+    border-radius: 7px;\
+    line-height: 14px;\
+    text-align: center;\
+    margin-left: -22px;\
+  }\
   </style>\
   ';
 
@@ -181,7 +193,8 @@ function showAllData(recordDesc) {
       <button title="Inline edit the values of this record" data-bind="enable: canEdit(), visible: !isEditing(), click: doEdit">Edit</button>\
       <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: doSave">Save</button>\
     </div>\
-    <input class="filter-input" placeholder="Filter" data-bind="value: fieldRowsFilter, valueUpdate: \'input\'" autofocus>\
+    <input class="filter-input" placeholder="Filter" data-bind="value: fieldRowsFilter, valueUpdate: \'input\', hasFocus: fieldRowsFilterFocus">\
+    <a href="about:blank" class="char-btn" data-bind="click: clearAndFocusFilter">X</a>\
   </div>\
   <table>\
     <thead>\
@@ -277,9 +290,14 @@ function showAllData(recordDesc) {
       return (objectData() ? "ALL DATA: " + objectData().name + " " : "") + vm.recordHeading();
     },
     errorMessages: ko.observableArray(),
+    fieldRowsFilterFocus: ko.observable(true),
     fieldRowsFilter: ko.observable(""),
     fieldRows: ko.observableArray(),
     childRows: ko.observableArray(),
+    clearAndFocusFilter: function() {
+      vm.fieldRowsFilter("");
+      vm.fieldRowsFilterFocus(true);
+    },
     sortByLabel: function() {
       sortFieldRows("label");
     },
