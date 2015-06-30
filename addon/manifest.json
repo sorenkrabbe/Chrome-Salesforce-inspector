@@ -9,6 +9,7 @@
   "content_scripts": [
     {
       "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*"],
+      "all_frames": true,
       "css": [
         "data/chromePopup.css",
         "data/showStdPageDetails.css"
