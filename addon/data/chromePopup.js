@@ -66,6 +66,7 @@ function openPopup() {
     <h3>Salesforce inspector</h3>\
     <button id="insext-showStdPageDetailsBtn">Show field metadata (m)</button>\
     <button id="insext-showAllDataBtn">Show all data (a)</button>\
+    <input id="insext-showAllDataInp" placeholder="Record ID, ID prefix or Sobject name">\
     <button id="insext-dataExportBtn">Data Export (e)</button>\
     <button id="insext-dataImportBtn">Data Import (i)</button>\
     <button id="insext-apiExploreBtn">Explore API (x)</button>\
@@ -165,6 +166,15 @@ function openPopup() {
     showAllData({recordId: recordId});
     closePopup();
   }
+  function showAllDataKeypress(e) {
+    if (e.keyCode != 13) {
+      e.stopPropagation(); // Stop our keyboard shortcut handler
+      return;
+    }
+    e.preventDefault();
+    showAllData({recordId: document.querySelector('#insext-showAllDataInp').value});
+    closePopup();
+  }
   function dataExportClick() {
     dataExport();
     closePopup();
@@ -183,6 +193,7 @@ function openPopup() {
     document.querySelector('#insext-showStdPageDetailsBtn').style.display = "none";
     document.querySelector('#insext-showAllDataBtn').style.display = "none";
   } else {
+    document.querySelector('#insext-showAllDataInp').style.display = "none";
     document.querySelector('#insext-apiExploreBtn').style.display = "none";
   }
   if (detailsShown || !recordId) {
@@ -193,6 +204,7 @@ function openPopup() {
   }
   document.querySelector('#insext-showStdPageDetailsBtn').addEventListener('click', showStdPageDetailsClick);
   document.querySelector('#insext-showAllDataBtn').addEventListener('click', showAllDataClick);
+  document.querySelector('#insext-showAllDataInp').addEventListener('keypress', showAllDataKeypress);
   document.querySelector('#insext-dataExportBtn').addEventListener('click', dataExportClick);
   document.querySelector('#insext-dataImportBtn').addEventListener('click', dataImportClick);
   document.querySelector('#insext-apiExploreBtn').addEventListener('click', apiExploreClick);

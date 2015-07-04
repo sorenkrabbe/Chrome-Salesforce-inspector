@@ -627,7 +627,7 @@ function showAllData(recordDesc) {
           var generalMetadataResponse = responses[x];
           for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
             var sobject = generalMetadataResponse.sobjects[i];
-            if (sobject.keyPrefix == currentObjKeyPrefix) {
+            if (sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
               var sobjectInfo = {};
               sobjectInfo.sobjectName = sobject.name;
               sobjectInfo.sobjectDescribePromise = askSalesforce(sobject.urls.describe);
@@ -643,7 +643,7 @@ function showAllData(recordDesc) {
             }
           }
         }
-        throw 'Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix;
+        throw 'Unknown salesforce object: ' + recordDesc.recordId;
       });
   } else if ("recordAttributes" in recordDesc) {
     var sobjectInfo = {};

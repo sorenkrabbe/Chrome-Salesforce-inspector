@@ -51,7 +51,8 @@
 #insext .insext-btn img:hover {
     opacity: 1.0; 
  }
-#insext button {
+#insext button,
+#insext input {
     width: 100%;
 }
 #insext-spinner {
