@@ -13,7 +13,7 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*"],
+      "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*", "https://*.lightning.force.com/*"],
       "all_frames": true,
       "css": [
         "data/chromePopup.css",

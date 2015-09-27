@@ -1,7 +1,7 @@
 // sfdcBody = normal Salesforce page
 // ApexCSIPage = Developer Console
-var buttonParent = document.querySelector('body.sfdcBody, body.ApexCSIPage');
-if (buttonParent) {
+// auraLoadingBox = Lightning / Salesforce1
+if (document.querySelector('body.sfdcBody, body.ApexCSIPage, #auraLoadingBox')) {
   // We are in a Salesforce org
   init();
 }
@@ -26,7 +26,7 @@ function init() {
     </div>\
   </div>';
   var rootEl = f.firstChild;
-  buttonParent.appendChild(rootEl);
+  document.body.appendChild(rootEl);
   document.querySelector('.insext-btn').addEventListener('click', function() {
     if (!rootEl.classList.contains('insext-active')) {
       openPopup();
@@ -111,13 +111,20 @@ function openPopup() {
   var match = document.location.search.match(/(\?|&)id=([a-zA-Z0-9]*)(&|$)/);
   if (match) {
     recordId = match[2];
-  } else {
+  }
+  if (!recordId && location.hostname.indexOf(".salesforce.com") > -1) {
     match = document.location.pathname.match(/\/([a-zA-Z0-9]*)(\/|$)/);
     if (match) {
       recordId = match[1];
     }
   }
-  if (recordId.length != 3 && recordId.length != 15 && recordId.length != 18) {
+  if (!recordId && location.hostname.indexOf(".lightning.force.com") > -1) {
+    match = document.location.hash.match(/\/sObject\/([a-zA-Z0-9]*)(\/|$)/);
+    if (match) {
+      recordId = match[1];
+    }
+  }
+  if (recordId && recordId.length != 3 && recordId.length != 15 && recordId.length != 18) {
     recordId = null;
   }
 
@@ -168,6 +175,7 @@ function openPopup() {
   }
 
   var isDevConsole = document.querySelector('body.ApexCSIPage');
+  var inAura = document.querySelector('#auraLoadingBox');
   if (isDevConsole) {
     document.querySelector('#insext-showStdPageDetailsBtn').style.display = "none";
     document.querySelector('#insext-showAllDataBtn').style.display = "none";
@@ -175,7 +183,7 @@ function openPopup() {
     document.querySelector('#insext-showAllDataInp').style.display = "none";
     document.querySelector('#insext-apiExploreBtn').style.display = "none";
   }
-  if (detailsShown || !recordId) {
+  if (inAura || detailsShown || !recordId) {
     document.querySelector('#insext-showStdPageDetailsBtn').disabled = true;
   }
   if (!recordId) {
