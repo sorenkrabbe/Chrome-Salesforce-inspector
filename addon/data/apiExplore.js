@@ -1,6 +1,6 @@
 var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 var options = args.options;
-var orgId = args.orgId;
+orgId = args.orgId;
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
   var popupWin = window;

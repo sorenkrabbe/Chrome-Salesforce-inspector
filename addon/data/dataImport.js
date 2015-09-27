@@ -1,5 +1,5 @@
 var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
-var orgId = args.orgId;
+orgId = args.orgId;
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
   var popupWin = window;
@@ -17,7 +17,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   function recalculateHeight() {
     vm.resultBoxOffsetTop(resultBox.offsetTop);
   }
-  if (this.self && self.port) {
+  if (!this.webkitURL) {
     // Firefox
     // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
     new MutationObserver(recalculateHeight).observe(dataInput, {attributes: true});
@@ -31,10 +31,12 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   }
   vm.showHelp.subscribe(recalculateHeight);
   vm.importAction.subscribe(recalculateHeight);
-  popupWin.addEventListener("resize", function() {
+  function resize() {
     vm.winInnerHeight(popupWin.innerHeight);
     recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
-  });
+  }
+  popupWin.addEventListener("resize", resize);
+  resize();
 
 });
 

@@ -20,6 +20,7 @@
         "data/showStdPageDetails.css"
       ],
       "js": [
+        "data/inspector.js",
         "data/chromePopup.js",
         "data/showStdPageDetails.js"
       ]

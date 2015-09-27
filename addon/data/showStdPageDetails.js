@@ -2,37 +2,44 @@ function showStdPageDetails(recordId) {
   var fieldDetailsByLabel = {};
   var metadataResponse = {};
   var fieldSetupData = {};
-
-  return Promise
-      .all([
-        askSalesforce('/services/data/v34.0/sobjects/'),
-        askSalesforce('/services/data/v34.0/tooling/sobjects/')
-      ])
-      .then(function(responses) {
-        var currentObjKeyPrefix = recordId.substring(0, 3);
-        for (var x = 0; x < responses.length; x++) {
-          var generalMetadataResponse = responses[x];
-          for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
-            if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
-              return askSalesforce(generalMetadataResponse.sobjects[i].urls.describe);
-            }
-          }
-        }
-        throw 'Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix;
-      })
-    .then(function(res) {
-      metadataResponse = res;
-      
-      // We don't wait for loadFieldSetupData to resolve. We show the data we have, and add the field setup links once that data arrives
-      fieldDetailsReady();
-      
-      loadFieldSetupData(metadataResponse.name)
-        .then(function(res) {
-          fieldSetupData = res;
-        }, function() {
-          // Don't fail if the user does not have access to the tooling API.
-        });
+  return new Promise(function(resolve, reject) {
+    chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+      session = {key: message.key, hostname: location.hostname};
+      resolve();
     });
+  })
+  .then(function() {
+    return Promise
+    .all([
+      askSalesforce('/services/data/v34.0/sobjects/'),
+      askSalesforce('/services/data/v34.0/tooling/sobjects/')
+    ]);
+  })
+  .then(function(responses) {
+    var currentObjKeyPrefix = recordId.substring(0, 3);
+    for (var x = 0; x < responses.length; x++) {
+      var generalMetadataResponse = responses[x];
+      for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
+        if (generalMetadataResponse.sobjects[i].keyPrefix == currentObjKeyPrefix) {
+          return askSalesforce(generalMetadataResponse.sobjects[i].urls.describe);
+        }
+      }
+    }
+    throw 'Unknown salesforce object. Unable to identify current page\'s object type based on key prefix: ' + currentObjKeyPrefix;
+  })
+  .then(function(res) {
+    metadataResponse = res;
+
+    // We don't wait for loadFieldSetupData to resolve. We show the data we have, and add the field setup links once that data arrives
+    fieldDetailsReady();
+
+    loadFieldSetupData(metadataResponse.name)
+      .then(function(res) {
+        fieldSetupData = res;
+      }, function() {
+        // Don't fail if the user does not have access to the tooling API.
+      });
+  });
 
 
 /**

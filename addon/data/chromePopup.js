@@ -6,8 +6,6 @@ if (buttonParent) {
   init();
 }
 
-var session, orgId;
-
 function init() {
   // When on a *.visual.force.com page, the session in the cookie does not have API access,
   // so we read the session from a cache stored in memory.
@@ -17,12 +15,8 @@ function init() {
   // http://salesforce.stackexchange.com/questions/23277/different-session-ids-in-different-contexts
   orgId = document.cookie.match(/(^|;\s*)sid=(.+?)!/)[2];
   if (location.hostname.indexOf(".salesforce.com") > -1) {
-    session = {key: document.cookie.match(/(^|;\s*)sid=(.+?);/)[2], hostname: location.hostname};
+    var session = {key: document.cookie.match(/(^|;\s*)sid=(.+?);/)[2], hostname: location.hostname};
     chrome.runtime.sendMessage({message: "putSession", orgId: orgId, session: session});
-  } else if (location.hostname.indexOf(".visual.force.com") > -1) {
-    chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
-      session = {key: message.key, hostname: location.hostname};
-    });
   }
   
   var f = document.createElement('div');
@@ -196,106 +190,4 @@ function openPopup() {
   document.querySelector('#insext-aboutLnk').addEventListener('click', function(){ 
     open('https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'); 
   });
-}
-
-function loadFieldSetupData(sobjectName) {
-  return askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix, EntityDefinition.QualifiedApiName from CustomField")).then(function(res) {
-    var fieldIds = {};
-    res.records.forEach(function(customField) {
-      // We build the API name from NamespacePrefix and DeveloperName, since we cannot query FullName when we query more than one field.
-      fieldIds[customField.EntityDefinition.QualifiedApiName + "." + (customField.NamespacePrefix ? customField.NamespacePrefix + "__" : "") + customField.DeveloperName + "__c"] = customField.Id;
-    });
-    return fieldIds;
-  });
-}
-
-function getFieldSetupLink(fieldIds, sobjectDescribe, fieldDescribe) {
-  if (!fieldDescribe.custom) {
-    var name = fieldDescribe.name;
-    if (name.substr(-2) == "Id" && name != "Id") {
-      name = name.slice(0, -2);
-    }
-    return 'https://' + session.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + sobjectDescribe.name;
-  } else {
-    var fieldId = fieldIds[sobjectDescribe.name + '.' + fieldDescribe.name];
-    if (!fieldId) {
-      return null;
-    }
-    return 'https://' + session.hostname + '/' + fieldId;
-  }
-}
-
-function askSalesforce(url, progressHandler, options) {
-  return new Promise(function(resolve, reject) {
-    options = options || {};
-    if (!session) {
-      reject(new Error("Session not found"));
-      return;
-    }
-    url += (url.indexOf("?") > -1 ? '&' : '?') + 'cache=' + Math.random();
-    var xhr = new XMLHttpRequest();
-    if (progressHandler) {
-      progressHandler.abort = function(result) {
-        resolve(result);
-        xhr.abort();
-      }
-    }
-    xhr.open(options.method || "GET", "https://" + session.hostname + url, true);
-    xhr.setRequestHeader('Authorization', "OAuth " + session.key);
-    xhr.setRequestHeader('Accept', "application/json");
-    if (options.body) {
-      xhr.setRequestHeader('Content-Type', "application/json");
-    }
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        if (xhr.status == 200) {
-          resolve(JSON.parse(xhr.responseText));
-        } else if (xhr.status == 204) {
-          resolve(null);
-        } else {
-          reject(xhr);
-        }
-      }
-    }
-    xhr.send(JSON.stringify(options.body));
-  });
-}
-
-function askSalesforceSoap(request) {
-  return new Promise(function(resolve, reject) {
-    if (!session) {
-      reject(new Error("Session not found"));
-      return;
-    }
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", "https://" + session.hostname + '/services/Soap/u/34.0?cache=' + Math.random(), true);
-    xhr.setRequestHeader('Content-Type', "text/xml");
-    xhr.setRequestHeader('SOAPAction', '""');
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        if (xhr.status == 200) {
-          resolve(xhr.responseXML);
-        } else {
-          reject(xhr);
-        }
-      }
-    }
-    xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="urn:partner.soap.sforce.com"><SessionHeader><sessionId>' + session.key + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="urn:partner.soap.sforce.com">' + request + '</soapenv:Body></soapenv:Envelope>');
-  });
-}
-
-function dataExport(options) {
-  chrome.runtime.sendMessage({message: "dataExport", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})))}, function(message) {});
-}
-
-function dataImport() {
-  chrome.runtime.sendMessage({message: "dataImport", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId})))}, function(message) {});
-}
-
-function showAllData(recordDesc) {
-  chrome.runtime.sendMessage({message: "showAllData", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, recordDesc: recordDesc})))}, function(message) {});
-}
-
-function apiExplore(options) {
-  chrome.runtime.sendMessage({message: "apiExplore", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})))}, function(message) {});
 }
