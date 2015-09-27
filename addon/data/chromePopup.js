@@ -6,7 +6,7 @@ if (buttonParent) {
   init();
 }
 
-var session;
+var session, orgId;
 
 function init() {
   // When on a *.visual.force.com page, the session in the cookie does not have API access,
@@ -15,29 +15,14 @@ function init() {
   // The first part of the session cookie is the OrgID,
   // which we use as key to support being logged in to multiple orgs at once.
   // http://salesforce.stackexchange.com/questions/23277/different-session-ids-in-different-contexts
-  var orgId = document.cookie.match(/(^|;\s*)sid=(.+?)!/)[2];
+  orgId = document.cookie.match(/(^|;\s*)sid=(.+?)!/)[2];
   if (location.hostname.indexOf(".salesforce.com") > -1) {
-    session = document.cookie.match(/(^|;\s*)sid=(.+?);/)[2];
-    if (this.self && self.port) {
-      // Firefox
-      self.port.emit("putSession", orgId, session);
-    } else {
-      // Chrome
-      chrome.runtime.sendMessage({message: "putSession", orgId: orgId, session: session});
-    }
+    session = {key: document.cookie.match(/(^|;\s*)sid=(.+?);/)[2], hostname: location.hostname};
+    chrome.runtime.sendMessage({message: "putSession", orgId: orgId, session: session});
   } else if (location.hostname.indexOf(".visual.force.com") > -1) {
-    if (this.self && self.port) {
-      // Firefox
-      self.port.emit("getSession", orgId);
-      self.port.on("getSession", function(message) {
-        session = message;
-      });
-    } else {
-      // Chrome
-      chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
-        session = message;
-      });
-    }
+    chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+      session = {key: message.key, hostname: location.hostname};
+    });
   }
   
   var f = document.createElement('div');
@@ -230,13 +215,13 @@ function getFieldSetupLink(fieldIds, sobjectDescribe, fieldDescribe) {
     if (name.substr(-2) == "Id" && name != "Id") {
       name = name.slice(0, -2);
     }
-    return 'https://' + document.location.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + sobjectDescribe.name;
+    return 'https://' + session.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + sobjectDescribe.name;
   } else {
     var fieldId = fieldIds[sobjectDescribe.name + '.' + fieldDescribe.name];
     if (!fieldId) {
       return null;
     }
-    return 'https://' + document.location.hostname + '/' + fieldId;
+    return 'https://' + session.hostname + '/' + fieldId;
   }
 }
 
@@ -255,8 +240,8 @@ function askSalesforce(url, progressHandler, options) {
         xhr.abort();
       }
     }
-    xhr.open(options.method || "GET", "https://" + document.location.hostname + url, true);
-    xhr.setRequestHeader('Authorization', "OAuth " + session);
+    xhr.open(options.method || "GET", "https://" + session.hostname + url, true);
+    xhr.setRequestHeader('Authorization', "OAuth " + session.key);
     xhr.setRequestHeader('Accept', "application/json");
     if (options.body) {
       xhr.setRequestHeader('Content-Type', "application/json");
@@ -283,7 +268,7 @@ function askSalesforceSoap(request) {
       return;
     }
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "https://" + document.location.hostname + '/services/Soap/u/34.0?cache=' + Math.random(), true);
+    xhr.open("POST", "https://" + session.hostname + '/services/Soap/u/34.0?cache=' + Math.random(), true);
     xhr.setRequestHeader('Content-Type', "text/xml");
     xhr.setRequestHeader('SOAPAction', '""');
     xhr.onreadystatechange = function() {
@@ -295,6 +280,22 @@ function askSalesforceSoap(request) {
         }
       }
     }
-    xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="urn:partner.soap.sforce.com"><SessionHeader><sessionId>' + session + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="urn:partner.soap.sforce.com">' + request + '</soapenv:Body></soapenv:Envelope>');
+    xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="urn:partner.soap.sforce.com"><SessionHeader><sessionId>' + session.key + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="urn:partner.soap.sforce.com">' + request + '</soapenv:Body></soapenv:Envelope>');
   });
+}
+
+function dataExport(options) {
+  chrome.runtime.sendMessage({message: "dataExport", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})))}, function(message) {});
+}
+
+function dataImport() {
+  chrome.runtime.sendMessage({message: "dataImport", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId})))}, function(message) {});
+}
+
+function showAllData(recordDesc) {
+  chrome.runtime.sendMessage({message: "showAllData", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, recordDesc: recordDesc})))}, function(message) {});
+}
+
+function apiExplore(options) {
+  chrome.runtime.sendMessage({message: "apiExplore", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})))}, function(message) {});
 }

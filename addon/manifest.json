@@ -2,6 +2,11 @@
   "name": "Salesforce inspector",
   "description": "Productivity tools for Salesforce administrators and developers to inspect data and metadata directly from the Salesforce UI.",
   "version": "0.7",
+  "applications": {
+    "gecko": {
+      "id": "jid1-DBcuAQpfLMcvOQ@jetpack"
+    }
+  },
   "permissions": [
     "https://*.salesforce.com/*",
     "https://*.visual.force.com/*"
@@ -15,18 +20,14 @@
         "data/showStdPageDetails.css"
       ],
       "js": [
-        "data/knockout-3.2.0.js",
         "data/chromePopup.js",
-        "data/showAllDataForRecordPopup.js",
-        "data/dataExport.js",
-        "data/dataImport.js",
-        "data/apiExplore.js",
         "data/showStdPageDetails.js"
       ]
     }
   ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'none'",
   "background": {
-    "scripts": ["lib/main.js"]
+    "scripts": ["main.js"]
   },
   "incognito": "split",
   "manifest_version": 2

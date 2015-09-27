@@ -1,0 +1,120 @@
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  overflow: hidden;
+  margin-top: 0;
+}
+#user-info {
+  background-color: #1797c0;
+  color: white;
+  padding: .5em;
+  border-radius: 0 0 10px 10px;
+  margin-bottom: 8px;
+}
+textarea {
+  display:block;
+  width: 100%;
+  resize: vertical;
+  word-wrap: normal;
+  font-size: 11px;
+}
+textarea[hidden] {
+  display: none;
+}
+table {
+  border-collapse: collapse;
+}
+th, td {
+  text-align: left;
+  font-size: 11px;
+  border: 1px solid gray;
+  background-color: white;
+  white-space: pre;
+}
+#result-box {
+  margin-top: 3px;
+  overflow: auto;
+}
+#query {
+  height: 5em;
+  margin-top: 3px;
+}
+#result-text {
+  height: calc(100% - 2px);
+  resize: none;
+  white-space: pre;
+}
+.area {
+  background-color: #F8F8F8;
+  padding: 3px;
+  border-radius: 5px;
+  border: 1px solid #E0E3E5;
+  border-top: 3px solid #1797C0;
+}
+h1 {
+  font-size: 1.2em;
+  margin: 0px;
+  display: inline;
+}
+.action-arrow {
+  text-align: center;
+}
+.arrow-body {
+  background-color: green;
+  width: 100px;
+  margin: 0 auto;
+  padding-top: 5px;
+}
+.arrow-head {
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+  border-top: 15px solid green;
+  width: 0;
+  margin: 0 auto -8px;
+  position: relative;
+}
+.area input[type="radio"], .area input[type="checkbox"] {
+  margin: 0 2px 0 0;
+}
+.area label {
+  padding-left: 10px;
+  white-space: nowrap;
+}
+.area * {
+  vertical-align: middle
+}
+.query-history {
+  width: 9em;
+}
+#export-help-btn {
+  float: right;
+  margin-top: 3px;
+}
+#autocomplete-results {
+  white-space: nowrap;
+  overflow: hidden;
+}
+#autocomplete-results.expanded {
+  white-space: normal;
+}
+#spinner {
+  position: absolute;
+  left: -15px;
+  top: -15px;
+}
+.cancel-btn {
+  float: right;
+  height: 1.3em;
+  border: 1px solid gray;
+}
+.char-btn {
+  color: white;
+  text-decoration: none;
+  background-color: gray;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  line-height: 14px;
+  text-align: center;
+}

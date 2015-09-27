@@ -1,0 +1,123 @@
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  overflow: hidden;
+  margin-top: 0;
+}
+#user-info {
+  background-color: #1797c0;
+  color: white;
+  padding: .5em;
+  border-radius: 0 0 10px 10px;
+  margin-bottom: 8px;
+}
+textarea {
+  display:block;
+  width: 100%;
+  resize: vertical;
+  white-space: pre;
+  word-wrap: normal;
+}
+#result-box {
+  margin-top: 3px;
+  overflow: auto;
+}
+#data {
+  height:17em;
+  margin-top: 3px;
+}
+#import-result {
+  height: calc(100% - 2px);
+  resize: none;
+}
+.area {
+  background-color: #F8F8F8;
+  padding: 3px;
+  border-radius: 5px;
+  border: 1px solid #E0E3E5;
+  border-top: 3px solid #1797C0;
+}
+h1 {
+  font-size: 1.2em;
+  margin: 0px;
+  display: inline;
+}
+.action-arrow {
+  text-align: center;
+}
+.arrow-body {
+  background-color: green;
+  width: 100px;
+  margin: 0 auto;
+  padding-top: 5px;
+}
+.arrow-head {
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+  border-top: 15px solid green;
+  width: 0;
+  margin: 0 auto -8px;
+  position: relative;
+}
+.area label {
+  font-weight: bold;
+  color: #4a4a56;
+  padding-left: 15px;
+  white-space: nowrap;
+}
+.area * {
+  vertical-align: middle
+}
+#import-help-btn {
+  float: right;
+  margin-top: 3px;
+}
+#spinner {
+  position: absolute;
+  left: -15px;
+  top: -15px;
+}
+.area label.statusGroupEmpty {
+  color: lightgray;
+  font-weight: normal;
+}
+.batch-size {
+  width: 3.4em;
+}
+.cancel-btn {
+  float: right;
+  height: 1.3em;
+  border: 1px solid gray;
+}
+.char-btn {
+  color: white;
+  text-decoration: none;
+  background-color: gray;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  line-height: 14px;
+  text-align: center;
+}
+#confirm-background {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 99999;
+}
+
+#confirm-dialog {
+  width: 400px;
+  position: relative;
+  margin: 10% auto;
+  border-radius: 10px;
+  background: #fff;
+  padding: 20px;
+}
+.dialog-buttons {
+  text-align: center;
+}
