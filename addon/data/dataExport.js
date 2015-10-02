@@ -501,8 +501,8 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       };
     }
     var expRecords = exportResult().exportedRecords;
-    var exportAsJson = vm.dataFormat() == "json";
-    if (exportAsJson) {
+    var dataFormat = vm.dataFormat();
+    if (dataFormat == "json") {
       return {
         isWorking: exportResult().isWorking,
         resultText: JSON.stringify(expRecords, null, "  ")
@@ -514,7 +514,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
     We don't care, because we don't need a stable set of columns for our use case.
     */
-    var header = [];
+    var header = [""];
     for (var i = 0; i < expRecords.length; i++) {
       var record = expRecords[i];
       function discoverColumns(record, prefix) {
@@ -545,6 +545,9 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         var value = record;
         for (var f = 0; f < column.length; f++) {
           var field = column[f];
+          if (field == "") {
+            continue;
+          }
           if (typeof value != "object") {
             value = null;
           }
@@ -553,18 +556,31 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
           }
         }
         if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
-          value = "[" + value.attributes.type + "]";
+          if (dataFormat == "table") {
+            value = {
+              text: value.attributes.type,
+              allDataParam: {recordAttributes: value.attributes, useToolingApi: exportResult().exportedTooling}
+            };
+          } else {
+            value = "[" + value.attributes.type + "]";
+          }
+        } else if (value == null) {
+          value = "";
+        } else {
+          value = "" + value;
         }
         row.push(value);
       }
       table.push(row);
     }
-    if (vm.dataFormat() == "table") {
+    if (dataFormat == "table") {
       var data = [];
       for (var r = 0; r < table.length; r++) {
         data.push({
           cells: table[r],
-          openAllData: function() { showAllData(this); }.bind({recordAttributes: expRecords[r].attributes, useToolingApi: exportResult().exportedTooling})
+          openAllData: function(value) {
+            showAllData(value.allDataParam);
+          }
         });
       }
       return {
@@ -572,7 +588,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         resultTable: {header: header, data: data}
       };
     } else {
-      var separator = vm.dataFormat() == "excel" ? "\t" : ",";
+      var separator = dataFormat == "excel" ? "\t" : ",";
       return {
         isWorking: exportResult().isWorking,
         resultText: csvSerialize([header].concat(table), separator)

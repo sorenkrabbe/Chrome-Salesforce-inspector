@@ -48,7 +48,6 @@
       <table data-bind="if: exportResultVm().resultTable">
         <thead>
           <tr>
-            <th>+</th>
             <!-- ko foreach: exportResultVm().resultTable.header -->
               <th data-bind="text: $data"></th>
             <!-- /ko -->
@@ -56,9 +55,13 @@
         </thead>
         <tbody data-bind="foreach: exportResultVm().resultTable.data">
           <tr>
-            <td><a href="about:blank" title="Show all data" data-bind="click: openAllData">+</a></td>
             <!-- ko foreach: cells -->
-              <td data-bind="text: $data"></td>
+              <!-- ko if: typeof $data == "object" -->
+                <td><a href="about:blank" title="Show all data" data-bind="click: $parent.openAllData, text: $data.text"></a></td>
+              <!-- /ko -->
+              <!-- ko if: typeof $data == "string" -->
+                <td data-bind="text: $data"></td>
+              <!-- /ko -->
             <!-- /ko -->
           </tr>
         </tbody>
