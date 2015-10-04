@@ -652,12 +652,6 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
   function doExport() {
     var exportedData = new RecordTable();
     exportedData.isTooling = vm.queryTooling();
-    exportResult({
-      isWorking: true,
-      exportStatus: "Exporting...",
-      exportError: null,
-      exportedData: exportedData
-    });
     var query = queryInput.getValue();
     var queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
     spinFor(askSalesforce("/services/data/v34.0/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
@@ -666,13 +660,14 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         exportedData.totalSize = data.totalSize;
       }
       if (!data.done) {
+        var pr = askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
         exportResult({
           isWorking: true,
           exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " records.",
           exportError: null,
           exportedData: exportedData
         });
-        return askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
+        return pr;
       }
       vm.queryHistory(addToQueryHistory(query));
       if (exportedData.records.length == 0) {
@@ -726,6 +721,12 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         exportedData: exportedData
       });
     }));
+    exportResult({
+      isWorking: true,
+      exportStatus: "Exporting...",
+      exportError: null,
+      exportedData: exportedData
+    });
   }
 
   function stopExport() {
