@@ -13,7 +13,7 @@
     <label><input type="checkbox" data-bind="checked: queryAll, disable: queryTooling"> <span>Include deleted and archived records?</span></label>
     <label title="With the tooling API you can query more metadata, but you cannot query regular data"><input type="checkbox" data-bind="checked: queryTooling, disable: queryAll"> <span>Use Tooling API?</span></label>
     <label>
-      <select data-bind="options: queryHistory, optionsCaption: 'Query history', value: selectedHistoryEntry, event: {change: selectHistoryEntry}" class="query-history"></select>
+      <select data-bind="options: queryHistory, optionsCaption: 'Query history', optionsText: function(q) { return q.substring(0, 300); }, value: selectedHistoryEntry, event: {change: selectHistoryEntry}" class="query-history"></select>
       <a href="about:blank" data-bind="click: clearHistory" title="Clear query history" class="char-btn">X</a>
     </label>
     <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>
