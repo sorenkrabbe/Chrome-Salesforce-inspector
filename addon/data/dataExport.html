@@ -43,6 +43,7 @@
     <label><input type=radio name="data-format" value="csv" data-bind="checked: dataFormat"> <span>CSV</span></label>
     <label><input type=radio name="data-format" value="json" data-bind="checked: dataFormat"> <span>JSON</span></label>
     <button class="cancel-btn" data-bind="visible: exportResultVm().isWorking, click: stopExport">Stop</button>
+    <span class="result-status" data-bind="text: exportResultVm().resultStatus"></span>
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + 'px'}">
       <textarea id="result-text" readonly data-bind="text: exportResultVm().resultText, visible: !exportResultVm().resultTable"></textarea>
       <!-- the scroll table goes here -->

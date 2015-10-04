@@ -1,3 +1,5 @@
+if (!this.isUnitTest) {
+
 var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 var options = args.options;
 orgId = args.orgId;
@@ -79,9 +81,11 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
 });
 
+}
+
 function dataExportVm(options, queryInput, queryHistoryStorage) {
   options = options || {};
-  var exportResult = ko.observable({isWorking: false, exportStatus: "", exportedRecords: [], exportedTooling: false});
+  var exportResult = ko.observable({isWorking: false, exportStatus: "", exportError: "", exportedData: null});
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -501,21 +505,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     }
   }
 
-  function computeExportResultVm() {
-    if (exportResult().exportStatus != null) {
-      return {
-        isWorking: exportResult().isWorking,
-        resultText: exportResult().exportStatus
-      };
-    }
-    var expRecords = exportResult().exportedRecords;
-    var dataFormat = vm.dataFormat();
-    if (dataFormat == "json") {
-      return {
-        isWorking: exportResult().isWorking,
-        resultText: JSON.stringify(expRecords, null, "  ")
-      };
-    }
+  function RecordTable() {
     /*
     We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
     This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
@@ -524,25 +514,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     var columnIdx = new Map();
     var header = [""];
     var table = [header];
-    function getValue(value) {
-      if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
-        if (dataFormat == "table") {
-          value = {
-            text: value.attributes.type,
-            allDataParam: {recordAttributes: value.attributes, useToolingApi: exportResult().exportedTooling}
-          };
-        } else {
-          value = "[" + value.attributes.type + "]";
-        }
-      } else if (value == null) {
-        value = "";
-      } else {
-        value = "" + value;
-      }
-      row.push(value);
-      return value;
-    }
-    function discoverColumns(record, prefix) {
+    function discoverColumns(record, prefix, row) {
       for (var field in record) {
         if (field == "attributes") {
           continue;
@@ -554,34 +526,91 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         } else {
           c = header.length;
           columnIdx.set(column, c);
-          for (var r = 0; r < table.lengt; r++) {
-            table[r].push("");
+          for (var r = 0; r < table.length; r++) {
+            table[r].push(undefined);
           }
           header[c] = column;
         }
-        row[c] = getValue(record[field]);
+        row[c] = record[field];
         if (typeof record[field] == "object" && record[field] != null) {
-          discoverColumns(record[field], column + ".");
+          discoverColumns(record[field], column + ".", row);
         }
       }
     }
-    for (var i = 0; i < expRecords.length; i++) {
-      var record = expRecords[i];
-      var row = new Array(header.length);
-      row[0] = getValue(record);
-      table.push(row);
-      discoverColumns(record, "");
+    return {
+      records: [],
+      table: table,
+      isTooling: false,
+      totalSize: -1,
+      addToTable: function(expRecords) {
+        this.records = this.records.concat(expRecords);
+        for (var i = 0; i < expRecords.length; i++) {
+          var record = expRecords[i];
+          var row = new Array(header.length);
+          row[0] = record;
+          table.push(row);
+          discoverColumns(record, "", row);
+        }
+      }
+    };
+  }
+
+  function computeExportResultVm() {
+    if (exportResult().exportError != null) {
+      return {
+        isWorking: exportResult().isWorking,
+        resultStatus: exportResult().exportStatus,
+        resultText: exportResult().exportError
+      };
     }
+    var dataFormat = vm.dataFormat();
+    if (dataFormat == "json") {
+      return {
+        isWorking: exportResult().isWorking,
+        resultStatus: exportResult().exportStatus,
+        resultText: JSON.stringify(exportResult().exportedData.records, null, "  ")
+      };
+    }
+    
+    var table1 = exportResult().exportedData.table;
+    var table2 = [];
+    for (var r = 0; r < table1.length; r++) {
+      var row1 = table1[r];
+      var row2 = [];
+      for (var c = 0; c < row1.length; c++) {
+        var value1 = row1[c];
+        var value2;
+        if (typeof value1 == "object" && value1 != null && value1.attributes && value1.attributes.type) {
+          if (dataFormat == "table") {
+            value2 = {
+              text: value1.attributes.type,
+              allDataParam: {recordAttributes: value1.attributes, useToolingApi: exportResult().exportedData.isTooling}
+            };
+          } else {
+            value2 = "[" + value1.attributes.type + "]";
+          }
+        } else if (value1 == null) {
+          value2 = "";
+        } else {
+          value2 = "" + value1;
+        }
+        row2.push(value2);
+      }
+      table2.push(row2);
+    }
+
     if (dataFormat == "table") {
       return {
         isWorking: exportResult().isWorking,
-        resultTable:  table
+        resultStatus: exportResult().exportStatus,
+        resultTable: table2
       };
     } else {
       var separator = dataFormat == "excel" ? "\t" : ",";
       return {
         isWorking: exportResult().isWorking,
-        resultText: csvSerialize(table, separator)
+        resultStatus: exportResult().exportStatus,
+        resultText: csvSerialize(table2, separator)
       };
     }
   }
@@ -621,47 +650,60 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
 
   var exportProgress = {};
   function doExport() {
-    var exportedTooling = vm.queryTooling();
-    var exportedRecords = [];
+    var exportedData = new RecordTable();
+    exportedData.isTooling = vm.queryTooling();
     exportResult({
       isWorking: true,
       exportStatus: "Exporting...",
-      exportedRecords: exportedRecords,
-      exportedTooling: exportedTooling
+      exportError: null,
+      exportedData: exportedData
     });
     var query = queryInput.getValue();
-    var queryMethod = exportedTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+    var queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
     spinFor(askSalesforce("/services/data/v34.0/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
-      exportedRecords = exportedRecords.concat(data.records);
+      exportedData.addToTable(data.records);
+      if (data.totalSize != -1) {
+        exportedData.totalSize = data.totalSize;
+      }
       if (!data.done) {
         exportResult({
           isWorking: true,
-          exportStatus: "Exporting... Completed " + exportedRecords.length + " of " + data.totalSize + " records.",
-          exportedRecords: exportedRecords,
-          exportedTooling: exportedTooling
+          exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " records.",
+          exportError: null,
+          exportedData: exportedData
         });
         return askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
       }
       vm.queryHistory(addToQueryHistory(query));
-      if (exportedRecords.length == 0) {
+      if (exportedData.records.length == 0) {
         exportResult({
           isWorking: false,
           exportStatus: data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.",
-          exportedRecords: exportedRecords,
-          exportedTooling: exportedTooling
+          exportError: null,
+          exportedData: exportedData
         });
         return null;
       }
       exportResult({
         isWorking: false,
-        exportStatus: null,
-        exportedRecords: exportedRecords,
-        exportedTooling: exportedTooling
+        exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " records.",
+        exportError: null,
+        exportedData: exportedData
       });
       return null;
     }, function(xhr) {
       if (!xhr || xhr.readyState != 4) {
         throw xhr; // Not an HTTP error response
+      }
+      if (exportedData.totalSize != -1) {
+        // We already got some data. Show it, and indicate that not all data was exported
+        exportResult({
+          isWorking: false,
+          exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " records. Stopped by error.",
+          exportError: null,
+          exportedData: exportedData
+        });
+        return null;
       }
       var data = JSON.parse(xhr.responseText);
       var text = "=== ERROR ===\n";
@@ -670,24 +712,24 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       }
       exportResult({
         isWorking: false,
-        exportStatus: text,
-        exportedRecords: exportedRecords,
-        exportedTooling: exportedTooling
+        exportStatus: "Error",
+        exportError: text,
+        exportedData: exportedData
       });
       return null;
     }).then(null, function(error) {
       console.error(error);
       exportResult({
         isWorking: false,
-        exportStatus: "UNEXPECTED EXCEPTION:" + error,
-        exportedRecords: exportedRecords,
-        exportedTooling: exportedTooling
+        exportStatus: "Error",
+        exportError: "UNEXPECTED EXCEPTION:" + error,
+        exportedData: exportedData
       });
     }));
   }
 
   function stopExport() {
-    exportProgress.abort({records: [], done: true, totalSize: 0});
+    exportProgress.abort({records: [], done: true, totalSize: -1});
   }
 
   function csvSerialize(table, separator) {
@@ -754,37 +796,55 @@ function initScrollTable(element, dataObs, resizeObs) {
 
   function dataChange() {
     var data = dataObs();
-    rowHeights = [];
-    rowCount = data.length;
-    totalHeight = 0;
-    firstRowIdx = 0;
-    firstRowTop = 0;
-    lastRowIdx = 0;
-    lastRowTop = 0;
-    for (var r = 0; r < rowCount; r++) {
-      rowHeights[r] = initialRowHeight;
-      totalHeight += initialRowHeight;
-    }
+    if (data.length == 0) {
+      // First render, or table was cleared
+      rowHeights = [];
+      rowCount = 0;
+      totalHeight = 0;
+      firstRowIdx = 0;
+      firstRowTop = 0;
+      lastRowIdx = 0;
+      lastRowTop = 0;
 
-    colWidths = [];
-    colCount =  data.length > 0 ? data[0].length : 0;
-    totalWidth = 0;
-    firstColIdx = 0;
-    firstColLeft = 0;
-    lastColIdx = 0;
-    lastRowLeft = 0;
-    for (var c = 0; c < colCount; c++) {
-      colWidths[c] = initialColWidth;
-      totalWidth += initialColWidth;
+      colWidths = [];
+      colCount =  0;
+      totalWidth = 0;
+      firstColIdx = 0;
+      firstColLeft = 0;
+      lastColIdx = 0;
+      lastRowLeft = 0;
+      render(data, {force: true});
+    } else {
+      // Rows or columns were added to an existing table
+      var rowsAdded = false;
+      var newRowCount = data.length;
+      if (newRowCount > rowCount) {
+        for (var r = rowCount; r < newRowCount; r++) {
+          rowHeights[r] = initialRowHeight;
+          totalHeight += initialRowHeight;
+        }
+        rowsAdded = true;
+        rowCount = newRowCount;
+      }
+      var colsAdded = false;
+      var newColCount = data[0].length;
+      if (newColCount > colCount) {
+        for (var c = colCount; c < newColCount; c++) {
+          colWidths[c] = initialColWidth;
+          totalWidth += initialColWidth;
+        }
+        colsAdded = true;
+        colCount = newColCount;
+      }
+      render(data, {rowsAdded: rowsAdded, colsAdded: colsAdded});
     }
-    render(true, data);
   }
 
   function viewportChange() {
-    render(false, dataObs());
+    render(dataObs(), {});
   }
 
-  function render(force, data) {
+  function render(data, options) {
     if (rowCount == 0 || colCount == 0) {
       scrolled.textContent = ""; // Delete previously rendered content
       scrolled.style.height = "0px";
@@ -797,7 +857,11 @@ function initScrollTable(element, dataObs, resizeObs) {
     var offsetHeight = scroller.offsetHeight;
     var offsetWidth = scroller.offsetWidth;
 
-    if (!force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || lastRowIdx == rowCount) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || lastColIdx == colCount)) {
+    if (!options.force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || (lastRowIdx == rowCount && !options.rowsAdded)) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || (lastColIdx == colCount && !options.colsAdded))) {
+      if (options.rowsAdded || options.colsAdded) {
+        scrolled.style.height = totalHeight + "px";
+        scrolled.style.width = totalWidth + "px";
+      }
       return;
     }
     console.log("render");

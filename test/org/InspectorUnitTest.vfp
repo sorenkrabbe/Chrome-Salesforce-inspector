@@ -1,6 +1,6 @@
 <apex:page showHeader="false" standardStylesheets="false" controller="InspectorUnitTest">
     <h1>Salesforce Inspector Unit Test</h1>
-    <script>var session = "{!$API.Session_ID}"</script>
+    <script>var session = {key: "{!$API.Session_ID}", hostname: location.hostname};var isUnitTest = true;</script>
     <script src="https://localhost:8080/addon/data/knockout-3.2.0.js"></script>
     <script src="https://localhost:8080/addon/data/inspector.js"></script>
     <script src="https://localhost:8080/addon/data/chromePopup.js"></script>

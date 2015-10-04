@@ -1,2 +1,3 @@
 *.sublime-*
-salesforce-inspector.xpi
+*.xpi
+*.pem

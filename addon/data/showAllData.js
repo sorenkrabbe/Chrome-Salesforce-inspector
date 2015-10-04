@@ -1,3 +1,5 @@
+if (!this.isUnitTest) {
+
 var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 var recordDesc = args.recordDesc;
 orgId = args.orgId;
@@ -484,3 +486,5 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   }));
 
 });
+
+}

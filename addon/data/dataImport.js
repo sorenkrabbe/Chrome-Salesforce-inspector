@@ -1,3 +1,5 @@
+if (!this.isUnitTest) {
+
 var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 orgId = args.orgId;
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
@@ -39,6 +41,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   resize();
 
 });
+
+}
 
 function dataImportVm(dataInput) {
 

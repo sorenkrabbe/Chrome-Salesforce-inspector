@@ -243,20 +243,21 @@ function* dataExportTest() {
 
   // Export data
   queryInput.value = "select Name, Checkbox__c, Number__c from Inspector_Test__c order by Name";
-  assertEquals("excel", vm.dataFormat());
+  assertEquals("table", vm.dataFormat());
+  vm.dataFormat("excel");
   vm.doExport();
   assert(vm.exportResultVm().isWorking);
   assert(!vm.exportResultVm().resultTable);
-  assertEquals("Exporting...", vm.exportResultVm().resultText);
+  assertEquals("Exporting...", vm.exportResultVm().resultStatus);
   yield waitForSpinner();
   assert(!vm.exportResultVm().isWorking);
   assert(!vm.exportResultVm().resultTable);
-  assertEquals('"Name"\t"Checkbox__c"\t"Number__c"\r\n"test1"\t"false"\t"100.01"\r\n"test2"\t"true"\t"200.02"\r\n"test3"\t"false"\t"300.03"\r\n"test4"\t"true"\t"400.04"', vm.exportResultVm().resultText);
+  assertEquals('""\t"Name"\t"Checkbox__c"\t"Number__c"\r\n"[Inspector_Test__c]"\t"test1"\t"false"\t"100.01"\r\n"[Inspector_Test__c]"\t"test2"\t"true"\t"200.02"\r\n"[Inspector_Test__c]"\t"test3"\t"false"\t"300.03"\r\n"[Inspector_Test__c]"\t"test4"\t"true"\t"400.04"', vm.exportResultVm().resultText);
 
   // Format CSV
   vm.dataFormat("csv");
   assert(!vm.exportResultVm().resultTable);
-  assertEquals('"Name","Checkbox__c","Number__c"\r\n"test1","false","100.01"\r\n"test2","true","200.02"\r\n"test3","false","300.03"\r\n"test4","true","400.04"', vm.exportResultVm().resultText);
+  assertEquals('"","Name","Checkbox__c","Number__c"\r\n"[Inspector_Test__c]","test1","false","100.01"\r\n"[Inspector_Test__c]","test2","true","200.02"\r\n"[Inspector_Test__c]","test3","false","300.03"\r\n"[Inspector_Test__c]","test4","true","400.04"', vm.exportResultVm().resultText);
 
   // Format JSON
   vm.dataFormat("json");
@@ -266,15 +267,15 @@ function* dataExportTest() {
   // Format Table
   vm.dataFormat("table");
   assert(vm.exportResultVm().resultTable);
-  assertEquals({
-    header: ["Name", "Checkbox__c", "Number__c"],
-    data: [
-      {cells: ["test1", false, 100.01], openAllData: undefined},
-      {cells: ["test2", true, 200.02], openAllData: undefined},
-      {cells: ["test3", false, 300.03], openAllData: undefined},
-      {cells: ["test4", true, 400.04], openAllData: undefined}
-    ]
-  }, vm.exportResultVm().resultTable);
+  var rtbl = vm.exportResultVm().resultTable;
+  rtbl.forEach(function(row) { row[0].allDataParam = undefined; });
+  assertEquals([
+    ["", "Name", "Checkbox__c", "Number__c"],
+    [{text: "Inspector_Test__c", allDataParam: undefined}, "test1", "false", "100.01"],
+    [{text: "Inspector_Test__c", allDataParam: undefined}, "test2", "true", "200.02"],
+    [{text: "Inspector_Test__c", allDataParam: undefined}, "test3", "false", "300.03"],
+    [{text: "Inspector_Test__c", allDataParam: undefined}, "test4", "true", "400.04"]
+  ], rtbl);
 
   vm.dataFormat("csv");
 
@@ -283,7 +284,7 @@ function* dataExportTest() {
   vm.doExport();
   yield waitForSpinner();
   assert(!vm.exportResultVm().resultTable);
-  assertEquals('"Name","Lookup__r","Lookup__r.Name"\r\n"test1","",""\r\n"test2","[Inspector_Test__c]","test1"\r\n"test3","",""\r\n"test4","[Inspector_Test__c]","test3"', vm.exportResultVm().resultText);
+  assertEquals('"","Name","Lookup__r","Lookup__r.Name"\r\n"[Inspector_Test__c]","test1","",""\r\n"[Inspector_Test__c]","test2","[Inspector_Test__c]","test1"\r\n"[Inspector_Test__c]","test3","",""\r\n"[Inspector_Test__c]","test4","[Inspector_Test__c]","test3"', vm.exportResultVm().resultText);
 
   // Export error
   queryInput.value = "select UnknownField from Inspector_Test__c";
@@ -297,14 +298,14 @@ function* dataExportTest() {
   vm.doExport();
   yield waitForSpinner();
   assert(!vm.exportResultVm().resultTable);
-  assertEquals("No data exported.", vm.exportResultVm().resultText);
+  assertEquals("No data exported.", vm.exportResultVm().resultStatus);
 
   // Export count
   queryInput.value = "select count() from Inspector_Test__c";
   vm.doExport();
   yield waitForSpinner();
   assert(!vm.exportResultVm().resultTable);
-  assertEquals("No data exported. 4 record(s).", vm.exportResultVm().resultText);
+  assertEquals("No data exported. 4 record(s).", vm.exportResultVm().resultStatus);
 
   // Stop export
   queryInput.value = "select count() from Inspector_Test__c";
@@ -314,7 +315,7 @@ function* dataExportTest() {
   yield waitForSpinner();
   assert(!vm.exportResultVm().isWorking);
   assert(!vm.exportResultVm().resultTable);
-  assertEquals("No data exported.", vm.exportResultVm().resultText);
+  assertEquals("No data exported.", vm.exportResultVm().resultStatus);
 
   // Set up test records
   yield vfRemoteAction(InspectorUnitTest.setTestRecordCount, 3000); // More than one batch when exporting (a batch is 2000)
@@ -324,7 +325,7 @@ function* dataExportTest() {
   vm.doExport();
   yield waitForSpinner();
   assert(!vm.exportResultVm().resultTable);
-  assertEquals('"Id"'.length + 3000 * '\r\n"123456789012345678"'.length, vm.exportResultVm().resultText.length);
+  assertEquals('"","Id"'.length + 3000 * '\r\n"[Inspector_Test__c]","123456789012345678"'.length, vm.exportResultVm().resultText.length);
 
   // Set up test records
   yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
@@ -344,7 +345,7 @@ function* dataExportTest() {
   vm.doExport();
   yield waitForSpinner();
   assert(!vm.exportResultVm().resultTable);
-  assert(vm.exportResultVm().resultText.indexOf('"Name"') == 0); // Result is not an error value
+  assert(vm.exportResultVm().resultText.indexOf('"","Name"') == 0); // Result is not an error value
   vm.queryTooling(false);
 
   // Query history

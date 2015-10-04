@@ -120,6 +120,7 @@ h1 {
   float: right;
   height: 1.3em;
   border: 1px solid gray;
+  margin-left: 1em;
 }
 .char-btn {
   color: white;
@@ -131,4 +132,7 @@ h1 {
   border-radius: 7px;
   line-height: 14px;
   text-align: center;
+}
+.result-status {
+  float: right;
 }
