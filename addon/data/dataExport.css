@@ -24,28 +24,39 @@ textarea {
 textarea[hidden] {
   display: none;
 }
-table {
-  border-collapse: collapse;
-}
-th, td {
-  text-align: left;
-  font-size: 11px;
-  border: 1px solid gray;
-  background-color: white;
-  white-space: pre;
-}
 #result-box {
   margin-top: 3px;
-  overflow: auto;
 }
 #query {
   height: 5em;
   margin-top: 3px;
 }
 #result-text {
-  height: calc(100% - 2px);
+  height: 100%;
   resize: none;
   white-space: pre;
+}
+.scrolltable-scroller {
+  overflow: auto;
+  height: 100%;
+}
+.scrolltable-scrolled {
+  position: relative;
+}
+.scrolltable-scrolled table {
+  border-collapse: collapse;
+  position: absolute;
+}
+.scrolltable-cell {
+  border: 1px solid gray;
+  overflow: hidden;
+  padding: 0 1px;
+  background-color: white;
+  white-space: pre;
+  box-sizing: border-box;
+}
+.scrolltable-cell.header {
+  font-weight: bold;
 }
 .area {
   background-color: #F8F8F8;

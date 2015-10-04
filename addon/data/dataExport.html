@@ -45,27 +45,7 @@
     <button class="cancel-btn" data-bind="visible: exportResultVm().isWorking, click: stopExport">Stop</button>
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + 'px'}">
       <textarea id="result-text" readonly data-bind="text: exportResultVm().resultText, visible: !exportResultVm().resultTable"></textarea>
-      <table data-bind="if: exportResultVm().resultTable">
-        <thead>
-          <tr>
-            <!-- ko foreach: exportResultVm().resultTable.header -->
-              <th data-bind="text: $data"></th>
-            <!-- /ko -->
-          </tr>
-        </thead>
-        <tbody data-bind="foreach: exportResultVm().resultTable.data">
-          <tr>
-            <!-- ko foreach: cells -->
-              <!-- ko if: typeof $data == "object" -->
-                <td><a href="about:blank" title="Show all data" data-bind="click: $parent.openAllData, text: $data.text"></a></td>
-              <!-- /ko -->
-              <!-- ko if: typeof $data == "string" -->
-                <td data-bind="text: $data"></td>
-              <!-- /ko -->
-            <!-- /ko -->
-          </tr>
-        </tbody>
-      </table>
+      <!-- the scroll table goes here -->
     </div>
   </div>
   <script src="knockout-3.2.0.js"></script>

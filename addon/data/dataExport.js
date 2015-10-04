@@ -44,6 +44,12 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     }
   });
 
+  initScrollTable(
+    document.querySelector("#result-box"),
+    ko.computed(function() { return vm.exportResultVm().resultTable || []; }),
+    ko.computed(function() { return vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth(); })
+  );
+
   var resultBox = document.querySelector("#result-box");
   function recalculateHeight() {
     vm.resultBoxOffsetTop(resultBox.offsetTop);
@@ -65,6 +71,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   vm.expandAutocomplete.subscribe(recalculateHeight);
   function resize() {
     vm.winInnerHeight(popupWin.innerHeight);
+    vm.winInnerWidth(popupWin.innerWidth);
     recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
   }
   popupWin.addEventListener("resize", resize);
@@ -81,12 +88,13 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     showHelp: ko.observable(false),
     userInfo: ko.observable("..."),
     winInnerHeight: ko.observable(0),
+    winInnerWidth: ko.observable({}),
     resultBoxOffsetTop: ko.observable(0),
     queryAll: ko.observable(false),
     queryTooling: ko.observable(false),
     autocompleteTitle: ko.observable("\u00A0"),
     autocompleteResults: ko.observable([]),
-    dataFormat: ko.observable("excel"),
+    dataFormat: ko.observable("table"),
     autocompleteClick: null,
     exportResultVm: ko.computed(computeExportResultVm),
     queryHistory: ko.observable(getQueryHistory()),
@@ -536,7 +544,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     /*
     Now we have the columns, we add the records to the CSV table.
     */
-    var table = [];
+    var table = [header];
     for (var i = 0; i < expRecords.length; i++) {
       var record = expRecords[i];
       var row = [];
@@ -574,24 +582,15 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       table.push(row);
     }
     if (dataFormat == "table") {
-      var data = [];
-      for (var r = 0; r < table.length; r++) {
-        data.push({
-          cells: table[r],
-          openAllData: function(value) {
-            showAllData(value.allDataParam);
-          }
-        });
-      }
       return {
         isWorking: exportResult().isWorking,
-        resultTable: {header: header, data: data}
+        resultTable:  table
       };
     } else {
       var separator = dataFormat == "excel" ? "\t" : ",";
       return {
         isWorking: exportResult().isWorking,
-        resultText: csvSerialize([header].concat(table), separator)
+        resultText: csvSerialize(table, separator)
       };
     }
   }
@@ -705,4 +704,205 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
   }
 
   return vm;
+}
+
+/*
+A table that contains millions of records will freeze the browser if we try to render the entire table at once.
+Therefore we implement a table within a scrollable area, where the cells are only rendered, when they are scrolled into view.
+
+Limitations:
+* It is not possible to select the contents of the table outside the rendered area. The user will need to use the Excel or CSV formats to do that.
+* Since we initially estimate the sice of each cell and then update as we render them, the table will sometimes "jump" as the user scrolls.
+* There is no line wrapping within the cells. A cell with a lot of text will be very wide.
+
+Implementation:
+Since we don't know the height of each row before we render it, we assume to begin with that it is fairly small, and we then grow it to fit the rendered content, as the user scrolls.
+We never schrink the height of a row, to ensure that it stabilzes as the user scrolls. The heights are stored in the `rowHeights` array.
+To avoid re-rendering the visible part on every scroll, we render an area that is slightly larger than the viewport, and we then only re-render, when the viewport moves outside the rendered area.
+Since we don't know the height of each row before we render it, we don't know exactly how many rows to render.
+However since we never schrink the height of a row, we never render too few rows, and since we update the height estimates after each render, we won't repeatedly render too many rows.
+The initial estimate of the height of each row should be large enough to ensure we don't render too many rows in our initial render.
+We only measure the current size at the end of each render, to minimize the number of synchronous layouts the browser needs to make.
+We support adding new rows to the end of the table, and new cells to the end of a row, but not deleting existing rows, and we do not reduce the height of a row if the existing content changes.
+In addition to keeping track of the height of each cell, we keep track of the total height in order to adjust the height of the scrollable area, and we keep track of the position of the scrolled area.
+After a scroll we search for the position of the new rendered area using the position of the old scrolled area, which should be the least amound of work when the user scrolls in one direction.
+The table must have at least one row, since the code keeps track of the first rendered row.
+We do the exact same logic for columns, as we do for rows.
+We assume that the size of a cell is not influenced by the size of other cells. Therefore we style cells with `white-space: pre`.
+We assume that the height of the cells we measure sum up to the height of the table.
+*/
+function initScrollTable(element, dataObs, resizeObs) {
+  var scroller = document.createElement("div");
+  scroller.className = "scrolltable-scroller";
+  element.appendChild(scroller);
+  var scrolled = document.createElement("div");
+  scrolled.className = "scrolltable-scrolled";
+  scroller.appendChild(scrolled);
+
+  var initialRowHeight = 15; // constant: The initial estimated height of a row before it is rendered
+  var initialColWidth = 50; // constant: The initial estimated width of a column before it is rendered
+  var bufferHeight = 500; // constant: The number of pixels to render above and below the current viewport
+  var bufferWidth = 500; // constant: The number of pixels to render to the left and right of the current viewport
+  var headerRows = 1; // constant: The number of header rows
+  var headerCols = 0; // constant: The number of header columns
+
+  var rowHeights = [];
+  var rowCount = 0;
+  var totalHeight = 0;
+  var firstRowIdx = 0; // The index of the first rendered row
+  var firstRowTop = 0; // The distance from the top of the table to the top of the first rendered row
+  var lastRowIdx = 0; // The index of the row below the last rendered row
+  var lastRowTop = 0; // The distance from the top of the table to the bottom of the last rendered row (the top of the row below the last rendered row)
+  var colWidths = [];
+  var colCount =  0;
+  var totalWidth = 0;
+  var firstColIdx = 0; // The index of the first rendered column
+  var firstColLeft = 0; // The distance from the left of the table to the left of the first rendered column
+  var lastColIdx = 0; // The index of the column to the right of the last rendered column
+  var lastRowLeft = 0; // The distance from the left of the table to the right of the last rendered column (the left of the row below the last rendered row)
+
+  function dataChange() {
+    var data = dataObs();
+    rowHeights = [];
+    rowCount = data.length;
+    totalHeight = 0;
+    firstRowIdx = 0;
+    firstRowTop = 0;
+    lastRowIdx = 0;
+    lastRowTop = 0;
+    for (var r = 0; r < rowCount; r++) {
+      rowHeights[r] = initialRowHeight;
+      totalHeight += initialRowHeight;
+    }
+
+    colWidths = [];
+    colCount =  data.length > 0 ? data[0].length : 0;
+    totalWidth = 0;
+    firstColIdx = 0;
+    firstColLeft = 0;
+    lastColIdx = 0;
+    lastRowLeft = 0;
+    for (var c = 0; c < colCount; c++) {
+      colWidths[c] = initialColWidth;
+      totalWidth += initialColWidth;
+    }
+    render(true, data);
+  }
+
+  function viewportChange() {
+    render(false, dataObs());
+  }
+
+  function render(force, data) {
+    if (rowCount == 0 || colCount == 0) {
+      scrolled.textContent = ""; // Delete previously rendered content
+      scrolled.style.height = "0px";
+      scrolled.style.width = "0px";
+      return;
+    }
+
+    var scrollTop = scroller.scrollTop;
+    var scrollLeft = scroller.scrollLeft;
+    var offsetHeight = scroller.offsetHeight;
+    var offsetWidth = scroller.offsetWidth;
+
+    if (!force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || lastRowIdx == rowCount) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || lastColIdx == colCount)) {
+      return;
+    }
+    console.log("render");
+
+    while (firstRowTop < scrollTop - bufferHeight && firstRowIdx < rowCount - 1) {
+      firstRowTop += rowHeights[firstRowIdx];
+      firstRowIdx++;
+    }
+    while (firstRowTop > scrollTop - bufferHeight && firstRowIdx > 0) {
+      firstRowIdx--;
+      firstRowTop -= rowHeights[firstRowIdx];
+    }
+    while (firstColLeft < scrollLeft - bufferWidth && firstColIdx < colCount - 1) {
+      firstColLeft += colWidths[firstColIdx];
+      firstColIdx++;
+    }
+    while (firstColLeft > scrollLeft - bufferWidth && firstColIdx > 0) {
+      firstColIdx--;
+      firstColLeft -= colWidths[firstColIdx];
+    }
+
+    lastRowIdx = firstRowIdx;
+    lastRowTop = firstRowTop;
+    while (lastRowTop < scrollTop + offsetHeight + bufferHeight && lastRowIdx < rowCount) {
+      lastRowTop += rowHeights[lastRowIdx];
+      lastRowIdx++;
+    }
+    lastColIdx = firstColIdx;
+    lastColLeft = firstColLeft;
+    while (lastColLeft < scrollLeft + offsetWidth + bufferWidth && lastColIdx < colCount) {
+      lastColLeft += colWidths[lastColIdx];
+      lastColIdx++;
+    }
+
+    scrolled.textContent = ""; // Delete previously rendered content
+    scrolled.style.height = totalHeight + "px";
+    scrolled.style.width = totalWidth + "px";
+
+    var table = document.createElement("table");
+    for (var r = firstRowIdx; r < lastRowIdx; r++) {
+      var row = data[r];
+      var tr = document.createElement("tr");
+      for (var c = firstColIdx; c < lastColIdx; c++) {
+        var cell = row[c];
+        var td = document.createElement("td");
+        td.className = "scrolltable-cell";
+        if (r < headerRows || c < headerCols) {
+          td.className += " header";
+        }
+        td.style.minWidth = colWidths[c] + "px";
+        td.style.minHeight = rowHeights[r] + "px";
+        if (typeof cell == "object") {
+          var a = document.createElement("a");
+          a.href = "about:blank";
+          a.title = "Show all data";
+          a.addEventListener("click", function(e) {
+            e.preventDefault();
+            showAllData(this.allDataParam);
+          }.bind(cell));
+          a.textContent = cell.text;
+          td.appendChild(a);
+        } else {
+          td.textContent = cell;
+        }
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    }
+    table.style.top = firstRowTop + "px";
+    table.style.left = firstColLeft + "px";
+    scrolled.appendChild(table);
+    // Before this point we invalidate style and layout. After this point we recalculate style and layout, and we do not invalidate them again.
+    tr = table.firstElementChild;
+    for (var r = firstRowIdx; r < lastRowIdx; r++) {
+      var rowRect = tr.firstElementChild.getBoundingClientRect();
+      var oldHeight = rowHeights[r];
+      var newHeight = Math.max(oldHeight, rowRect.height);
+      rowHeights[r] = newHeight;
+      totalHeight += newHeight - oldHeight;
+      lastRowTop += newHeight - oldHeight;
+      tr = tr.nextElementSibling;
+    }
+    td = table.firstElementChild.firstElementChild;
+    for (var c = firstColIdx; c < lastColIdx; c++) {
+      var colRect = td.getBoundingClientRect();
+      var oldWidth = colWidths[c];
+      var newWidth = Math.max(oldWidth, colRect.width);
+      colWidths[c] = newWidth;
+      totalWidth += newWidth - oldWidth;
+      lastColLeft += newWidth - oldWidth;
+      td = td.nextElementSibling;
+    }
+  }
+
+  dataChange();
+  dataObs.subscribe(dataChange);
+  resizeObs.subscribe(viewportChange);
+  scroller.addEventListener("scroll", viewportChange);
 }
