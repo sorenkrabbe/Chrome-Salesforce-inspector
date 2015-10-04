@@ -517,69 +517,60 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       };
     }
     /*
-    Discover what columns should be in our CSV file.
     We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
     This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
     We don't care, because we don't need a stable set of columns for our use case.
     */
+    var columnIdx = new Map();
     var header = [""];
-    for (var i = 0; i < expRecords.length; i++) {
-      var record = expRecords[i];
-      function discoverColumns(record, prefix) {
-        for (var field in record) {
-          if (field == "attributes") {
-            continue;
-          }
-          var column = prefix + field;
-          if (header.indexOf(column) < 0) {
-            header.push(column);
-          }
-          if (typeof record[field] == "object" && record[field] != null) {
-            discoverColumns(record[field], column + ".");
-          }
-        }
-      }
-      discoverColumns(record, "");
-    }
-    /*
-    Now we have the columns, we add the records to the CSV table.
-    */
     var table = [header];
+    function getValue(value) {
+      if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
+        if (dataFormat == "table") {
+          value = {
+            text: value.attributes.type,
+            allDataParam: {recordAttributes: value.attributes, useToolingApi: exportResult().exportedTooling}
+          };
+        } else {
+          value = "[" + value.attributes.type + "]";
+        }
+      } else if (value == null) {
+        value = "";
+      } else {
+        value = "" + value;
+      }
+      row.push(value);
+      return value;
+    }
+    function discoverColumns(record, prefix) {
+      for (var field in record) {
+        if (field == "attributes") {
+          continue;
+        }
+        var column = prefix + field;
+        var c;
+        if (columnIdx.has(column)) {
+          c = columnIdx.get(column);
+        } else {
+          c = header.length;
+          columnIdx.set(column, c);
+          for (var r = 0; r < table.lengt; r++) {
+            table[r].push("");
+          }
+          header[c] = column;
+        }
+        row[c] = getValue(record[field]);
+        if (typeof record[field] == "object" && record[field] != null) {
+          discoverColumns(record[field], column + ".");
+        }
+      }
+    }
     for (var i = 0; i < expRecords.length; i++) {
       var record = expRecords[i];
-      var row = [];
-      for (var c = 0; c < header.length; c++) {
-        var column = header[c].split(".");
-        var value = record;
-        for (var f = 0; f < column.length; f++) {
-          var field = column[f];
-          if (field == "") {
-            continue;
-          }
-          if (typeof value != "object") {
-            value = null;
-          }
-          if (value != null) {
-            value = value[field];
-          }
-        }
-        if (typeof value == "object" && value != null && value.attributes && value.attributes.type) {
-          if (dataFormat == "table") {
-            value = {
-              text: value.attributes.type,
-              allDataParam: {recordAttributes: value.attributes, useToolingApi: exportResult().exportedTooling}
-            };
-          } else {
-            value = "[" + value.attributes.type + "]";
-          }
-        } else if (value == null) {
-          value = "";
-        } else {
-          value = "" + value;
-        }
-        row.push(value);
-      }
+      var row = new Array(header.length);
+      row[0] = getValue(record);
       table.push(row);
+      discoverColumns(record, "");
     }
     if (dataFormat == "table") {
       return {
