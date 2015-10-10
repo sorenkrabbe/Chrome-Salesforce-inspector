@@ -25,6 +25,10 @@ Unit tests
 -----
 1. Set up a Developer Edition org with the customizations described in `test/org/`.
 2. Set up a server at `https://localhost:8080` pointing a the root of this repository.
+  * `npm install http-server --global`
+  * `OPENSSL_CONF=/c/Program\ Files\ \(x86\)/Git/ssl/openssl.cnf openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 300 -nodes`
+  * `http-server --ssl`
+  * Open `https://localhost:8080/` and confirm the security exception.
 3. Open the Visualforce page you just created.
 4. Open your browser's developer tools console.
 5. Wait until "Salesforce Inspector unit test finished" is logged, and verify that no error messages are logged (HTTP 4xx messages are OK)

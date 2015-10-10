@@ -26,7 +26,31 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     clear: function() { localStorage.removeItem("insextQueryHistory"); }
   };
 
-  var vm = dataExportVm(options, queryInputVm, queryHistoryStorage);
+  function copyToClipboard(value) {
+    // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.
+    // The oncopy event only works on editable elements, e.g. an input field.
+    var temp = document.createElement("input");
+    // The oncopy event only works if there is something selected in the editable element.
+    temp.value = "temp";
+    temp.addEventListener("copy", function(e) {
+      e.clipboardData.setData("text/plain", value);
+      e.preventDefault();
+    });
+    document.body.appendChild(temp);
+    try {
+      // The oncopy event only works if there is something selected in the editable element.
+      temp.select();
+      // Trigger the oncopy event
+      var success = document.execCommand("copy");
+      if (!success) {
+        throw "execCommand(copy) returned false";
+      }
+    } finally {
+      document.body.removeChild(temp);
+    }
+  }
+
+  var vm = dataExportVm(options, queryInputVm, queryHistoryStorage, copyToClipboard);
   ko.applyBindings(vm, document.documentElement);
 
   function queryAutocompleteEvent() {
@@ -83,7 +107,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
 }
 
-function dataExportVm(options, queryInput, queryHistoryStorage) {
+function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard) {
   options = options || {};
 
   var vm = {
@@ -157,30 +181,6 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         return "\"" + value2.split("\"").join("\"\"") + "\"";
       }).join(separator);
     }).join("\r\n");
-  }
-
-  function copyToClipboard(value) {
-    // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.
-    // The oncopy event only works on editable elements, e.g. an input field.
-    var temp = document.createElement("input");
-    // The oncopy event only works if there is something selected in the editable element.
-    temp.value = "temp";
-    temp.addEventListener("copy", function(e) {
-      e.clipboardData.setData("text/plain", value);
-      e.preventDefault();
-    });
-    document.body.appendChild(temp);
-    try {
-      // The oncopy event only works if there is something selected in the editable element.
-      temp.select();
-      // Trigger the oncopy event
-      var success = document.execCommand("copy");
-      if (!success) {
-        throw "execCommand(copy) returned false";
-      }
-    } finally {
-      document.body.removeChild(temp);
-    }
   }
 
   function spinFor(promise) {
@@ -657,7 +657,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         var pr = askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
         vm.exportResult({
           isWorking: true,
-          exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " records.",
+          exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
           exportError: null,
           exportedData: exportedData
         });
@@ -675,7 +675,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       }
       vm.exportResult({
         isWorking: false,
-        exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " records.",
+        exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s).",
         exportError: null,
         exportedData: exportedData
       });
@@ -688,7 +688,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         // We already got some data. Show it, and indicate that not all data was exported
         vm.exportResult({
           isWorking: false,
-          exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " records. Stopped by error.",
+          exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " record(s). Stopped by error.",
           exportError: null,
           exportedData: exportedData
         });
