@@ -48,7 +48,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   initScrollTable(
     document.querySelector("#result-box"),
-    ko.computed(function() { return vm.exportResultVm().resultTable || []; }),
+    vm.exportResult,
     ko.computed(function() { return vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth(); })
   );
 
@@ -85,7 +85,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
 function dataExportVm(options, queryInput, queryHistoryStorage) {
   options = options || {};
-  var exportResult = ko.observable({isWorking: false, exportStatus: "", exportError: "", exportedData: null});
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -98,9 +97,8 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     queryTooling: ko.observable(false),
     autocompleteTitle: ko.observable("\u00A0"),
     autocompleteResults: ko.observable([]),
-    dataFormat: ko.observable("table"),
     autocompleteClick: null,
-    exportResultVm: ko.computed(computeExportResultVm),
+    exportResult: ko.observable({isWorking: false, exportStatus: "Ready", exportError: null, exportedData: null}),
     queryHistory: ko.observable(getQueryHistory()),
     selectedHistoryEntry: ko.observable(),
     sobjectName: ko.observable(""),
@@ -129,8 +127,61 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     },
     queryAutocompleteHandler: queryAutocompleteHandler,
     doExport: doExport,
+    canCopy: function() {
+      return vm.exportResult().exportedData != null;
+    },
+    copyAsExcel: function() {
+      copyToClipboard(csvSerialize("\t"));
+    },
+    copyAsCsv: function() {
+      copyToClipboard(csvSerialize(","));
+    },
+    copyAsJson: function() {
+      copyToClipboard(JSON.stringify(vm.exportResult().exportedData.records, null, "  "));
+    },
     stopExport: stopExport
   };
+
+  function csvSerialize(separator) {
+    var table = vm.exportResult().exportedData.table;
+    return table.map(function(row) {
+      return row.map(function(value1) {
+        var value2;
+        if (typeof value1 == "object" && value1 != null && value1.attributes && value1.attributes.type) {
+          value2 = "[" + value1.attributes.type + "]";
+        } else if (value1 == null) {
+          value2 = "";
+        } else {
+          value2 = "" + value1;
+        }
+        return "\"" + value2.split("\"").join("\"\"") + "\"";
+      }).join(separator);
+    }).join("\r\n");
+  }
+
+  function copyToClipboard(value) {
+    // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.
+    // The oncopy event only works on editable elements, e.g. an input field.
+    var temp = document.createElement("input");
+    // The oncopy event only works if there is something selected in the editable element.
+    temp.value = "temp";
+    temp.addEventListener("copy", function(e) {
+      e.clipboardData.setData("text/plain", value);
+      e.preventDefault();
+    });
+    document.body.appendChild(temp);
+    try {
+      // The oncopy event only works if there is something selected in the editable element.
+      temp.select();
+      // Trigger the oncopy event
+      var success = document.execCommand("copy");
+      if (!success) {
+        throw "execCommand(copy) returned false";
+      }
+    } finally {
+      document.body.removeChild(temp);
+    }
+  }
 
   function spinFor(promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
@@ -558,66 +609,6 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     };
   }
 
-  function computeExportResultVm() {
-    if (exportResult().exportError != null) {
-      return {
-        isWorking: exportResult().isWorking,
-        resultStatus: exportResult().exportStatus,
-        resultText: exportResult().exportError
-      };
-    }
-    var dataFormat = vm.dataFormat();
-    if (dataFormat == "json") {
-      return {
-        isWorking: exportResult().isWorking,
-        resultStatus: exportResult().exportStatus,
-        resultText: JSON.stringify(exportResult().exportedData.records, null, "  ")
-      };
-    }
-    
-    var table1 = exportResult().exportedData.table;
-    var table2 = [];
-    for (var r = 0; r < table1.length; r++) {
-      var row1 = table1[r];
-      var row2 = [];
-      for (var c = 0; c < row1.length; c++) {
-        var value1 = row1[c];
-        var value2;
-        if (typeof value1 == "object" && value1 != null && value1.attributes && value1.attributes.type) {
-          if (dataFormat == "table") {
-            value2 = {
-              text: value1.attributes.type,
-              allDataParam: {recordAttributes: value1.attributes, useToolingApi: exportResult().exportedData.isTooling}
-            };
-          } else {
-            value2 = "[" + value1.attributes.type + "]";
-          }
-        } else if (value1 == null) {
-          value2 = "";
-        } else {
-          value2 = "" + value1;
-        }
-        row2.push(value2);
-      }
-      table2.push(row2);
-    }
-
-    if (dataFormat == "table") {
-      return {
-        isWorking: exportResult().isWorking,
-        resultStatus: exportResult().exportStatus,
-        resultTable: table2
-      };
-    } else {
-      var separator = dataFormat == "excel" ? "\t" : ",";
-      return {
-        isWorking: exportResult().isWorking,
-        resultStatus: exportResult().exportStatus,
-        resultText: csvSerialize(table2, separator)
-      };
-    }
-  }
-
   vm.queryTooling.subscribe(function() {
     queryAutocompleteHandler();
   });
@@ -664,7 +655,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       }
       if (!data.done) {
         var pr = askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
-        exportResult({
+        vm.exportResult({
           isWorking: true,
           exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " records.",
           exportError: null,
@@ -674,7 +665,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       }
       vm.queryHistory(addToQueryHistory(query));
       if (exportedData.records.length == 0) {
-        exportResult({
+        vm.exportResult({
           isWorking: false,
           exportStatus: data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.",
           exportError: null,
@@ -682,7 +673,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         });
         return null;
       }
-      exportResult({
+      vm.exportResult({
         isWorking: false,
         exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " records.",
         exportError: null,
@@ -695,7 +686,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       }
       if (exportedData.totalSize != -1) {
         // We already got some data. Show it, and indicate that not all data was exported
-        exportResult({
+        vm.exportResult({
           isWorking: false,
           exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " records. Stopped by error.",
           exportError: null,
@@ -704,27 +695,27 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
         return null;
       }
       var data = JSON.parse(xhr.responseText);
-      var text = "=== ERROR ===\n";
+      var text = "";
       for (var i = 0; i < data.length; i++) {
         text += data[i].message + "\n";
       }
-      exportResult({
+      vm.exportResult({
         isWorking: false,
         exportStatus: "Error",
         exportError: text,
-        exportedData: exportedData
+        exportedData: null
       });
       return null;
     }).then(null, function(error) {
       console.error(error);
-      exportResult({
+      vm.exportResult({
         isWorking: false,
         exportStatus: "Error",
         exportError: "UNEXPECTED EXCEPTION:" + error,
-        exportedData: exportedData
+        exportedData: null
       });
     }));
-    exportResult({
+    vm.exportResult({
       isWorking: true,
       exportStatus: "Exporting...",
       exportError: null,
@@ -734,10 +725,6 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
 
   function stopExport() {
     exportProgress.abort({records: [], done: true, totalSize: -1});
-  }
-
-  function csvSerialize(table, separator) {
-    return table.map(function(row) { return row.map(function(text) { return "\"" + ("" + (text == null ? "" : text)).split("\"").join("\"\"") + "\""; }).join(separator); }).join("\r\n");
   }
 
   return vm;
@@ -799,8 +786,8 @@ function initScrollTable(element, dataObs, resizeObs) {
   var lastRowLeft = 0; // The distance from the left of the table to the right of the last rendered column (the left of the row below the last rendered row)
 
   function dataChange() {
-    var data = dataObs();
-    if (data.length == 0) {
+    var data = dataObs().exportedData;
+    if (data == null || data.table.length == 0) {
       // First render, or table was cleared
       rowHeights = [];
       rowCount = 0;
@@ -821,7 +808,7 @@ function initScrollTable(element, dataObs, resizeObs) {
     } else {
       // Rows or columns were added to an existing table
       var rowsAdded = false;
-      var newRowCount = data.length;
+      var newRowCount = data.table.length;
       if (newRowCount > rowCount) {
         for (var r = rowCount; r < newRowCount; r++) {
           rowHeights[r] = initialRowHeight;
@@ -831,7 +818,7 @@ function initScrollTable(element, dataObs, resizeObs) {
         rowCount = newRowCount;
       }
       var colsAdded = false;
-      var newColCount = data[0].length;
+      var newColCount = data.table[0].length;
       if (newColCount > colCount) {
         for (var c = colCount; c < newColCount; c++) {
           colWidths[c] = initialColWidth;
@@ -845,7 +832,7 @@ function initScrollTable(element, dataObs, resizeObs) {
   }
 
   function viewportChange() {
-    render(dataObs(), {});
+    render(dataObs().exportedData, {});
   }
 
   function render(data, options) {
@@ -906,7 +893,7 @@ function initScrollTable(element, dataObs, resizeObs) {
 
     var table = document.createElement("table");
     for (var r = firstRowIdx; r < lastRowIdx; r++) {
-      var row = data[r];
+      var row = data.table[r];
       var tr = document.createElement("tr");
       for (var c = firstColIdx; c < lastColIdx; c++) {
         var cell = row[c];
@@ -917,16 +904,18 @@ function initScrollTable(element, dataObs, resizeObs) {
         }
         td.style.minWidth = colWidths[c] + "px";
         td.style.minHeight = rowHeights[r] + "px";
-        if (typeof cell == "object") {
+        if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
           var a = document.createElement("a");
           a.href = "about:blank";
           a.title = "Show all data";
           a.addEventListener("click", function(e) {
             e.preventDefault();
-            showAllData(this.allDataParam);
+            showAllData({recordAttributes: this.attributes, useToolingApi: data.isTooling});
           }.bind(cell));
-          a.textContent = cell.text;
+          a.textContent = cell.attributes.type;
           td.appendChild(a);
+        } else if (cell == null) {
+          td.textContent = "";
         } else {
           td.textContent = cell;
         }

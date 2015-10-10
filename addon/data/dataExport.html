@@ -33,19 +33,20 @@
     </div>
   </div>
   <div class="action-arrow">
-    <div class="arrow-body"><button data-bind="disable: exportResultVm().isWorking, click: doExport">Export</button></div>
+    <div class="arrow-body"><button data-bind="disable: exportResult().isWorking, click: doExport">Export</button></div>
     <div class="arrow-head"></div>
   </div>
   <div class="area" id="result-area">
     <h1>Export result</h1>
-    <label><input type=radio name="data-format" value="table" data-bind="checked: dataFormat"> <span>Table</span></label>
-    <label><input type=radio name="data-format" value="excel" data-bind="checked: dataFormat"> <span>Excel</span></label>
-    <label><input type=radio name="data-format" value="csv" data-bind="checked: dataFormat"> <span>CSV</span></label>
-    <label><input type=radio name="data-format" value="json" data-bind="checked: dataFormat"> <span>JSON</span></label>
-    <button class="cancel-btn" data-bind="visible: exportResultVm().isWorking, click: stopExport">Stop</button>
-    <span class="result-status" data-bind="text: exportResultVm().resultStatus"></span>
+    <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy exported data to clipboard for pasting into Excel or similar">Copy Excel</button>
+    <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy exported data to clipboard for saving as a CSV file">Copy CSV</button>
+    <button data-bind="enable: canCopy(), click: copyAsJson" title="Copy raw API output to clipboard">Copy JSON</button>
+    <span class="result-status">
+      <span data-bind="text: exportResult().exportStatus"></span>
+      <button class="cancel-btn" data-bind="enable: exportResult().isWorking, click: stopExport">Stop</button>
+    </span>
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + 'px'}">
-      <textarea id="result-text" readonly data-bind="text: exportResultVm().resultText, visible: !exportResultVm().resultTable"></textarea>
+      <textarea id="result-text" readonly data-bind="text: exportResult().exportError, visible: exportResult().exportError != null"></textarea>
       <!-- the scroll table goes here -->
     </div>
   </div>

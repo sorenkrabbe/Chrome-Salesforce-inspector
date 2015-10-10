@@ -116,10 +116,10 @@ h1 {
   left: -15px;
   top: -15px;
 }
+#result-area  h1 {
+  margin-right: 1em;
+}
 .cancel-btn {
-  float: right;
-  height: 1.3em;
-  border: 1px solid gray;
   margin-left: 1em;
 }
 .char-btn {
