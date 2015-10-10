@@ -26,6 +26,7 @@ textarea[hidden] {
 }
 #result-box {
   margin-top: 3px;
+  clear: both;
 }
 #query {
   height: 5em;
