@@ -513,7 +513,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
     */
     var columnIdx = new Map();
     var header = [""];
-    var table = [header];
+    var table = [];
     function discoverColumns(record, prefix, row) {
       for (var field in record) {
         if (field == "attributes") {
@@ -544,6 +544,9 @@ function dataExportVm(options, queryInput, queryHistoryStorage) {
       totalSize: -1,
       addToTable: function(expRecords) {
         this.records = this.records.concat(expRecords);
+        if (table.length == 0 && expRecords.length > 0) {
+          table.push(header);
+        }
         for (var i = 0; i < expRecords.length; i++) {
           var record = expRecords[i];
           var row = new Array(header.length);
