@@ -18,13 +18,15 @@
     </label>
     <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>
     <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + 'px'}"></textarea>
-    <div id="autocomplete-results" data-bind="css: {expanded: expandAutocomplete}">
+    <div class="autocomplete-box" data-bind="css: {expanded: expandAutocomplete}">
+      <span class="autocomplete-results">
+        <span data-bind="text: autocompleteTitle"></span>
+        <span data-bind="foreach: autocompleteResults">
+          <a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a>
+        </span>
+      </span>
       <a href="about:blank" class="char-btn" data-bind="click: showDescribe, visible: sobjectName(), attr: {title: 'Show field info for the ' + sobjectName() + ' object'}">i</a>
       <a href="about:blank" class="char-btn" data-bind="click: toggleExpand, text: expandAutocomplete() ? '-' : '+'" title="Show all suggestions or only the first line"></a>
-      <span data-bind="text: autocompleteTitle"></span>
-      <span data-bind="foreach: autocompleteResults">
-        <a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a>
-      </span>
     </div>
     <div data-bind="visible: showHelp">
       <p>Use for quick one-off data exports. Enter a <a href="http://www.salesforce.com/us/developer/docs/soql_sosl/" target="_blank">SOQL query</a> in the box above and press Export.</p>

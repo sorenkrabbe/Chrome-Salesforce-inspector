@@ -105,12 +105,17 @@ h1 {
   float: right;
   margin-top: 3px;
 }
-#autocomplete-results {
+.autocomplete-box {
+  display: flex;
   white-space: nowrap;
-  overflow: hidden;
 }
-#autocomplete-results.expanded {
+.autocomplete-box.expanded {
   white-space: normal;
+}
+.autocomplete-results {
+  flex-basis: 0;
+  flex-grow: 1;
+  overflow: hidden;
 }
 #spinner {
   position: absolute;
@@ -133,6 +138,7 @@ h1 {
   border-radius: 7px;
   line-height: 14px;
   text-align: center;
+  margin: 1px 0 0 3px;
 }
 .result-status {
   float: right;
