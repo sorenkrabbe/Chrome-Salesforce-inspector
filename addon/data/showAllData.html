@@ -21,6 +21,7 @@
     </span>
     <span>
       <a href="about:blank" data-bind="visible: canView(), attr: {href: viewLink()}" target="_blank" title="View this record in Salesforce">View</a>
+      <a href="about:blank" data-bind="visible: objectName(), click: showObjectMetadata">More</a>
       <a href="about:blank" data-bind="visible: setupLink(), attr: {href: setupLink()}" target="_blank">Setup</a>
       <button title="Inline edit the values of this record" data-bind="enable: canEdit(), visible: !isEditing(), click: doEdit">Edit</button>
       <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: doSave">Save</button>
@@ -28,7 +29,7 @@
   </div>
   <div data-bind="css: {body: true, empty: !showFieldLabelColumn() && !showFieldHelptextColumn() && !showFieldDescriptionColumn() && !showFieldValueColumn() && !showFieldTypeColumn()}">
     <h1>
-      <span data-bind="if: objectName()"><a href="about:blank" data-bind="text: objectName(), click: showObjectMetadata"></a></span>
+      <span data-bind="text: objectName()"></span>
       <span data-bind="text: recordHeading()"></span>
     </h1>
     <div data-bind="foreach: errorMessages, visible: errorMessages().length > 0" class="error-message"><div data-bind="text: $data"></div></div>
