@@ -1,6 +1,6 @@
 var session, orgId;
 
-function loadFieldSetupData(sobjectName) {
+function loadSetupLinkData(sobjectName) {
   var objectsPromise = askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix from CustomObject")).then(function(res) {
     var objectIds = {};
     res.records.forEach(function(customObject) {
@@ -19,9 +19,7 @@ function loadFieldSetupData(sobjectName) {
   return Promise.all([objectsPromise, fieldsPromise]);
 }
 
-function getFieldSetupLink(fieldSetupData, sobjectName, fieldName) {
-  var objectIds = fieldSetupData ? fieldSetupData[0] : {};
-  var fieldIds = fieldSetupData ? fieldSetupData[1] : {};
+function getFieldSetupLink(setupLinkData, sobjectName, fieldName) {
   if (!fieldName.endsWith("__c")) {
     var name = fieldName;
     if (name.substr(-2) == "Id" && name != "Id") {
@@ -30,6 +28,7 @@ function getFieldSetupLink(fieldSetupData, sobjectName, fieldName) {
     if (!sobjectName.endsWith("__c")) {
       return 'https://' + session.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + sobjectName;
     } else {
+      var objectIds = setupLinkData ? setupLinkData[0] : {};
       var objectId = objectIds[sobjectName];
       if (!objectId) {
         return null;
@@ -37,11 +36,25 @@ function getFieldSetupLink(fieldSetupData, sobjectName, fieldName) {
       return 'https://' + session.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + objectId;
     }
   } else {
+    var fieldIds = setupLinkData ? setupLinkData[1] : {};
     var fieldId = fieldIds[sobjectName + '.' + fieldName];
     if (!fieldId) {
       return null;
     }
     return 'https://' + session.hostname + '/' + fieldId;
+  }
+}
+
+function getObjectSetupLink(setupLinkData, sobjectName) {
+  if (!sobjectName.endsWith("__c")) {
+    return 'https://' + session.hostname + '/p/setup/layout/LayoutFieldList?type=' + sobjectName + "&setupid=" + sobjectName + "Fields";
+  } else {
+    var objectIds = setupLinkData ? setupLinkData[0] : {};
+    var objectId = objectIds[sobjectName];
+    if (!objectId) {
+      return null;
+    }
+    return 'https://' + session.hostname + '/' + objectId;
   }
 }
 

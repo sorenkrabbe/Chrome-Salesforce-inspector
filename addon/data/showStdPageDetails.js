@@ -1,7 +1,7 @@
 function showStdPageDetails(recordId) {
   var fieldDetailsByLabel = {};
   var metadataResponse = {};
-  var fieldSetupData = null;
+  var setupLinkData = null;
   return new Promise(function(resolve, reject) {
     chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
       session = {key: message.key, hostname: location.hostname};
@@ -30,12 +30,12 @@ function showStdPageDetails(recordId) {
   .then(function(res) {
     metadataResponse = res;
 
-    // We don't wait for loadFieldSetupData to resolve. We show the data we have, and add the field setup links once that data arrives
+    // We don't wait for loadSetupLinkData to resolve. We show the data we have, and add the field setup links once that data arrives
     fieldDetailsReady();
 
-    loadFieldSetupData(metadataResponse.name)
+    loadSetupLinkData(metadataResponse.name)
       .then(function(res) {
-        fieldSetupData = res;
+        setupLinkData = res;
       }, function() {
         // Don't fail if the user does not have access to the tooling API.
       });
@@ -147,7 +147,7 @@ function showFieldDetails(labelElement){
             if (fieldDetail.calculatedFormula) {
                 output.appendChild(Ea('div', {'class': 'insext-formula'}, [T(fieldDetail.calculatedFormula)]));
             }
-            var fieldSetupLink = getFieldSetupLink(fieldSetupData, metadataResponse.name, fieldDetail.name);
+            var fieldSetupLink = getFieldSetupLink(setupLinkData, metadataResponse.name, fieldDetail.name);
             if (fieldSetupLink) {
                 output.appendChild(Ea('a', {'href': fieldSetupLink, 'target': '_blank'}, [T('Setup')]));
             }

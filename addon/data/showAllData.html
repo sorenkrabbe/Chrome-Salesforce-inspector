@@ -19,9 +19,12 @@
       <label><input type="checkbox" data-bind="checked: showFieldValueColumn, enable: canView()"> Value</label>
       <label><input type="checkbox" data-bind="checked: showFieldTypeColumn"> Type</label>
     </span>
-    <button title="View this record in Salesforce" data-bind="enable: canView(), click: doView">View</button>
-    <button title="Inline edit the values of this record" data-bind="enable: canEdit(), visible: !isEditing(), click: doEdit">Edit</button>
-    <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: doSave">Save</button>
+    <span>
+      <a href="about:blank" data-bind="visible: canView(), attr: {href: viewLink()}" target="_blank" title="View this record in Salesforce">View</a>
+      <a href="about:blank" data-bind="visible: setupLink(), attr: {href: setupLink()}" target="_blank">Setup</a>
+      <button title="Inline edit the values of this record" data-bind="enable: canEdit(), visible: !isEditing(), click: doEdit">Edit</button>
+      <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: doSave">Save</button>
+    </span>
   </div>
   <div data-bind="css: {body: true, empty: !showFieldLabelColumn() && !showFieldHelptextColumn() && !showFieldDescriptionColumn() && !showFieldValueColumn() && !showFieldTypeColumn()}">
     <h1>
