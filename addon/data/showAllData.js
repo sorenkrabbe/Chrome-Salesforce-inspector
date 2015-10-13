@@ -420,6 +420,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
               sobjectInfo.sobjectDescribePromise = askSalesforce(sobject.urls.describe);
               if (recordDesc.recordId.length < 15) {
                 sobjectInfo.recordDataPromise = null; // Just a prefix, don't attempt to load the record
+              } else if (sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
+                sobjectInfo.recordDataPromise = null; // Not a record ID, don't attempt to load the record
               } else if (!sobject.retrieveable) {
                 sobjectInfo.recordDataPromise = null;
                 vm.errorMessages.push("This object does not support showing all data");
