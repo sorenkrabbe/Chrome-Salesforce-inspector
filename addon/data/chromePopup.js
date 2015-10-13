@@ -38,6 +38,7 @@ function init() {
 
 var closePopup = null;
 var detailsShown = false;
+var sobjects = null;
 function openPopup() {
   var el = document.createElement('div');
   el.innerHTML = '<div class="insext-popup">\
@@ -45,7 +46,8 @@ function openPopup() {
     <h3>Salesforce inspector</h3>\
     <button id="insext-showStdPageDetailsBtn">Show field metadata (m)</button>\
     <button id="insext-showAllDataBtn">Show all data (a)</button>\
-    <input id="insext-showAllDataInp" placeholder="Record ID, ID prefix or Sobject name">\
+    <input id="insext-showAllDataInp" placeholder="Record ID, ID prefix or Sobject name" list="insext-sobjects">\
+    <datalist id="insext-sobjects"></datalist>\
     <button id="insext-dataExportBtn">Data Export (e)</button>\
     <button id="insext-dataImportBtn">Data Import (i)</button>\
     <button id="insext-apiExploreBtn">Explore API (x)</button>\
@@ -198,4 +200,33 @@ function openPopup() {
   document.querySelector('#insext-aboutLnk').addEventListener('click', function(){ 
     open('https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'); 
   });
+  if (isDevConsole) {
+    if (sobjects == null) {
+      sobjects = new Promise(function(resolve, reject) {
+        document.querySelector("#insext-spinner").removeAttribute("hidden");
+        chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+          session = {key: message.key, hostname: location.hostname};
+          resolve();
+        });
+      })
+      .then(function() {
+        return askSalesforce('/services/data/v34.0/sobjects/');
+      })
+      .then(function(res) {
+        document.querySelector("#insext-spinner").setAttribute("hidden", "");
+        return res.sobjects;
+      })
+      .catch(function() {
+        document.querySelector("#insext-spinner").setAttribute("hidden", "");
+      });
+    }
+    sobjects.then(function(sobjects) {
+      var datalist = document.querySelector("#insext-sobjects");
+      sobjects.forEach(function(sobject) {
+        var option = document.createElement("option");
+        option.value = sobject.name;
+        datalist.appendChild(option);
+      });
+    });
+  }
 }
