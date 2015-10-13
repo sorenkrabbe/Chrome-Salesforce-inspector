@@ -39,11 +39,17 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       vm.fieldRowsFilter("");
       vm.fieldRowsFilterFocus(true);
     },
+    sortByName: function() {
+      sortFieldRows("name");
+    },
     sortByLabel: function() {
       sortFieldRows("label");
     },
-    sortByName: function() {
-      sortFieldRows("name");
+    sortByHelptext: function() {
+      sortFieldRows("helptext");
+    },
+    sortByDesc: function() {
+      sortFieldRows("desc");
     },
     sortByValue: function() {
       sortFieldRows("dataValue");
@@ -55,6 +61,12 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     fieldDetailsFilter: ko.observable(""),
     fieldDetails: ko.observable(null),
     isEditing: ko.observable(false),
+    hasEntityParticles: ko.observable(false),
+    showFieldLabelColumn: ko.observable(true),
+    showFieldHelptextColumn: ko.observable(false),
+    showFieldDescriptionColumn: ko.observable(false),
+    showFieldValueColumn: ko.observable(false),
+    showFieldTypeColumn: ko.observable(true),
     closeFieldDetails: function() {
       vm.fieldDetails(null);
     },
@@ -95,6 +107,11 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     }
   };
 
+  var fetchFieldDescriptions = vm.showFieldDescriptionColumn.subscribe(function() {
+    fetchFieldDescriptions.dispose();
+    vm.fieldRows().forEach(function(fieldRow) { fieldRow.showFieldDescription(); });
+  });
+
   function FieldRow(fieldName) {
     function fieldProperties() {
       var props = {};
@@ -115,6 +132,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       dataTypedValue: ko.observable(),
       dataStringValue: ko.observable(""),
       entityParticle: ko.observable(),
+      fieldDefinition: ko.observable(),
 
       fieldLabel: function() {
         if (fieldVm.fieldDescribe()) {
@@ -126,6 +144,18 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         return "Unknown Label";
       },
       fieldName: fieldName,
+      hasFieldHelptext: function() {
+        return typeof fieldVm.fieldHelptext() != "undefined";
+      },
+      fieldHelptext: function() {
+        return fieldVm.fieldDescribe() && fieldVm.fieldDescribe().inlineHelpText;
+      },
+      hasFieldDesc: function() {
+        return typeof fieldVm.fieldDesc() != "undefined";
+      },
+      fieldDesc: function() {
+        return fieldVm.fieldDefinition() && fieldVm.fieldDefinition().Metadata.description;
+      },
       fieldTypeDesc: function() {
         var fieldDescribe = fieldVm.fieldDescribe();
         if (fieldDescribe) {
@@ -222,8 +252,10 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         });
       },
       sortKeys: {
-        label: function() { return fieldVm.fieldLabel().trim(); },
         name: function() { return fieldVm.fieldName.trim(); },
+        label: function() { return fieldVm.fieldLabel().trim(); },
+        helptext: function() { return (fieldVm.fieldHelptext() || "").trim(); },
+        desc: function() { return (fieldVm.fieldDesc() || "").trim(); },
         dataValue: function() { return fieldVm.hasDataValue() ? fieldVm.dataStringValue().trim() : "\uFFFD"; },
         type: function() { return fieldVm.fieldTypeDesc().trim(); }
       },
@@ -238,10 +270,24 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
               return false;
             }
           } else {
-            var row = fieldVm.fieldLabel() + "," + fieldVm.fieldName + "," + fieldVm.dataStringValue() + "," + fieldVm.fieldTypeDesc();
+            var row = fieldVm.fieldName
+              + "," + (vm.showFieldLabelColumn() ? fieldVm.fieldLabel() : "")
+              + "," + (vm.showFieldHelptextColumn() ? fieldVm.fieldHelptext() || "" : "")
+              + "," + (vm.showFieldDescriptionColumn() ? fieldVm.fieldDesc() || "" : "")
+              + "," + (vm.showFieldValueColumn() ? fieldVm.dataStringValue() : "")
+              + "," + (vm.showFieldTypeColumn() ? fieldVm.fieldTypeDesc() : "");
             return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
           }
         });
+      },
+      showFieldDescription: function() {
+        if (!fieldVm.entityParticle()) {
+          return;
+        }
+        spinFor("get field definition for " + fieldName, askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where Id = '" + fieldVm.entityParticle().FieldDefinition.Id + "' and EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
+          .then(function(fieldDefs) {
+            fieldVm.fieldDefinition(fieldDefs.records[0]);
+          }));
       }
     };
     return fieldVm;
@@ -427,6 +473,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     // Fetch record data using record retrieve call
     if (sobjectInfo.recordDataPromise) {
       spinFor("retrieving record", sobjectInfo.recordDataPromise.then(function(res) {
+        vm.showFieldValueColumn(true);
         for (var name in res) {
           if (name != "attributes") {
             var fieldRow = fieldMap[name];
@@ -462,6 +509,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           }
           fieldRow.entityParticle(entityParticle);
         });
+        vm.hasEntityParticles(true);
         resortFieldRows();
       }));
     /*

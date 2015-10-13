@@ -9,8 +9,6 @@ body {
 table {
   width: 100%;
   border-spacing: 0px;
-  font-size: 11px;
-  table-layout: fixed;
 }
 .value-text {
   word-wrap: break-word;
@@ -27,7 +25,7 @@ table {
 tr.fieldCalculated {
   font-style: italic;
 }
-tr.fieldHidden, tr.fieldHidden td[tabindex], tr.fieldHidden a[href] {
+tr.fieldHidden, tr.fieldHidden a[href] {
   color: #777;
 }
 tr:hover {
@@ -37,13 +35,14 @@ th {
   text-align: left;
 }
 .field-label {
-  width: 20em;
+  white-space: nowrap;
 }
 .field-name {
-  width: 20em;
+  white-space: nowrap;
 }
 .field-value {
   text-align: right;
+  max-width: 200px; /* To handle long words. This is not actually 200px but scales with the table. Table layout magic. */
 }
 .field-value textarea {
   width: 100%;
@@ -52,12 +51,14 @@ th {
 .field-type {
   text-align: right;
   width: 9em;
+  min-width: 9em;
+  max-width: 9em;
 }
-.field-setup {
+.field-actions {
   text-align: right;
-  width: 4em;
+  white-space: nowrap;
 }
-span[tabindex], td[tabindex], th[tabindex] {
+th[tabindex] {
   text-decoration: underline;
   cursor: pointer;
   color: darkblue;
@@ -114,6 +115,9 @@ span[tabindex], td[tabindex], th[tabindex] {
 #fieldDetailsView .isBoolean {
   color: #099;
 }
+.filter-box {
+  white-space: nowrap;
+}
 .filter-input {
   width: 20em;
 }
@@ -140,20 +144,31 @@ h1 {
   width: 100%;
   padding: 8px;
   box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  z-index: 1;
+}
+.column-toggles {
+  flex-grow: 1;
+  text-align: center;
+}
+.column-toggles label {
+  margin: 0 5px;
 }
 .body {
   padding: 3.8em 8px 8px;
 }
-.object-actions {
-  float: right;
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
 }
-.child-list {
-  text-align: right;
-  width: 4em;
+.body.empty {
+  animation: spin 4s linear infinite;
 }
-.child-setup {
+.child-actions {
   text-align: right;
-  width: 4em;
+  white-space: nowrap;
 }
 .char-btn {
   color: white;
