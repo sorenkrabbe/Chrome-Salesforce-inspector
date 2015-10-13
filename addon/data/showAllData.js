@@ -9,7 +9,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   var objectData = ko.observable(null);
   var recordData = ko.observable(null);
-  var fieldIds = ko.observable({});
+  var fieldSetupData = ko.observable(null);
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -212,8 +212,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         }
       },
       setupLink: function() {
-        var custom = fieldVm.fieldDescribe() ? fieldVm.fieldDescribe().custom : fieldName.endsWith("__c");
-        return getFieldSetupLink(fieldIds(), {name: vm.objectName()}, {name: fieldName, custom: custom});
+        return getFieldSetupLink(fieldSetupData(), vm.objectName(), fieldName);
       },
       summary: function() {
         var fieldDescribe = fieldVm.fieldDescribe();
@@ -330,7 +329,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         });
       },
       setupLink: function() {
-        return getFieldSetupLink(fieldIds(), {name: childDescribe.childSObject}, {name: childDescribe.field, custom: childDescribe.field.endsWith("__c")});
+        return getFieldSetupLink(fieldSetupData(), childDescribe.childSObject, childDescribe.field);
       },
       queryList: function() {
         dataExport({query: "select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'"});
@@ -530,7 +529,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
     // Fetch field ids to build links to field setup ui pages
     spinFor("getting setup links", loadFieldSetupData(sobjectInfo.sobjectName).then(function(res) {
-      fieldIds(res);
+      fieldSetupData(res);
     }));
 
   }));

@@ -1,7 +1,7 @@
 function showStdPageDetails(recordId) {
   var fieldDetailsByLabel = {};
   var metadataResponse = {};
-  var fieldSetupData = {};
+  var fieldSetupData = null;
   return new Promise(function(resolve, reject) {
     chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
       session = {key: message.key, hostname: location.hostname};
@@ -147,7 +147,7 @@ function showFieldDetails(labelElement){
             if (fieldDetail.calculatedFormula) {
                 output.appendChild(Ea('div', {'class': 'insext-formula'}, [T(fieldDetail.calculatedFormula)]));
             }
-            var fieldSetupLink = getFieldSetupLink(fieldSetupData, metadataResponse, fieldDetail);
+            var fieldSetupLink = getFieldSetupLink(fieldSetupData, metadataResponse.name, fieldDetail.name);
             if (fieldSetupLink) {
                 output.appendChild(Ea('a', {'href': fieldSetupLink, 'target': '_blank'}, [T('Setup')]));
             }
