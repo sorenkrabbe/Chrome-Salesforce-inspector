@@ -215,14 +215,14 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
       }));
     }
   }
-  spinFor(askSalesforce("/services/data/v34.0/sobjects/").then(function(res) {
+  spinFor(askSalesforce("/services/data/v35.0/sobjects/").then(function(res) {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectDataDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
     describeState++;
     queryAutocompleteHandler();
   }));
-  spinFor(askSalesforce("/services/data/v34.0/tooling/sobjects/").then(function(res) {
+  spinFor(askSalesforce("/services/data/v35.0/tooling/sobjects/").then(function(res) {
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectToolingDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
     });
@@ -422,7 +422,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         var field = contextValueFields[0].field;
         var queryMethod = vm.queryTooling() ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
         var acQuery = "select " + field.name + " from " + sobjectDescribe.name + " where " + field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + field.name + " limit 100";
-        spinFor(askSalesforce("/services/data/v34.0/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
+        spinFor(askSalesforce("/services/data/v35.0/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
           .catch(function(xhr) {
             vm.autocompleteTitle("Error: " + (xhr && xhr.responseText));
             return null;
@@ -648,7 +648,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     exportedData.isTooling = vm.queryTooling();
     var query = queryInput.getValue();
     var queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
-    spinFor(askSalesforce("/services/data/v34.0/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
+    spinFor(askSalesforce("/services/data/v35.0/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
       exportedData.addToTable(data.records);
       if (data.totalSize != -1) {
         exportedData.totalSize = data.totalSize;

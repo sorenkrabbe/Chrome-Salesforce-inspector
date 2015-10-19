@@ -1,14 +1,14 @@
 var session, orgId;
 
 function loadSetupLinkData(sobjectName) {
-  var objectsPromise = askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix from CustomObject")).then(function(res) {
+  var objectsPromise = askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix from CustomObject")).then(function(res) {
     var objectIds = {};
     res.records.forEach(function(customObject) {
       objectIds[(customObject.NamespacePrefix ? customObject.NamespacePrefix + "__" : "") + customObject.DeveloperName + "__c"] = customObject.Id.slice(0, -3);
     });
     return objectIds;
   });
-  var fieldsPromise = askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix, EntityDefinition.QualifiedApiName from CustomField")).then(function(res) {
+  var fieldsPromise = askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix, EntityDefinition.QualifiedApiName from CustomField")).then(function(res) {
     var fieldIds = {};
     res.records.forEach(function(customField) {
       // We build the API name from NamespacePrefix and DeveloperName, since we cannot query FullName when we query more than one field.
@@ -101,7 +101,7 @@ function askSalesforceSoap(request) {
       return;
     }
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "https://" + session.hostname + '/services/Soap/u/34.0?cache=' + Math.random(), true);
+    xhr.open("POST", "https://" + session.hostname + '/services/Soap/u/35.0?cache=' + Math.random(), true);
     xhr.setRequestHeader('Content-Type', "text/xml");
     xhr.setRequestHeader('SOAPAction', '""');
     xhr.onreadystatechange = function() {

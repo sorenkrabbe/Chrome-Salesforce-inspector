@@ -158,7 +158,7 @@ function dataImportVm(dataInput) {
       }));
     }
   }
-  spinFor(askSalesforce("/services/data/v34.0/sobjects/").then(function(res) {
+  spinFor(askSalesforce("/services/data/v35.0/sobjects/").then(function(res) {
     vm.sobjectList(res.sobjects.filter(function(sobjectDescribe) { return sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable; }).map(function(sobjectDescribe) { return sobjectDescribe.name; }));
     res.sobjects.forEach(function(sobjectDescribe) {
       sobjectDataDescribes()[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;

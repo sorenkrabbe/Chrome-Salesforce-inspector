@@ -93,7 +93,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       });
       spinFor(
         "saving record",
-        askSalesforce("/services/data/v34.0/sobjects/" + objectData().name + "/" + recordData().Id, null, {method: "PATCH", body: record})
+        askSalesforce("/services/data/v35.0/sobjects/" + objectData().name + "/" + recordData().Id, null, {method: "PATCH", body: record})
           .then(function() {
             vm.errorMessages.push("Record saved successfully");
           })
@@ -286,7 +286,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         if (!fieldVm.entityParticle()) {
           return;
         }
-        spinFor("get field definition for " + fieldName, askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where Id = '" + fieldVm.entityParticle().FieldDefinition.Id + "' and EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
+        spinFor("get field definition for " + fieldName, askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where Id = '" + fieldVm.entityParticle().FieldDefinition.Id + "' and EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
           .then(function(fieldDefs) {
             fieldVm.fieldDefinition(fieldDefs.records[0]);
           }));
@@ -407,8 +407,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   if ("recordId" in recordDesc) {
     sobjectInfoPromise = Promise
       .all([
-        askSalesforce('/services/data/v34.0/sobjects/'),
-        askSalesforce('/services/data/v34.0/tooling/sobjects/')
+        askSalesforce('/services/data/v35.0/sobjects/'),
+        askSalesforce('/services/data/v35.0/tooling/sobjects/')
       ])
       .then(function(responses) {
         var currentObjKeyPrefix = recordDesc.recordId.substring(0, 3);
@@ -439,7 +439,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   } else if ("recordAttributes" in recordDesc) {
     var sobjectInfo = {};
     sobjectInfo.sobjectName = recordDesc.recordAttributes.type;
-    sobjectInfo.sobjectDescribePromise = askSalesforce("/services/data/v34.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+    sobjectInfo.sobjectDescribePromise = askSalesforce("/services/data/v35.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
     if (!recordDesc.recordAttributes.url) {
       sobjectInfo.recordDataPromise = null; // No record url
     } else {
@@ -497,7 +497,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
     // Fetch fields using Tooling API call, which contains fields not readable by the current user, but fails if the user does not have access to the Tooling API, and is much less stable.
     // These fields are not queried since Salesforce returns an error for some objects if these fields are incluced in the query: IsApiFilterable, IsApiSortable, IsApiGroupable, FieldDefinition.IsApiFilterable, FieldDefinition.IsApiSortable, FieldDefinition.IsApiGroupable, FieldDefinition.DataType, IsCompactLayoutable, FieldDefinition.IsCompactLayoutable
-    spinFor("querying tooling particles", askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select\
+    spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select\
       Id, DurableId, QualifiedApiName, EntityDefinitionId, FieldDefinitionId, NamespacePrefix, DeveloperName, MasterLabel, Label, Length, DataType, ServiceDataTypeId, ExtraTypeInfo, IsCalculated, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, Precision, Scale, IsFieldHistoryTracked, IsListVisible,\
       FieldDefinition.Id, FieldDefinition.DurableId, FieldDefinition.QualifiedApiName, FieldDefinition.EntityDefinitionId, FieldDefinition.NamespacePrefix, FieldDefinition.DeveloperName, FieldDefinition.MasterLabel, FieldDefinition.Label, FieldDefinition.Length, FieldDefinition.ServiceDataTypeId, FieldDefinition.ExtraTypeInfo, FieldDefinition.IsCalculated, FieldDefinition.IsHighScaleNumber, FieldDefinition.IsHtmlFormatted, FieldDefinition.IsNameField, FieldDefinition.IsNillable, FieldDefinition.IsWorkflowFilterable, FieldDefinition.Precision, FieldDefinition.Scale, FieldDefinition.IsFieldHistoryTracked, FieldDefinition.IsListFilterable, FieldDefinition.IsListSortable, FieldDefinition.IsListVisible, FieldDefinition.ControllingFieldDefinitionId, FieldDefinition.LastModifiedDate, FieldDefinition.LastModifiedById, FieldDefinition.PublisherId, FieldDefinition.RunningUserFieldAccessId, FieldDefinition.RelationshipName, FieldDefinition.ReferenceTo, FieldDefinition.ReferenceTargetField,\
       ServiceDataType.Id, ServiceDataType.DurableId, ServiceDataType.Name, ServiceDataType.IsComplex, ServiceDataType.ServiceId, ServiceDataType.Namespace, ServiceDataType.NamespacePrefix,\
@@ -518,9 +518,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       }));
     /*
     // Uncomment this code to test if the query works for all objects in an org. If it fails for some objects, it may be fixable by querying less fields.
-    spinFor("testing", askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName from EntityDefinition ")).then(function(res) {
+    spinFor("testing", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName from EntityDefinition ")).then(function(res) {
       res.records.forEach(function(record) {
-        spinFor("testing for " + record.QualifiedApiName, askSalesforce("/services/data/v34.0/tooling/query/?q=" + encodeURIComponent("select\
+        spinFor("testing for " + record.QualifiedApiName, askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select\
       Id, DurableId, QualifiedApiName, EntityDefinitionId, FieldDefinitionId, NamespacePrefix, DeveloperName, MasterLabel, Label, Length, DataType, ServiceDataTypeId, ExtraTypeInfo, IsCalculated, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, Precision, Scale, IsFieldHistoryTracked, IsListVisible,\
       FieldDefinition.Id, FieldDefinition.DurableId, FieldDefinition.QualifiedApiName, FieldDefinition.EntityDefinitionId, FieldDefinition.NamespacePrefix, FieldDefinition.DeveloperName, FieldDefinition.MasterLabel, FieldDefinition.Label, FieldDefinition.Length, FieldDefinition.ServiceDataTypeId, FieldDefinition.ExtraTypeInfo, FieldDefinition.IsCalculated, FieldDefinition.IsHighScaleNumber, FieldDefinition.IsHtmlFormatted, FieldDefinition.IsNameField, FieldDefinition.IsNillable, FieldDefinition.IsWorkflowFilterable, FieldDefinition.Precision, FieldDefinition.Scale, FieldDefinition.IsFieldHistoryTracked, FieldDefinition.IsListFilterable, FieldDefinition.IsListSortable, FieldDefinition.IsListVisible, FieldDefinition.ControllingFieldDefinitionId, FieldDefinition.LastModifiedDate, FieldDefinition.LastModifiedById, FieldDefinition.PublisherId, FieldDefinition.RunningUserFieldAccessId, FieldDefinition.RelationshipName, FieldDefinition.ReferenceTo, FieldDefinition.ReferenceTargetField,\
       ServiceDataType.Id, ServiceDataType.DurableId, ServiceDataType.Name, ServiceDataType.IsComplex, ServiceDataType.ServiceId, ServiceDataType.Namespace, ServiceDataType.NamespacePrefix,\

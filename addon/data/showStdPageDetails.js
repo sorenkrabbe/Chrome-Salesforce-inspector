@@ -11,8 +11,8 @@ function showStdPageDetails(recordId) {
   .then(function() {
     return Promise
     .all([
-      askSalesforce('/services/data/v34.0/sobjects/'),
-      askSalesforce('/services/data/v34.0/tooling/sobjects/')
+      askSalesforce('/services/data/v35.0/sobjects/'),
+      askSalesforce('/services/data/v35.0/tooling/sobjects/')
     ]);
   })
   .then(function(responses) {
