@@ -127,6 +127,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       if (fieldVm.entityParticle()) {
         addProperties(props, fieldVm.entityParticle(), "part.", {});
       }
+      if (fieldVm.fieldParticleMetadata()) {
+        addProperties(props, fieldVm.fieldParticleMetadata(), "meta.", {});
+      }
       return props;
     }
 
@@ -135,7 +138,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       dataTypedValue: ko.observable(),
       dataStringValue: ko.observable(""),
       entityParticle: ko.observable(),
-      fieldDefinition: ko.observable(),
+      fieldParticleMetadata: ko.observable(),
 
       fieldLabel: function() {
         if (fieldVm.fieldDescribe()) {
@@ -157,7 +160,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         return typeof fieldVm.fieldDesc() != "undefined";
       },
       fieldDesc: function() {
-        return fieldVm.fieldDefinition() && fieldVm.fieldDefinition().Metadata.description;
+        return fieldVm.fieldParticleMetadata() && fieldVm.fieldParticleMetadata().Metadata.description;
       },
       fieldTypeDesc: function() {
         var fieldDescribe = fieldVm.fieldDescribe();
@@ -286,9 +289,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         if (!fieldVm.entityParticle()) {
           return;
         }
-        spinFor("get field definition for " + fieldName, askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where Id = '" + fieldVm.entityParticle().FieldDefinition.Id + "' and EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
+        spinFor("getting field definition metadata for " + fieldName, askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle().FieldDefinition.DurableId + "'"))
           .then(function(fieldDefs) {
-            fieldVm.fieldDefinition(fieldDefs.records[0]);
+            fieldVm.fieldParticleMetadata(fieldDefs.records[0]);
           }));
       }
     };
@@ -495,14 +498,12 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       }));
     }
 
-    // Fetch fields using Tooling API call, which contains fields not readable by the current user, but fails if the user does not have access to the Tooling API, and is much less stable.
-    // These fields are not queried since Salesforce returns an error for some objects if these fields are incluced in the query: IsApiFilterable, IsApiSortable, IsApiGroupable, FieldDefinition.IsApiFilterable, FieldDefinition.IsApiSortable, FieldDefinition.IsApiGroupable, FieldDefinition.DataType, IsCompactLayoutable, FieldDefinition.IsCompactLayoutable
-    spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select\
-      Id, DurableId, QualifiedApiName, EntityDefinitionId, FieldDefinitionId, NamespacePrefix, DeveloperName, MasterLabel, Label, Length, DataType, ServiceDataTypeId, ExtraTypeInfo, IsCalculated, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, Precision, Scale, IsFieldHistoryTracked, IsListVisible,\
-      FieldDefinition.Id, FieldDefinition.DurableId, FieldDefinition.QualifiedApiName, FieldDefinition.EntityDefinitionId, FieldDefinition.NamespacePrefix, FieldDefinition.DeveloperName, FieldDefinition.MasterLabel, FieldDefinition.Label, FieldDefinition.Length, FieldDefinition.ServiceDataTypeId, FieldDefinition.ExtraTypeInfo, FieldDefinition.IsCalculated, FieldDefinition.IsHighScaleNumber, FieldDefinition.IsHtmlFormatted, FieldDefinition.IsNameField, FieldDefinition.IsNillable, FieldDefinition.IsWorkflowFilterable, FieldDefinition.Precision, FieldDefinition.Scale, FieldDefinition.IsFieldHistoryTracked, FieldDefinition.IsListFilterable, FieldDefinition.IsListSortable, FieldDefinition.IsListVisible, FieldDefinition.ControllingFieldDefinitionId, FieldDefinition.LastModifiedDate, FieldDefinition.LastModifiedById, FieldDefinition.PublisherId, FieldDefinition.RunningUserFieldAccessId, FieldDefinition.RelationshipName, FieldDefinition.ReferenceTo, FieldDefinition.ReferenceTargetField,\
-      ServiceDataType.Id, ServiceDataType.DurableId, ServiceDataType.Name, ServiceDataType.IsComplex, ServiceDataType.ServiceId, ServiceDataType.Namespace, ServiceDataType.NamespacePrefix,\
-      FieldDefinition.Publisher.Id, FieldDefinition.Publisher.DurableId, FieldDefinition.Publisher.Name, FieldDefinition.Publisher.NamespacePrefix, FieldDefinition.Publisher.IsSalesforce\
-      from EntityParticle where EntityDefinition.QualifiedApiName = '" + sobjectInfo.sobjectName + "'"))
+    // Fetch fields using a Tooling API call, which returns fields not readable by the current user, but fails if the user does not have access to the Tooling API.
+    // The Tooling API is not very stable. It often gives "An unexpected error occurred. Please include this ErrorId if you contact support".
+    // We would like to query all meta-fields, to show them when the user clicks a field for more details.
+    // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
+    // Therefore qe query the minimum set of meta-fields needed by our main UI.
+    spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + sobjectInfo.sobjectName + "'"))
       .then(function(res) {
         res.records.forEach(function(entityParticle) {
           var fieldRow = fieldMap[entityParticle.QualifiedApiName];
@@ -516,19 +517,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         vm.hasEntityParticles(true);
         resortFieldRows();
       }));
-    /*
-    // Uncomment this code to test if the query works for all objects in an org. If it fails for some objects, it may be fixable by querying less fields.
-    spinFor("testing", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName from EntityDefinition ")).then(function(res) {
-      res.records.forEach(function(record) {
-        spinFor("testing for " + record.QualifiedApiName, askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select\
-      Id, DurableId, QualifiedApiName, EntityDefinitionId, FieldDefinitionId, NamespacePrefix, DeveloperName, MasterLabel, Label, Length, DataType, ServiceDataTypeId, ExtraTypeInfo, IsCalculated, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, Precision, Scale, IsFieldHistoryTracked, IsListVisible,\
-      FieldDefinition.Id, FieldDefinition.DurableId, FieldDefinition.QualifiedApiName, FieldDefinition.EntityDefinitionId, FieldDefinition.NamespacePrefix, FieldDefinition.DeveloperName, FieldDefinition.MasterLabel, FieldDefinition.Label, FieldDefinition.Length, FieldDefinition.ServiceDataTypeId, FieldDefinition.ExtraTypeInfo, FieldDefinition.IsCalculated, FieldDefinition.IsHighScaleNumber, FieldDefinition.IsHtmlFormatted, FieldDefinition.IsNameField, FieldDefinition.IsNillable, FieldDefinition.IsWorkflowFilterable, FieldDefinition.Precision, FieldDefinition.Scale, FieldDefinition.IsFieldHistoryTracked, FieldDefinition.IsListFilterable, FieldDefinition.IsListSortable, FieldDefinition.IsListVisible, FieldDefinition.ControllingFieldDefinitionId, FieldDefinition.LastModifiedDate, FieldDefinition.LastModifiedById, FieldDefinition.PublisherId, FieldDefinition.RunningUserFieldAccessId, FieldDefinition.RelationshipName, FieldDefinition.ReferenceTo, FieldDefinition.ReferenceTargetField,\
-      ServiceDataType.Id, ServiceDataType.DurableId, ServiceDataType.Name, ServiceDataType.IsComplex, ServiceDataType.ServiceId, ServiceDataType.Namespace, ServiceDataType.NamespacePrefix,\
-      FieldDefinition.Publisher.Id, FieldDefinition.Publisher.DurableId, FieldDefinition.Publisher.Name, FieldDefinition.Publisher.NamespacePrefix, FieldDefinition.Publisher.IsSalesforce\
-      from EntityParticle where EntityDefinition.QualifiedApiName = '" + record.QualifiedApiName + "'")));
-      });
-    }));
-    */
 
     // Fetch field ids to build links to field setup ui pages
     spinFor("getting setup links", loadSetupLinkData(sobjectInfo.sobjectName).then(function(res) {
