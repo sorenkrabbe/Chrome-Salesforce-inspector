@@ -4,7 +4,9 @@ function showStdPageDetails(recordId) {
   var setupLinkData = null;
   return new Promise(function(resolve, reject) {
     chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
-      session = {key: message.key, hostname: location.hostname};
+      if (message) {
+        session = {key: message.key, hostname: location.hostname};
+      }
       resolve();
     });
   })
@@ -56,7 +58,7 @@ function fieldDetailsReady(){
         fieldDetailsByLabel[fieldDetails.label].push(fieldDetails);
     }
     
-    var labelElements = document.querySelectorAll("td.labelCol")
+    var labelElements = document.querySelectorAll("td.labelCol, th.labelCol")
     for (var i = 0; i < labelElements.length; i++) {
         if (labelElements[i].textContent.trim() != '') {
             var labelEventElement = labelElements[i];
