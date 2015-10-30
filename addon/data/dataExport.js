@@ -694,10 +694,14 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         });
         return null;
       }
-      var data = JSON.parse(xhr.responseText);
       var text = "";
-      for (var i = 0; i < data.length; i++) {
-        text += data[i].message + "\n";
+      if (xhr.responseText) {
+        var data = JSON.parse(xhr.responseText);
+        for (var i = 0; i < data.length; i++) {
+          text += data[i].message + "\n";
+        }
+      } else {
+        text = "Network error, offline or timeout";
       }
       vm.exportResult({
         isWorking: false,
