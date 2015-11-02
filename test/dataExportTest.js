@@ -84,9 +84,9 @@ function* dataExportTest() {
   setQuery("select Id, shipp", "", " from Account");
   assertEquals("select Id, shipp from Account", queryInput.value);
   assertEquals("Account fields:", vm.autocompleteTitle());
-  assertEquals(["ShippingStreet", "ShippingCity", "ShippingState", "ShippingPostalCode", "ShippingCountry", "ShippingLatitude", "ShippingLongitude", "ShippingAddress"], getValues(vm.autocompleteResults()));
+  assertEquals(["ShippingStreet", "ShippingCity", "ShippingState", "ShippingPostalCode", "ShippingCountry", "ShippingLatitude", "ShippingLongitude", "ShippingGeocodeAccuracy", "ShippingAddress"], getValues(vm.autocompleteResults()));
   vm.queryAutocompleteHandler({ctrlSpace: true});
-  assertEquals("select Id, ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry, ShippingLatitude, ShippingLongitude, ShippingAddress,  from Account", queryInput.value);
+  assertEquals("select Id, ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry, ShippingLatitude, ShippingLongitude, ShippingGeocodeAccuracy, ShippingAddress,  from Account", queryInput.value);
   
   // Autocomplete relationship field in SELECT
   setQuery("select Id, OWNE", "", " from Account");
@@ -265,7 +265,7 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
   assertEquals([
-    ["", "Name", "Checkbox__c", "Number__c"],
+    ["_", "Name", "Checkbox__c", "Number__c"],
     [{type: "Inspector_Test__c"}, "test1", false, 100.01],
     [{type: "Inspector_Test__c"}, "test2", true, 200.02],
     [{type: "Inspector_Test__c"}, "test3", false, 300.03],
@@ -276,11 +276,11 @@ function* dataExportTest() {
   // Copy Excel
   assertEquals(true, vm.canCopy());
   vm.copyAsExcel();
-  assertEquals('""\t"Name"\t"Checkbox__c"\t"Number__c"\r\n"[Inspector_Test__c]"\t"test1"\t"false"\t"100.01"\r\n"[Inspector_Test__c]"\t"test2"\t"true"\t"200.02"\r\n"[Inspector_Test__c]"\t"test3"\t"false"\t"300.03"\r\n"[Inspector_Test__c]"\t"test4"\t"true"\t"400.04"', clipboardValue);
+  assertEquals('"_"\t"Name"\t"Checkbox__c"\t"Number__c"\r\n"[Inspector_Test__c]"\t"test1"\t"false"\t"100.01"\r\n"[Inspector_Test__c]"\t"test2"\t"true"\t"200.02"\r\n"[Inspector_Test__c]"\t"test3"\t"false"\t"300.03"\r\n"[Inspector_Test__c]"\t"test4"\t"true"\t"400.04"', clipboardValue);
 
   // Format CSV
   vm.copyAsCsv();
-  assertEquals('"","Name","Checkbox__c","Number__c"\r\n"[Inspector_Test__c]","test1","false","100.01"\r\n"[Inspector_Test__c]","test2","true","200.02"\r\n"[Inspector_Test__c]","test3","false","300.03"\r\n"[Inspector_Test__c]","test4","true","400.04"', clipboardValue);
+  assertEquals('"_","Name","Checkbox__c","Number__c"\r\n"[Inspector_Test__c]","test1","false","100.01"\r\n"[Inspector_Test__c]","test2","true","200.02"\r\n"[Inspector_Test__c]","test3","false","300.03"\r\n"[Inspector_Test__c]","test4","true","400.04"', clipboardValue);
 
   // Format JSON
   vm.copyAsJson();
@@ -301,7 +301,7 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
   assertEquals([
-    ["", "Name", "Lookup__r", "Lookup__r.Name"],
+    ["_", "Name", "Lookup__r", "Lookup__r.Name"],
     [{type: "Inspector_Test__c"}, "test1", null, null],
     [{type: "Inspector_Test__c"}, "test2", {type: "Inspector_Test__c"}, "test1"],
     [{type: "Inspector_Test__c"}, "test3", null, null],

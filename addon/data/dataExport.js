@@ -563,7 +563,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     We don't care, because we don't need a stable set of columns for our use case.
     */
     var columnIdx = new Map();
-    var header = [""];
+    var header = ["_"];
     var table = [];
     function discoverColumns(record, prefix, row) {
       for (var field in record) {
