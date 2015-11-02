@@ -1,11 +1,17 @@
 * {
   box-sizing: border-box;
 }
+html {
+  height: 100%;
+}
 body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 11px;
   overflow: hidden;
-  margin-top: 0;
+  margin: 0 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 #user-info {
   background-color: #1797c0;
@@ -14,62 +20,104 @@ body {
   border-radius: 0 0 10px 10px;
   margin-bottom: 8px;
 }
-textarea {
-  display:block;
-  width: 100%;
-  resize: vertical;
-  white-space: pre;
-  word-wrap: normal;
-}
 #result-box {
   margin-top: 3px;
   overflow: auto;
 }
-#data {
-  height:17em;
+.conf-section {
+  display: flex;
+  flex-direction: row;
+}
+@media (max-width: 670px) {
+  .conf-section {
+    display: block;
+  }
+}
+.conf-subsection {
+  flex-grow: 1;
+  flex-basis: 0;
+}
+.conf-label, .columns-label {
+  font-weight: bold;
+  color: #4a4a56;
+}
+.conf-label {
+  display: inline-block;
+  text-align: right;
+  width: 90px;
+  padding-right: 1em;
+}
+@media (max-width: 670px) {
+  .columns-label {
+    display: inline-block;
+    text-align: right;
+    width: 90px;
+    padding-right: 1em;
+  }
+}
+.conf-value {
+  display: inline-block;
+}
+.conf-line textarea, .conf-line input[type=text], .conf-line select {
+  width: 200px;
+}
+.conf-line {
   margin-top: 3px;
 }
+.conf-error {
+  color: #a00;
+  margin: 5px;
+}
+.confError {
+  box-shadow: 0 0 4px 2px #a00;
+}
+.columns-mapping {
+}
+.columns-mapping .conf-label {
+  display: block;
+}
+.columns-mapping .conf-value {
+  overflow: auto;
+  display: block;
+  padding: 5px;
+  max-height: 150px;
+}
+#data {
+  resize: none;
+  white-space: pre;
+  word-wrap: normal;
+  height: auto;
+  overflow: hidden;
+  text-align: center;
+  color: #777;
+  padding: 1.5em;
+  font: inherit;
+}
 #import-result {
+  display:block;
+  width: 100%;
+  resize: none;
+  white-space: pre;
+  word-wrap: normal;
   height: calc(100% - 2px);
   resize: none;
-}
-.area {
-  background-color: #F8F8F8;
-  padding: 3px;
-  border-radius: 5px;
-  border: 1px solid #E0E3E5;
-  border-top: 3px solid #1797C0;
 }
 h1 {
   font-size: 1.2em;
   margin: 0px;
   display: inline;
 }
-.action-arrow {
-  text-align: center;
+.status-group {
+  margin-top: 3px;
 }
-.arrow-body {
-  background-color: green;
-  width: 100px;
-  margin: 0 auto;
-  padding-top: 5px;
-}
-.arrow-head {
-  border-left: 50px solid transparent;
-  border-right: 50px solid transparent;
-  border-top: 15px solid green;
-  width: 0;
-  margin: 0 auto -8px;
-  position: relative;
-}
-.area label {
+.status-group label {
   font-weight: bold;
   color: #4a4a56;
-  padding-left: 15px;
+  padding-right: 15px;
   white-space: nowrap;
 }
-.area * {
-  vertical-align: middle
+* {
+  vertical-align: middle;
 }
 #import-help-btn {
   float: right;
@@ -80,17 +128,12 @@ h1 {
   left: -15px;
   top: -15px;
 }
-.area label.statusGroupEmpty {
+label.statusGroupEmpty {
   color: lightgray;
   font-weight: normal;
 }
 .batch-size {
   width: 3.4em;
-}
-.cancel-btn {
-  float: right;
-  height: 1.3em;
-  border: 1px solid gray;
 }
 .char-btn {
   color: white;

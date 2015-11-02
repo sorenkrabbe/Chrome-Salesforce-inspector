@@ -739,8 +739,8 @@ A table that contains millions of records will freeze the browser if we try to r
 Therefore we implement a table within a scrollable area, where the cells are only rendered, when they are scrolled into view.
 
 Limitations:
-* It is not possible to select the contents of the table outside the rendered area. The user will need to use the Excel or CSV formats to do that.
-* Since we initially estimate the sice of each cell and then update as we render them, the table will sometimes "jump" as the user scrolls.
+* It is not possible to select or search the contents of the table outside the rendered area. The user will need to copy to Excel or CSV to do that.
+* Since we initially estimate the size of each cell and then update as we render them, the table will sometimes "jump" as the user scrolls.
 * There is no line wrapping within the cells. A cell with a lot of text will be very wide.
 
 Implementation:
@@ -753,11 +753,11 @@ The initial estimate of the height of each row should be large enough to ensure 
 We only measure the current size at the end of each render, to minimize the number of synchronous layouts the browser needs to make.
 We support adding new rows to the end of the table, and new cells to the end of a row, but not deleting existing rows, and we do not reduce the height of a row if the existing content changes.
 In addition to keeping track of the height of each cell, we keep track of the total height in order to adjust the height of the scrollable area, and we keep track of the position of the scrolled area.
-After a scroll we search for the position of the new rendered area using the position of the old scrolled area, which should be the least amound of work when the user scrolls in one direction.
+After a scroll we search for the position of the new rendered area using the position of the old scrolled area, which should be the least amount of work when the user scrolls in one direction.
 The table must have at least one row, since the code keeps track of the first rendered row.
+We assume that the height of the cells we measure sum up to the height of the table.
 We do the exact same logic for columns, as we do for rows.
 We assume that the size of a cell is not influenced by the size of other cells. Therefore we style cells with `white-space: pre`.
-We assume that the height of the cells we measure sum up to the height of the table.
 */
 function initScrollTable(element, dataObs, resizeObs) {
   var scroller = document.createElement("div");
