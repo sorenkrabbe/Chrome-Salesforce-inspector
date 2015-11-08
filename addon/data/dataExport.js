@@ -44,7 +44,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       // Trigger the oncopy event
       var success = document.execCommand("copy");
       if (!success) {
-        throw "execCommand(copy) returned false";
+        alert("Copy failed");
       }
     } finally {
       document.body.removeChild(temp);
@@ -743,6 +743,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         exportedData: null
       });
     }));
+    vm.resultsFilter("");
     vm.exportResult({
       isWorking: true,
       exportStatus: "Exporting...",
