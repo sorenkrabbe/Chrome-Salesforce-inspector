@@ -4,6 +4,7 @@ var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 var options = args.options;
 orgId = args.orgId;
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+  "use strict";
   session = message;
   var popupWin = window;
 
@@ -72,7 +73,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   initScrollTable(
     document.querySelector("#result-box"),
-    vm.exportResult,
+    ko.computed(function() { return vm.exportResult().exportedData; }),
     ko.computed(function() { return vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth(); })
   );
 
@@ -80,7 +81,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   function recalculateHeight() {
     vm.resultBoxOffsetTop(resultBox.offsetTop);
   }
-  if (!this.webkitURL) {
+  if (!window.webkitURL) {
     // Firefox
     // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
     new MutationObserver(recalculateHeight).observe(queryInput, {attributes: true});
@@ -108,6 +109,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 }
 
 function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard) {
+  "use strict";
   options = options || {};
 
   var vm = {
@@ -127,6 +129,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     selectedHistoryEntry: ko.observable(),
     sobjectName: ko.observable(""),
     expandAutocomplete: ko.observable(false),
+    resultsFilter: ko.observable(""),
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
     },
@@ -155,33 +158,16 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
       return vm.exportResult().exportedData != null;
     },
     copyAsExcel: function() {
-      copyToClipboard(csvSerialize("\t"));
+      copyToClipboard(vm.exportResult().exportedData.csvSerialize("\t"));
     },
     copyAsCsv: function() {
-      copyToClipboard(csvSerialize(","));
+      copyToClipboard(vm.exportResult().exportedData.csvSerialize(","));
     },
     copyAsJson: function() {
       copyToClipboard(JSON.stringify(vm.exportResult().exportedData.records, null, "  "));
     },
     stopExport: stopExport
   };
-
-  function csvSerialize(separator) {
-    var table = vm.exportResult().exportedData.table;
-    return table.map(function(row) {
-      return row.map(function(value1) {
-        var value2;
-        if (typeof value1 == "object" && value1 != null && value1.attributes && value1.attributes.type) {
-          value2 = "[" + value1.attributes.type + "]";
-        } else if (value1 == null) {
-          value2 = "";
-        } else {
-          value2 = "" + value1;
-        }
-        return "\"" + value2.split("\"").join("\"\"") + "\"";
-      }).join(separator);
-    }).join("\r\n");
-  }
 
   function spinFor(promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
@@ -457,9 +443,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
           ar.push({value: "false", title: "false", suffix: " "});
         }
         if (field.type == "date" || field.type == "datetime") {
-          function pad(n, d) {
-            return ("000" + n).slice(-d);
-          }
+          let pad = (n, d) => ("000" + n).slice(-d);
           var d = new Date();
           if (field.type == "date") {
             ar.push({value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2), title: "Today", suffix: " "});
@@ -564,7 +548,6 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     */
     var columnIdx = new Map();
     var header = ["_"];
-    var table = [];
     function discoverColumns(record, prefix, row) {
       for (var field in record) {
         if (field == "attributes") {
@@ -577,10 +560,11 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         } else {
           c = header.length;
           columnIdx.set(column, c);
-          for (var r = 0; r < table.length; r++) {
-            table[r].push(undefined);
+          for (var r = 0; r < rt.table.length; r++) {
+            rt.table[r].push(undefined);
           }
           header[c] = column;
+          rt.colVisibilities.push(true);
         }
         row[c] = record[field];
         if (typeof record[field] == "object" && record[field] != null) {
@@ -588,25 +572,65 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         }
       }
     }
-    return {
+    function cellToString(cell) {
+      if (cell == null) {
+        return "";
+      } else if (typeof cell == "object" && cell.attributes && cell.attributes.type) {
+        return "[" + cell.attributes.type + "]";
+      } else {
+        return "" + cell;
+      }
+    }
+    let isVisible = (row, filter) => !filter || row.some(cell => cellToString(cell).toLowerCase().includes(filter.toLowerCase()));
+    let rt = {
       records: [],
-      table: table,
+      table: [],
+      rowVisibilities: [],
+      colVisibilities: [true],
       isTooling: false,
       totalSize: -1,
       addToTable: function(expRecords) {
-        this.records = this.records.concat(expRecords);
-        if (table.length == 0 && expRecords.length > 0) {
-          table.push(header);
+        rt.records = rt.records.concat(expRecords);
+        if (rt.table.length == 0 && expRecords.length > 0) {
+          rt.table.push(header);
+          rt.rowVisibilities.push(true);
         }
+        var filter = vm.resultsFilter();
         for (var i = 0; i < expRecords.length; i++) {
           var record = expRecords[i];
           var row = new Array(header.length);
           row[0] = record;
-          table.push(row);
+          rt.table.push(row);
+          rt.rowVisibilities.push(isVisible(row, filter));
           discoverColumns(record, "", row);
+        }
+      },
+      csvSerialize: separator => rt.table.map(row => row.map(cell => "\"" + cellToString(cell).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n"),
+      updateVisibility: function() {
+        let filter = vm.resultsFilter();
+        for (let r = 1 /* always show header */; r < rt.table.length; r++) {
+          rt.rowVisibilities[r] = isVisible(rt.table[r], filter);
+        }
+      },
+      renderCell: function(cell, td) {
+        if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
+          var a = document.createElement("a");
+          a.href = "about:blank";
+          a.title = "Show all data";
+          a.addEventListener("click", function(e) {
+            e.preventDefault();
+            showAllData({recordAttributes: this.attributes, useToolingApi: vm.exportResult().isTooling});
+          });
+          a.textContent = cell.attributes.type;
+          td.appendChild(a);
+        } else if (cell == null) {
+          td.textContent = "";
+        } else {
+          td.textContent = cell;
         }
       }
     };
+    return rt;
   }
 
   vm.queryTooling.subscribe(function() {
@@ -731,6 +755,22 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     exportProgress.abort({records: [], done: true, totalSize: -1});
   }
 
+  vm.resultsFilter.subscribe(function() {
+    let exportResult = vm.exportResult();
+    if (exportResult.exportedData == null) {
+      return;
+    }
+    // Recalculate visibility
+    exportResult.exportedData.updateVisibility();
+    // Notify about the change
+    vm.exportResult({
+      isWorking: exportResult.isWorking,
+      exportStatus: exportResult.exportStatus,
+      exportError: exportResult.exportError,
+      exportedData: exportResult.exportedData
+    });
+  });
+
   return vm;
 }
 
@@ -752,14 +792,31 @@ However since we never schrink the height of a row, we never render too few rows
 The initial estimate of the height of each row should be large enough to ensure we don't render too many rows in our initial render.
 We only measure the current size at the end of each render, to minimize the number of synchronous layouts the browser needs to make.
 We support adding new rows to the end of the table, and new cells to the end of a row, but not deleting existing rows, and we do not reduce the height of a row if the existing content changes.
+Each row may be visible or hidden.
 In addition to keeping track of the height of each cell, we keep track of the total height in order to adjust the height of the scrollable area, and we keep track of the position of the scrolled area.
 After a scroll we search for the position of the new rendered area using the position of the old scrolled area, which should be the least amount of work when the user scrolls in one direction.
 The table must have at least one row, since the code keeps track of the first rendered row.
 We assume that the height of the cells we measure sum up to the height of the table.
 We do the exact same logic for columns, as we do for rows.
 We assume that the size of a cell is not influenced by the size of other cells. Therefore we style cells with `white-space: pre`.
+
+@param element A DOM element to render the table within.
+@param dataObs An observable that changes whenever data in the table changes.
+@param resizeObs An observable that changes whenever the size of viewport changes.
+
+initScrollTable(DOMElement element, Observable<Table> dataObs, Observable<void> resizeObs);
+interface Table {
+  Cell[][] table; // a two-dimensional array of table rows and cells
+  boolean[] rowVisibilities; // For each row, true if it is visible, or false if it is hidden
+  boolean[] colVisibilities; // For each column, true if it is visible, or false if it is hidden
+  void renderCell(Cell cell, DOMElement element); // Render cell within element
+}
+interface Cell {
+  // Anything, passed to the renderCell function
+}
 */
 function initScrollTable(element, dataObs, resizeObs) {
+  "use strict";
   var scroller = document.createElement("div");
   scroller.className = "scrolltable-scroller";
   element.appendChild(scroller);
@@ -774,26 +831,29 @@ function initScrollTable(element, dataObs, resizeObs) {
   var headerRows = 1; // constant: The number of header rows
   var headerCols = 0; // constant: The number of header columns
 
-  var rowHeights = [];
+  var rowHeights = []; // The height in pixels of each row
+  var rowVisible = []; // The visibility of each row. 0 = hidden, 1 = visible
   var rowCount = 0;
-  var totalHeight = 0;
+  var totalHeight = 0; // The sum of heights of visible cells
   var firstRowIdx = 0; // The index of the first rendered row
   var firstRowTop = 0; // The distance from the top of the table to the top of the first rendered row
   var lastRowIdx = 0; // The index of the row below the last rendered row
   var lastRowTop = 0; // The distance from the top of the table to the bottom of the last rendered row (the top of the row below the last rendered row)
-  var colWidths = [];
+  var colWidths = []; // The width in pixels of each column
+  var colVisible = []; // The visibility of each column. 0 = hidden, 1 = visible
   var colCount =  0;
-  var totalWidth = 0;
+  var totalWidth = 0; // The sum of widths of visible cells
   var firstColIdx = 0; // The index of the first rendered column
   var firstColLeft = 0; // The distance from the left of the table to the left of the first rendered column
   var lastColIdx = 0; // The index of the column to the right of the last rendered column
-  var lastRowLeft = 0; // The distance from the left of the table to the right of the last rendered column (the left of the row below the last rendered row)
+  var lastColLeft = 0; // The distance from the left of the table to the right of the last rendered column (the left of the column after the last rendered column)
 
   function dataChange() {
-    var data = dataObs().exportedData;
-    if (data == null || data.table.length == 0) {
+    var data = dataObs();
+    if (data == null || data.rowVisibilities.length == 0 || data.colVisibilities.length == 0) {
       // First render, or table was cleared
       rowHeights = [];
+      rowVisible = [];
       rowCount = 0;
       totalHeight = 0;
       firstRowIdx = 0;
@@ -802,41 +862,52 @@ function initScrollTable(element, dataObs, resizeObs) {
       lastRowTop = 0;
 
       colWidths = [];
+      colVisible = [];
       colCount =  0;
       totalWidth = 0;
       firstColIdx = 0;
       firstColLeft = 0;
       lastColIdx = 0;
-      lastRowLeft = 0;
+      lastColLeft = 0;
       render(data, {force: true});
     } else {
-      // Rows or columns were added to an existing table
-      var rowsAdded = false;
-      var newRowCount = data.table.length;
-      if (newRowCount > rowCount) {
-        for (var r = rowCount; r < newRowCount; r++) {
-          rowHeights[r] = initialRowHeight;
-          totalHeight += initialRowHeight;
-        }
-        rowsAdded = true;
-        rowCount = newRowCount;
+      // Data or visibility was changed
+      var newRowCount = data.rowVisibilities.length;
+      for (var r = rowCount; r < newRowCount; r++) {
+        rowHeights[r] = initialRowHeight;
+        rowVisible[r] = 0;
       }
-      var colsAdded = false;
-      var newColCount = data.table[0].length;
-      if (newColCount > colCount) {
-        for (var c = colCount; c < newColCount; c++) {
-          colWidths[c] = initialColWidth;
-          totalWidth += initialColWidth;
+      rowCount = newRowCount;
+      for (var r = 0; r < rowCount; r++) {
+        var newVisible = Number(data.rowVisibilities[r]);
+        var visibilityChange = newVisible - rowVisible[r];
+        totalHeight += visibilityChange * rowHeights[r];
+        if (r < firstRowIdx) {
+          firstRowTop += visibilityChange * rowHeights[r];
         }
-        colsAdded = true;
-        colCount = newColCount;
+        rowVisible[r] = newVisible;
       }
-      render(data, {rowsAdded: rowsAdded, colsAdded: colsAdded});
+      var newColCount = data.colVisibilities.length;
+      for (var c = colCount; c < newColCount; c++) {
+        colWidths[c] = initialColWidth;
+        colVisible[c] = 0;
+      }
+      colCount = newColCount;
+      for (var c = 0; c < colCount; c++) {
+        var newVisible = Number(data.colVisibilities[c]);
+        var visibilityChange = newVisible - colVisible[c];
+        totalWidth += visibilityChange * colWidths[c];
+        if (c < firstColIdx) {
+          firstColTop += visibilityChange * colWidths[c];
+        }
+        colVisible[c] = newVisible;
+      }
+      render(data, {force: true});
     }
   }
 
   function viewportChange() {
-    render(dataObs().exportedData, {});
+    render(dataObs(), {});
   }
 
   function render(data, options) {
@@ -852,42 +923,38 @@ function initScrollTable(element, dataObs, resizeObs) {
     var offsetHeight = scroller.offsetHeight;
     var offsetWidth = scroller.offsetWidth;
 
-    if (!options.force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || (lastRowIdx == rowCount && !options.rowsAdded)) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || (lastColIdx == colCount && !options.colsAdded))) {
-      if (options.rowsAdded || options.colsAdded) {
-        scrolled.style.height = totalHeight + "px";
-        scrolled.style.width = totalWidth + "px";
-      }
+    if (!options.force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || lastRowIdx == rowCount) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || lastColIdx == colCount)) {
       return;
     }
     console.log("render");
 
     while (firstRowTop < scrollTop - bufferHeight && firstRowIdx < rowCount - 1) {
-      firstRowTop += rowHeights[firstRowIdx];
+      firstRowTop += rowVisible[firstRowIdx] * rowHeights[firstRowIdx];
       firstRowIdx++;
     }
     while (firstRowTop > scrollTop - bufferHeight && firstRowIdx > 0) {
       firstRowIdx--;
-      firstRowTop -= rowHeights[firstRowIdx];
+      firstRowTop -= rowVisible[firstRowIdx] * rowHeights[firstRowIdx];
     }
     while (firstColLeft < scrollLeft - bufferWidth && firstColIdx < colCount - 1) {
-      firstColLeft += colWidths[firstColIdx];
+      firstColLeft += colVisible[firstColIdx] * colWidths[firstColIdx];
       firstColIdx++;
     }
     while (firstColLeft > scrollLeft - bufferWidth && firstColIdx > 0) {
       firstColIdx--;
-      firstColLeft -= colWidths[firstColIdx];
+      firstColLeft -= colVisible[firstColIdx] * colWidths[firstColIdx];
     }
 
     lastRowIdx = firstRowIdx;
     lastRowTop = firstRowTop;
     while (lastRowTop < scrollTop + offsetHeight + bufferHeight && lastRowIdx < rowCount) {
-      lastRowTop += rowHeights[lastRowIdx];
+      lastRowTop += rowVisible[lastRowIdx] * rowHeights[lastRowIdx];
       lastRowIdx++;
     }
     lastColIdx = firstColIdx;
     lastColLeft = firstColLeft;
     while (lastColLeft < scrollLeft + offsetWidth + bufferWidth && lastColIdx < colCount) {
-      lastColLeft += colWidths[lastColIdx];
+      lastColLeft += colVisible[lastColIdx] * colWidths[lastColIdx];
       lastColIdx++;
     }
 
@@ -896,10 +963,17 @@ function initScrollTable(element, dataObs, resizeObs) {
     scrolled.style.width = totalWidth + "px";
 
     var table = document.createElement("table");
+    var cellsVisible = false;
     for (var r = firstRowIdx; r < lastRowIdx; r++) {
+      if (rowVisible[r] == 0) {
+        continue;
+      }
       var row = data.table[r];
       var tr = document.createElement("tr");
       for (var c = firstColIdx; c < lastColIdx; c++) {
+        if (colVisible[c] == 0) {
+          continue;
+        }
         var cell = row[c];
         var td = document.createElement("td");
         td.className = "scrolltable-cell";
@@ -908,22 +982,9 @@ function initScrollTable(element, dataObs, resizeObs) {
         }
         td.style.minWidth = colWidths[c] + "px";
         td.style.minHeight = rowHeights[r] + "px";
-        if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
-          var a = document.createElement("a");
-          a.href = "about:blank";
-          a.title = "Show all data";
-          a.addEventListener("click", function(e) {
-            e.preventDefault();
-            showAllData({recordAttributes: this.attributes, useToolingApi: data.isTooling});
-          }.bind(cell));
-          a.textContent = cell.attributes.type;
-          td.appendChild(a);
-        } else if (cell == null) {
-          td.textContent = "";
-        } else {
-          td.textContent = cell;
-        }
+        data.renderCell(cell, td);
         tr.appendChild(td);
+        cellsVisible = true;
       }
       table.appendChild(tr);
     }
@@ -931,25 +992,33 @@ function initScrollTable(element, dataObs, resizeObs) {
     table.style.left = firstColLeft + "px";
     scrolled.appendChild(table);
     // Before this point we invalidate style and layout. After this point we recalculate style and layout, and we do not invalidate them again.
-    tr = table.firstElementChild;
-    for (var r = firstRowIdx; r < lastRowIdx; r++) {
-      var rowRect = tr.firstElementChild.getBoundingClientRect();
-      var oldHeight = rowHeights[r];
-      var newHeight = Math.max(oldHeight, rowRect.height);
-      rowHeights[r] = newHeight;
-      totalHeight += newHeight - oldHeight;
-      lastRowTop += newHeight - oldHeight;
-      tr = tr.nextElementSibling;
-    }
-    td = table.firstElementChild.firstElementChild;
-    for (var c = firstColIdx; c < lastColIdx; c++) {
-      var colRect = td.getBoundingClientRect();
-      var oldWidth = colWidths[c];
-      var newWidth = Math.max(oldWidth, colRect.width);
-      colWidths[c] = newWidth;
-      totalWidth += newWidth - oldWidth;
-      lastColLeft += newWidth - oldWidth;
-      td = td.nextElementSibling;
+    if (cellsVisible) {
+      tr = table.firstElementChild;
+      for (var r = firstRowIdx; r < lastRowIdx; r++) {
+        if (rowVisible[r] == 0) {
+          continue;
+        }
+        var rowRect = tr.firstElementChild.getBoundingClientRect();
+        var oldHeight = rowHeights[r];
+        var newHeight = Math.max(oldHeight, rowRect.height);
+        rowHeights[r] = newHeight;
+        totalHeight += newHeight - oldHeight;
+        lastRowTop += newHeight - oldHeight;
+        tr = tr.nextElementSibling;
+      }
+      td = table.firstElementChild.firstElementChild;
+      for (var c = firstColIdx; c < lastColIdx; c++) {
+        if (colVisible[c] == 0) {
+          continue;
+        }
+        var colRect = td.getBoundingClientRect();
+        var oldWidth = colWidths[c];
+        var newWidth = Math.max(oldWidth, colRect.width);
+        colWidths[c] = newWidth;
+        totalWidth += newWidth - oldWidth;
+        lastColLeft += newWidth - oldWidth;
+        td = td.nextElementSibling;
+      }
     }
   }
 

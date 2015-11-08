@@ -258,6 +258,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   yield waitForSpinner();
@@ -272,19 +274,51 @@ function* dataExportTest() {
     [{type: "Inspector_Test__c"}, "test4", true, 400.04]
   ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
   assertEquals(null, vm.exportResult().exportError);
+  assertEquals([true, true, true, true, true], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
 
   // Copy Excel
   assertEquals(true, vm.canCopy());
   vm.copyAsExcel();
   assertEquals('"_"\t"Name"\t"Checkbox__c"\t"Number__c"\r\n"[Inspector_Test__c]"\t"test1"\t"false"\t"100.01"\r\n"[Inspector_Test__c]"\t"test2"\t"true"\t"200.02"\r\n"[Inspector_Test__c]"\t"test3"\t"false"\t"300.03"\r\n"[Inspector_Test__c]"\t"test4"\t"true"\t"400.04"', clipboardValue);
 
-  // Format CSV
+  // Copy CSV
   vm.copyAsCsv();
   assertEquals('"_","Name","Checkbox__c","Number__c"\r\n"[Inspector_Test__c]","test1","false","100.01"\r\n"[Inspector_Test__c]","test2","true","200.02"\r\n"[Inspector_Test__c]","test3","false","300.03"\r\n"[Inspector_Test__c]","test4","true","400.04"', clipboardValue);
 
-  // Format JSON
+  // Copy JSON
   vm.copyAsJson();
   assert(clipboardValue.indexOf("Inspector_Test__c") > -1);
+
+  // Filter results
+  vm.resultsFilter("TRU");
+  assertEquals(false, vm.exportResult().isWorking);
+  assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
+  assertEquals([
+    ["_", "Name", "Checkbox__c", "Number__c"],
+    [{type: "Inspector_Test__c"}, "test1", false, 100.01],
+    [{type: "Inspector_Test__c"}, "test2", true, 200.02],
+    [{type: "Inspector_Test__c"}, "test3", false, 300.03],
+    [{type: "Inspector_Test__c"}, "test4", true, 400.04]
+  ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
+  assertEquals(null, vm.exportResult().exportError);
+  assertEquals([true, false, true, false, true], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
+
+  // Clear filter
+  vm.resultsFilter("");
+  assertEquals(false, vm.exportResult().isWorking);
+  assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
+  assertEquals([
+    ["_", "Name", "Checkbox__c", "Number__c"],
+    [{type: "Inspector_Test__c"}, "test1", false, 100.01],
+    [{type: "Inspector_Test__c"}, "test2", true, 200.02],
+    [{type: "Inspector_Test__c"}, "test3", false, 300.03],
+    [{type: "Inspector_Test__c"}, "test4", true, 400.04]
+  ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
+  assertEquals(null, vm.exportResult().exportError);
+  assertEquals([true, true, true, true, true], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
 
   // Export relationships
   queryInput.value = "select Name, Lookup__r.Name from Inspector_Test__c order by Name";
@@ -294,6 +328,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   yield waitForSpinner();
@@ -308,6 +344,8 @@ function* dataExportTest() {
     [{type: "Inspector_Test__c"}, "test4", {type: "Inspector_Test__c"}, "test3"]
   ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
   assertEquals(null, vm.exportResult().exportError);
+  assertEquals([true, true, true, true, true], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
 
   // Export error
   queryInput.value = "select UnknownField from Inspector_Test__c";
@@ -326,6 +364,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   yield waitForSpinner();
@@ -333,6 +373,8 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("No data exported.", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   // Export count
@@ -343,6 +385,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   yield waitForSpinner();
@@ -350,6 +394,8 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("No data exported. 4 record(s).", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   // Stop export
@@ -360,6 +406,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   vm.stopExport();
@@ -368,6 +416,8 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("No data exported.", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   // Set up test records
@@ -381,6 +431,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   yield waitForSpinner();
@@ -388,6 +440,8 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("Exported 3000 record(s).", vm.exportResult().exportStatus);
   assertEquals(3001, vm.exportResult().exportedData.table.length);
+  assertEquals(3001, vm.exportResult().exportedData.rowVisibilities.length);
+  assertEquals(2, vm.exportResult().exportedData.colVisibilities.length);
   assertEquals(null, vm.exportResult().exportError);
 
   // Set up test records
@@ -402,6 +456,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   yield waitForSpinner();
@@ -409,6 +465,8 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assert(vm.exportResult().exportStatus.indexOf("Exported") > -1);
   assert(vm.exportResult().exportedData.table.length > 3000);
+  assert(vm.exportResult().exportedData.rowVisibilities.length > 3000);
+  assertEquals(2, vm.exportResult().exportedData.colVisibilities.length);
   assertEquals(null, vm.exportResult().exportError);
 
   vm.queryAll(false);
@@ -422,6 +480,8 @@ function* dataExportTest() {
   assertEquals(true, vm.exportResult().isWorking);
   assertEquals("Exporting...", vm.exportResult().exportStatus);
   assertEquals([], vm.exportResult().exportedData.table);
+  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
+  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
   assertEquals(null, vm.exportResult().exportError);
 
   yield waitForSpinner();
@@ -429,6 +489,8 @@ function* dataExportTest() {
   assertEquals(false, vm.exportResult().isWorking);
   assert(vm.exportResult().exportStatus.indexOf("Exported") > -1);
   assert(vm.exportResult().exportedData.table.length > 1);
+  assert(vm.exportResult().exportedData.rowVisibilities.length > 1);
+  assertEquals(2, vm.exportResult().exportedData.colVisibilities.length);
   assertEquals(null, vm.exportResult().exportError);
 
   vm.queryTooling(false);
