@@ -23,6 +23,9 @@ body {
 #result-box {
   margin-top: 3px;
   overflow: auto;
+  flex-basis: 0;
+  flex-grow: 1;
+  margin-bottom: 8px;
 }
 .conf-section {
   display: flex;
@@ -92,15 +95,6 @@ body {
   color: #777;
   padding: 1.5em;
   font: inherit;
-}
-#import-result {
-  display:block;
-  width: 100%;
-  resize: none;
-  white-space: pre;
-  word-wrap: normal;
-  height: calc(100% - 2px);
-  resize: none;
 }
 h1 {
   font-size: 1.2em;

@@ -1,13 +1,13 @@
+"use strict";
 function* dataImportTest() {
   console.log("TEST dataImportVm");
 
-  var dataInput = {value: "", selectionStart: 0, selectionEnd: 0};
-  var dataInputVm = {
-    setSelectionRange: function(offsetStart, offsetEnd) { dataInput.selectionStart = offsetStart; dataInput.selectionEnd = offsetEnd; },
-    getValue: function() { return dataInput.value; }
-  };
+  var clipboardValue;
+  function copyToClipboard(value) {
+    clipboardValue = value;
+  }
 
-  var vm = dataImportVm(dataInputVm);
+  var vm = dataImportVm(copyToClipboard);
 
   // Simulate what applyBindings does
   ko.computed(vm.idLookupList);
@@ -35,6 +35,7 @@ function* dataImportTest() {
   }
 
   vm.importType("Inspector_Test__c");
+  vm.importAction("update");
 
   yield waitForSpinner();
 
@@ -58,30 +59,51 @@ function* dataImportTest() {
   vm.importAction("create");
   assertEquals(null, vm.confirmPopup());
   assertEquals(0, vm.activeBatches());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "", hasMore: null}, vm.importResult());
-  vm.dataResultFormat("csv");
-  dataInput.value = '"Name","Checkbox__c","Number__c","Lookup__r:Inspector_Test__c:Name"\r\n"test3","false","300.03",""\r\ntest4,false,400.04,test1\r\ntest5,true,500.05,\r\n"test6","true","600.06","notfound"';
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals(null, vm.importTableResult());
+  vm.setData('"Name","Checkbox__c","Number__c","Lookup__r:Inspector_Test__c:Name"\r\n"test3","false","300.03",""\r\ntest4,false,400.04,test1\r\ntest5,true,500.05,\r\n"test6","true","600.06","notfound"');
+  assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals({
+    table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    rowVisibilities: [true, true, true, true, true],
+    colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.doImport();
   assertEquals({text: "4 records will be imported.", action: undefined}, vm.confirmPopup());
   assertEquals(0, vm.activeBatches());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "", hasMore: null}, vm.importResult());
+  assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals({
+    table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    rowVisibilities: [true, true, true, true, true],
+    colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.confirmPopupNo();
   assertEquals(null, vm.confirmPopup());
   assertEquals(0, vm.activeBatches());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "", hasMore: null}, vm.importResult());
+  assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals({
+    table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    rowVisibilities: [true, true, true, true, true],
+    colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.doImport();
   assertEquals({text: "4 records will be imported.", action: undefined}, vm.confirmPopup());
   assertEquals(0, vm.activeBatches());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "", hasMore: null}, vm.importResult());
+  assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals({
+    table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    rowVisibilities: [true, true, true, true, true],
+    colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.confirmPopupYes();
   assertEquals(null, vm.confirmPopup());
   assertEquals(1, vm.activeBatches());
-  assertEquals({counts: {Queued: 0, Processing: 4, Succeeded: 0, Failed: 0, Canceled: 0}, text: '"Name","Checkbox__c","Number__c","Lookup__r:Inspector_Test__c:Name","__Status","__Id","__Action","__Errors"\r\n"test3","false","300.03","","Processing","","",""\r\n"test4","false","400.04","test1","Processing","","",""\r\n"test5","true","500.05","","Processing","","",""\r\n"test6","true","600.06","notfound","Processing","","",""', hasMore: null}, vm.importResult());
+  assertEquals({Queued: 0, Processing: 4, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals({
+    table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"], ["test3", "false", "300.03", "", "Processing", "", "", ""], ["test4", "false", "400.04", "test1", "Processing", "", "", ""], ["test5", "true", "500.05", "", "Processing", "", "", ""], ["test6", "true", "600.06", "notfound", "Processing", "", "", ""]],
+    rowVisibilities: [true, true, true, true, true],
+    colVisibilities: [true, true, true, true, true, true, true, true]}, vm.importTableResult());
   yield waitForSpinner();
   assertEquals(null, vm.confirmPopup());
   assertEquals(0, vm.activeBatches());
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 3, Failed: 1, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name","Checkbox__c","Number__c","Lookup__r:Inspector_Test__c:Name","__Status","__Id","__Action","__Errors"\r\n"test3","false","300.03","","Succeeded","123456789012345678","Inserted",""\r\n"test4","false","400.04","test1","Succeeded","123456789012345678","Inserted",""\r\n"test5","true","500.05","","Succeeded","123456789012345678","Inserted",""\r\n"test6","true","600.06","notfound","Failed","","","INVALID_FIELD: Foreign key external ID: notfound not found for field Name in entity Inspector_Test__c []"', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 3, Failed: 1}, vm.importCounts());
+  assertEquals([["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"], ["test3", "false", "300.03", "", "Succeeded", "--id--", "Inserted", ""], ["test4", "false", "400.04", "test1", "Succeeded", "--id--", "Inserted", ""], ["test5", "true", "500.05", "", "Succeeded", "--id--", "Inserted", ""], ["test6", "true", "600.06", "notfound", "Failed", "", "", "INVALID_FIELD: Foreign key external ID: notfound not found for field Name in entity Inspector_Test__c []"]], vm.importTableResult().table.map(row => row.map(cell => /^[a-zA-Z0-9]{18}$/.test(cell) ? "--id--" : cell)));
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},

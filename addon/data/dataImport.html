@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Data Import</title>
+  <link rel="stylesheet" href="dataLoad.css">
   <link rel="stylesheet" href="dataImport.css">
 </head>
 <body>
@@ -92,11 +93,11 @@
   <div class="conf-line">
     <span class="conf-label"></span>
     <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>
-    <button data-bind="click: doImport, disable: invalidInput() || isWorking() || importData().counts.Queued == 0">Import</button>
+    <button data-bind="click: doImport, disable: invalidInput() || isWorking() || importCounts().Queued == 0">Import</button>
     <button data-bind="enable: isProcessingQueue, click: stopImport">Cancel queued</button>
-    <button data-bind="enable: importData().counts.Failed > 0, click: retryFailed">Retry failed</button>
-    <label><input type=radio name="data-format" value="excel" data-bind="checked: dataResultFormat"> <span>Excel</span></label>
-    <label><input type=radio name="data-format" value="csv" data-bind="checked: dataResultFormat"> <span>CSV</span></label>
+    <button data-bind="enable: importCounts().Failed > 0, click: retryFailed" style="margin-right: 20px">Retry failed</button>
+    <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy import result to clipboard for pasting into Excel or similar">Copy Excel</button>
+    <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy import result to clipboard for saving as a CSV file">Copy CSV</button>
   </div>
   <div data-bind="visible: showHelp">
     <p>Use for quick one-off data imports.</p>
@@ -108,7 +109,7 @@
           <li>Empty cells insert null values.</li>
           <li>Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>.</li>
           <li>Columns starting with an underscore are ignored.</li>
-          <li>You can use the result of an import to retry failed records. If the input contains a "__Status" column, records marked as "Succeeded" will not be imported.</li>
+          <li>You can resume a previous import by including the "__Status" column in your input.</li>
         </ul>
       </li>
       <li>Select your input format</li>
@@ -120,13 +121,13 @@
   </div>
   <div class="status-group">
     <span class="conf-label">Status</span>
-    <label data-bind="css: {statusGroupEmpty: importData().counts.Queued == 0}"><input type=checkbox data-bind="checked: showStatus.Queued"> <span data-bind="text: importData().counts.Queued"></span> <span>Queued</span></label>
-    <label data-bind="css: {statusGroupEmpty: importData().counts.Processing == 0}"><input type=checkbox data-bind="checked: showStatus.Processing"> <span data-bind="text: importData().counts.Processing"></span> <span>Processing</span></label>
-    <label data-bind="css: {statusGroupEmpty: importData().counts.Succeeded == 0}"><input type=checkbox data-bind="checked: showStatus.Succeeded"> <span data-bind="text: importData().counts.Succeeded"></span> <span>Succeeded</span></label>
-    <label data-bind="css: {statusGroupEmpty: importData().counts.Failed == 0}"><input type=checkbox data-bind="checked: showStatus.Failed"> <span data-bind="text: importData().counts.Failed"></span> <span>Failed</span></label>
+    <label data-bind="css: {statusGroupEmpty: importCounts().Queued == 0}"><input type=checkbox data-bind="checked: showStatus.Queued"> <span data-bind="text: importCounts().Queued"></span> <span>Queued</span></label>
+    <label data-bind="css: {statusGroupEmpty: importCounts().Processing == 0}"><input type=checkbox data-bind="checked: showStatus.Processing"> <span data-bind="text: importCounts().Processing"></span> <span>Processing</span></label>
+    <label data-bind="css: {statusGroupEmpty: importCounts().Succeeded == 0}"><input type=checkbox data-bind="checked: showStatus.Succeeded"> <span data-bind="text: importCounts().Succeeded"></span> <span>Succeeded</span></label>
+    <label data-bind="css: {statusGroupEmpty: importCounts().Failed == 0}"><input type=checkbox data-bind="checked: showStatus.Failed"> <span data-bind="text: importCounts().Failed"></span> <span>Failed</span></label>
   </div>
   <div id="result-box">
-    <textarea id="import-result" readonly data-bind="value: importTextResult()"></textarea>
+    <!-- the scroll table goes here -->
   </div>
   <div data-bind="if: confirmPopup()">
     <div id="confirm-background">
@@ -144,5 +145,6 @@
   <script src="knockout-3.2.0.js"></script>
   <script src="inspector.js"></script>
   <script src="dataImport.js"></script>
+  <script src="scrolltable.js"></script>
 </body>
 </html>

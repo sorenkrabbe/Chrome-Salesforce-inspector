@@ -1,10 +1,10 @@
+"use strict";
 if (!this.isUnitTest) {
 
 var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 var options = args.options;
 orgId = args.orgId;
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
-  "use strict";
   session = message;
   var popupWin = window;
 
@@ -27,30 +27,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     clear: function() { localStorage.removeItem("insextQueryHistory"); }
   };
 
-  function copyToClipboard(value) {
-    // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.
-    // The oncopy event only works on editable elements, e.g. an input field.
-    var temp = document.createElement("input");
-    // The oncopy event only works if there is something selected in the editable element.
-    temp.value = "temp";
-    temp.addEventListener("copy", function(e) {
-      e.clipboardData.setData("text/plain", value);
-      e.preventDefault();
-    });
-    document.body.appendChild(temp);
-    try {
-      // The oncopy event only works if there is something selected in the editable element.
-      temp.select();
-      // Trigger the oncopy event
-      var success = document.execCommand("copy");
-      if (!success) {
-        alert("Copy failed");
-      }
-    } finally {
-      document.body.removeChild(temp);
-    }
-  }
-
   var vm = dataExportVm(options, queryInputVm, queryHistoryStorage, copyToClipboard);
   ko.applyBindings(vm, document.documentElement);
 
@@ -72,7 +48,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   });
 
   initScrollTable(
-    document.querySelector("#result-box"),
+    document.querySelector("#result-table"),
     ko.computed(function() { return vm.exportResult().exportedData; }),
     ko.computed(function() { return vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth(); })
   );
@@ -109,7 +85,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 }
 
 function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard) {
-  "use strict";
   options = options || {};
 
   var vm = {

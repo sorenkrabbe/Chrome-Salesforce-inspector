@@ -1,3 +1,4 @@
+"use strict";
 function* dataExportTest() {
   console.log("TEST dataExportVm");
 

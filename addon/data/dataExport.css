@@ -37,27 +37,9 @@ textarea[hidden] {
   resize: none;
   white-space: pre;
 }
-.scrolltable-scroller {
+#result-table {
   overflow: auto;
   height: 100%;
-}
-.scrolltable-scrolled {
-  position: relative;
-}
-.scrolltable-scrolled table {
-  border-collapse: collapse;
-  position: absolute;
-}
-.scrolltable-cell {
-  border: 1px solid gray;
-  overflow: hidden;
-  padding: 0 1px;
-  background-color: white;
-  white-space: pre;
-  box-sizing: border-box;
-}
-.scrolltable-cell.header {
-  font-weight: bold;
 }
 .area {
   background-color: #F8F8F8;

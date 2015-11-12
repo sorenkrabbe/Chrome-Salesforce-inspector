@@ -1,3 +1,4 @@
+"use strict";
 function assertEquals(expected, actual) {
   var strExpected = JSON.stringify(expected);
   var strActual = JSON.stringify(actual);

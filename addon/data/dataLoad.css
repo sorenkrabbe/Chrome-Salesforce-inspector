@@ -1,0 +1,18 @@
+.scrolltable-scrolled {
+  position: relative;
+}
+.scrolltable-scrolled table {
+  border-collapse: collapse;
+  position: absolute;
+}
+.scrolltable-cell {
+  border: 1px solid gray;
+  overflow: hidden;
+  padding: 0 1px;
+  background-color: white;
+  white-space: pre;
+  box-sizing: border-box;
+}
+.scrolltable-cell.header {
+  font-weight: bold;
+}

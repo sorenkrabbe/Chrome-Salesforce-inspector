@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Data Export</title>
+  <link rel="stylesheet" href="dataLoad.css">
   <link rel="stylesheet" href="dataExport.css">
 </head>
 <body>
@@ -50,7 +51,9 @@
     </span>
     <div id="result-box" data-bind="style: {height: (winInnerHeight() - resultBoxOffsetTop() - 25) + 'px'}">
       <textarea id="result-text" readonly data-bind="text: exportResult().exportError, visible: exportResult().exportError != null"></textarea>
-      <!-- the scroll table goes here -->
+      <div id="result-table">
+        <!-- the scroll table goes here -->
+      </div>
     </div>
   </div>
   <script src="knockout-3.2.0.js"></script>

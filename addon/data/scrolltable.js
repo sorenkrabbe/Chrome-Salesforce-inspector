@@ -1,3 +1,28 @@
+// Copy text to the clipboard, without rendering it, since rendering is slow.
+function copyToClipboard(value) {
+  // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.
+  // The oncopy event only works on editable elements, e.g. an input field.
+  var temp = document.createElement("input");
+  // The oncopy event only works if there is something selected in the editable element.
+  temp.value = "temp";
+  temp.addEventListener("copy", function(e) {
+    e.clipboardData.setData("text/plain", value);
+    e.preventDefault();
+  });
+  document.body.appendChild(temp);
+  try {
+    // The oncopy event only works if there is something selected in the editable element.
+    temp.select();
+    // Trigger the oncopy event
+    var success = document.execCommand("copy");
+    if (!success) {
+      alert("Copy failed");
+    }
+  } finally {
+    document.body.removeChild(temp);
+  }
+}
+
 /*
 A table that contains millions of records will freeze the browser if we try to render the entire table at once.
 Therefore we implement a table within a scrollable area, where the cells are only rendered, when they are scrolled into view.
@@ -24,7 +49,7 @@ We assume that the height of the cells we measure sum up to the height of the ta
 We do the exact same logic for columns, as we do for rows.
 We assume that the size of a cell is not influenced by the size of other cells. Therefore we style cells with `white-space: pre`.
 
-@param element A DOM element to render the table within.
+@param element A scrollable DOM element to render the table within.
 @param dataObs An observable that changes whenever data in the table changes.
 @param resizeObs An observable that changes whenever the size of viewport changes.
 
@@ -39,11 +64,8 @@ interface Cell {
   // Anything, passed to the renderCell function
 }
 */
-function initScrollTable(element, dataObs, resizeObs) {
+function initScrollTable(scroller, dataObs, resizeObs) {
   "use strict";
-  var scroller = document.createElement("div");
-  scroller.className = "scrolltable-scroller";
-  element.appendChild(scroller);
   var scrolled = document.createElement("div");
   scrolled.className = "scrolltable-scrolled";
   scroller.appendChild(scrolled);
@@ -205,7 +227,7 @@ function initScrollTable(element, dataObs, resizeObs) {
           td.className += " header";
         }
         td.style.minWidth = colWidths[c] + "px";
-        td.style.minHeight = rowHeights[r] + "px";
+        td.style.height = rowHeights[r] + "px"; // min-height does not work on table cells, but height acts as min-height
         data.renderCell(cell, td);
         tr.appendChild(td);
         cellsVisible = true;
