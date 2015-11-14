@@ -393,12 +393,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   function spinFor(actionName, promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
     promise
-      .then(null, function(error) {
-        if (error && error.responseText) {
-          error = error.responseText;
-        }
-        console.error(error);
-        vm.errorMessages.push("Error " + actionName + ": " + error);
+      .then(null, function(err) {
+        console.error(err);
+        vm.errorMessages.push("Error " + actionName + ": " + ((err && err.askSalesforceError) || err));
       })
       .then(stopSpinner, stopSpinner);
   }

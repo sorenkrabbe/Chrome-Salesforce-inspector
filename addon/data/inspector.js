@@ -79,14 +79,29 @@ function askSalesforce(url, progressHandler, options) {
     if (options.body) {
       xhr.setRequestHeader('Content-Type', "application/json");
     }
+    xhr.responseType = "json";
     xhr.onreadystatechange = function() {
       if (xhr.readyState == 4) {
         if (xhr.status == 200) {
-          resolve(JSON.parse(xhr.responseText));
+          resolve(xhr.response);
         } else if (xhr.status == 204) {
           resolve(null);
         } else {
-          reject(xhr);
+          console.error("Received error response from Salesforce API", xhr);
+          var text;
+          if (xhr.status == 400 && xhr.response) {
+            try {
+              text = xhr.response.map(err => err.errorCode + ": " + err.message).join("\n");
+            } catch(ex) {
+            }
+          }
+          if (xhr.status == 0) {
+            text = "Network error, offline or timeout";
+          }
+          if (!text) {
+            text = "HTTP error " + xhr.status + " " + xhr.statusText + (xhr.response ? "\n\n" + JSON.stringify(xhr.response) : "");
+          }
+          reject({askSalesforceError: text});
         }
       }
     }

@@ -213,9 +213,9 @@ function apiExploreVm(options, popupWin) {
     vm.textViews(textViews);
     // Don't update selectedTextView. No radio button will be selected, leaving the text area blank.
     // The results can be quite large and take a long time to render, so we only want to render a result once the user has explicitly selected it.
-  }).catch(function(xhr) {
-    console.error(xhr);
-    vm.textViews([{name: "Error", value: (xhr && xhr.responseText) || xhr}]);
+  }).catch(function(err) {
+    console.error(err);
+    vm.textViews([{name: "Error", value: (err && err.askSalesforceError) || err}]);
   }));
 
   function csvSerialize(table, separator) {

@@ -384,8 +384,8 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         var queryMethod = vm.queryTooling() ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
         var acQuery = "select " + field.name + " from " + sobjectDescribe.name + " where " + field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + field.name + " limit 100";
         spinFor(askSalesforce("/services/data/v35.0/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
-          .catch(function(xhr) {
-            vm.autocompleteTitle("Error: " + (xhr && xhr.responseText));
+          .catch(function(err) {
+            vm.autocompleteTitle("Error: " + ((err && err.askSalesforceError) || err));
             return null;
           })
           .then(function queryHandler(data) {
@@ -679,9 +679,9 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         exportedData: exportedData
       });
       return null;
-    }, function(xhr) {
-      if (!xhr || xhr.readyState != 4) {
-        throw xhr; // Not an HTTP error response
+    }, function(err) {
+      if (!err || !err.askSalesforceError) {
+        throw err; // not an askSalesforceError
       }
       if (exportedData.totalSize != -1) {
         // We already got some data. Show it, and indicate that not all data was exported
@@ -693,19 +693,10 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         });
         return null;
       }
-      var text = "";
-      if (xhr.responseText) {
-        var data = JSON.parse(xhr.responseText);
-        for (var i = 0; i < data.length; i++) {
-          text += data[i].message + "\n";
-        }
-      } else {
-        text = "Network error, offline or timeout";
-      }
       vm.exportResult({
         isWorking: false,
         exportStatus: "Error",
-        exportError: text,
+        exportError: err.askSalesforceError,
         exportedData: null
       });
       return null;
