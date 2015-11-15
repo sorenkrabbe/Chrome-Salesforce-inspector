@@ -1,60 +1,62 @@
+"use strict";
+
 var session, orgId;
 
-function loadSetupLinkData(sobjectName) {
-  var objectsPromise = askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix from CustomObject")).then(function(res) {
-    var objectIds = {};
-    res.records.forEach(function(customObject) {
-      objectIds[(customObject.NamespacePrefix ? customObject.NamespacePrefix + "__" : "") + customObject.DeveloperName + "__c"] = customObject.Id.slice(0, -3);
-    });
-    return objectIds;
-  });
-  var fieldsPromise = askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id, DeveloperName, NamespacePrefix, EntityDefinition.QualifiedApiName from CustomField")).then(function(res) {
-    var fieldIds = {};
-    res.records.forEach(function(customField) {
-      // We build the API name from NamespacePrefix and DeveloperName, since we cannot query FullName when we query more than one field.
-      fieldIds[customField.EntityDefinition.QualifiedApiName + "." + (customField.NamespacePrefix ? customField.NamespacePrefix + "__" : "") + customField.DeveloperName + "__c"] = customField.Id.slice(0, -3);
-    });
-    return fieldIds;
-  });
-  return Promise.all([objectsPromise, fieldsPromise]);
-}
-
-function getFieldSetupLink(setupLinkData, sobjectName, fieldName) {
+function openFieldSetup(sobjectName, fieldName) {
+  let w = open(""); // Open the new tab synchronously, to avoid the pop-up blocker, then later redirect it when we have the URL
   if (!fieldName.endsWith("__c")) {
-    var name = fieldName;
-    if (name.substr(-2) == "Id" && name != "Id") {
-      name = name.slice(0, -2);
+    if (fieldName.substr(-2) == "Id" && fieldName != "Id") {
+      fieldName = fieldName.slice(0, -2);
     }
     if (!sobjectName.endsWith("__c")) {
-      return 'https://' + session.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + sobjectName;
+      w.location = "https://" + session.hostname + "/p/setup/field/StandardFieldAttributes/d?id=" + fieldName + "&type=" + sobjectName;
     } else {
-      var objectIds = setupLinkData ? setupLinkData[0] : {};
-      var objectId = objectIds[sobjectName];
-      if (!objectId) {
-        return null;
+      let parts = sobjectName.split("__");
+      let namespacePrefix, developerName;
+      if (parts.length == 2) {
+        namespacePrefix = "";
+        developerName = parts[0];
+      } else { // parts.length == 3
+        namespacePrefix = parts[0];
+        developerName = parts[1];
       }
-      return 'https://' + session.hostname + '/p/setup/field/StandardFieldAttributes/d?id=' + name + '&type=' + objectId;
+      askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
+        .then(res => w.location = "https://" + session.hostname + "/p/setup/field/StandardFieldAttributes/d?id=" + fieldName + "&type=" + res.records[0].Id.slice(0, -3))
+        .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
     }
   } else {
-    var fieldIds = setupLinkData ? setupLinkData[1] : {};
-    var fieldId = fieldIds[sobjectName + '.' + fieldName];
-    if (!fieldId) {
-      return null;
+    let parts = fieldName.split("__");
+    let namespacePrefix, developerName;
+    if (parts.length == 2) {
+      namespacePrefix = "";
+      developerName = parts[0];
+    } else { // parts.length == 3
+      namespacePrefix = parts[0];
+      developerName = parts[1];
     }
-    return 'https://' + session.hostname + '/' + fieldId;
+    askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id from CustomField where EntityDefinition.QualifiedApiName = '" + sobjectName + "' and NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
+      .then(res => w.location = "https://" + session.hostname + "/" + res.records[0].Id.slice(0, -3))
+      .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
   }
 }
 
-function getObjectSetupLink(setupLinkData, sobjectName) {
+function openObjectSetup(sobjectName) {
+  let w = open(""); // Open the new tab synchronously, to avoid the pop-up blocker, then later redirect it when we have the URL
   if (!sobjectName.endsWith("__c")) {
-    return 'https://' + session.hostname + '/p/setup/layout/LayoutFieldList?type=' + sobjectName + "&setupid=" + sobjectName + "Fields";
+    w.location = "https://" + session.hostname + "/p/setup/layout/LayoutFieldList?type=" + sobjectName + "&setupid=" + sobjectName + "Fields";
   } else {
-    var objectIds = setupLinkData ? setupLinkData[0] : {};
-    var objectId = objectIds[sobjectName];
-    if (!objectId) {
-      return null;
+    let parts = sobjectName.split("__");
+    let namespacePrefix, developerName;
+    if (parts.length == 2) {
+      namespacePrefix = "";
+      developerName = parts[0];
+    } else { // parts.length == 3
+      namespacePrefix = parts[0];
+      developerName = parts[1];
     }
-    return 'https://' + session.hostname + '/' + objectId;
+    askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
+      .then(res => w.location = "https://" + session.hostname + "/" + res.records[0].Id.slice(0, -3))
+      .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
   }
 }
 

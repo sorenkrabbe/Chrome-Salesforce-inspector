@@ -1,7 +1,6 @@
 function showStdPageDetails(recordId) {
   var fieldDetailsByLabel = {};
   var metadataResponse = {};
-  var setupLinkData = null;
   return new Promise(function(resolve, reject) {
     chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
       if (message) {
@@ -31,16 +30,7 @@ function showStdPageDetails(recordId) {
   })
   .then(function(res) {
     metadataResponse = res;
-
-    // We don't wait for loadSetupLinkData to resolve. We show the data we have, and add the field setup links once that data arrives
     fieldDetailsReady();
-
-    loadSetupLinkData(metadataResponse.name)
-      .then(function(res) {
-        setupLinkData = res;
-      }, function() {
-        // Don't fail if the user does not have access to the tooling API.
-      });
   });
 
 
@@ -127,9 +117,6 @@ function showFieldDetails(labelElement){
         for (var i = 0; i < fieldDetails.length; i++) {
             var fieldDetail = fieldDetails[i];
             output.appendChild(E('div', [T(fieldDetail.name)]));
-            // /p/setup/layout/LayoutFieldList?type=Account and /01I20000000Mnwf?setupid=CustomObjects
-            //output.inner HTML += '<a href="/p/setup/field/StandardFieldAttributes/d?retURL=' + retUrlEncoded + '&id=' + fieldDetail.name + '&type=' + metadataResponse.name + '" class="name" target="_top">' + fieldDetail.name + '</a> ';
-            //output.inner HTML += '<a href="/_ui/common/lookupFilters/FieldAttributesUi/e?retURL=' + retUrlEncoded + '&Table='+ metadataResponse.name +'&FieldOrColumn=' + fieldDetail.name + '" class="salesforce-inspector-minor">[edit]</a>';
             output.appendChild(
                 E('div', [
                     T(
@@ -149,10 +136,14 @@ function showFieldDetails(labelElement){
             if (fieldDetail.calculatedFormula) {
                 output.appendChild(Ea('div', {'class': 'insext-formula'}, [T(fieldDetail.calculatedFormula)]));
             }
-            var fieldSetupLink = getFieldSetupLink(setupLinkData, metadataResponse.name, fieldDetail.name);
-            if (fieldSetupLink) {
-                output.appendChild(Ea('a', {'href': fieldSetupLink, 'target': '_blank'}, [T('Setup')]));
-            }
+            var fieldSetupLink = Ea('a', {'href': 'about:blank'}, [T('Setup')]);
+            (function(sobjectName, fieldName) {
+                fieldSetupLink.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    openFieldSetup(sobjectName, fieldName);
+                });
+            })(metadataResponse.name, fieldDetail.name);
+            output.appendChild(fieldSetupLink);
         }
     }
     

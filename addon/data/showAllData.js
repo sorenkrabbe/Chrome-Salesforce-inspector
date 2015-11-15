@@ -9,7 +9,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   var objectData = ko.observable(null);
   var recordData = ko.observable(null);
-  var setupLinkData = ko.observable(null);
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -105,8 +104,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     viewLink: function() {
       return recordData() && recordData().Id && "https://" + session.hostname + "/" + recordData().Id;
     },
-    setupLink: function() {
-      return vm.objectName() && getObjectSetupLink(setupLinkData(), vm.objectName());
+    openSetup: function() {
+      return openObjectSetup(vm.objectName());
     },
   };
 
@@ -217,8 +216,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           recordData[fieldVm.fieldDescribe().name] = fieldVm.dataStringValue() == "" ? null : fieldVm.dataStringValue();
         }
       },
-      setupLink: function() {
-        return getFieldSetupLink(setupLinkData(), vm.objectName(), fieldName);
+      openSetup: function() {
+        return openFieldSetup(vm.objectName(), fieldName);
       },
       summary: function() {
         var fieldDescribe = fieldVm.fieldDescribe();
@@ -334,8 +333,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           useToolingApi: false
         });
       },
-      setupLink: function() {
-        return getFieldSetupLink(setupLinkData(), childDescribe.childSObject, childDescribe.field);
+      openSetup: function() {
+        return openFieldSetup(childDescribe.childSObject, childDescribe.field);
       },
       queryList: function() {
         dataExport({query: "select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'"});
@@ -514,11 +513,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         vm.hasEntityParticles(true);
         resortFieldRows();
       }));
-
-    // Fetch field ids to build links to field setup ui pages
-    spinFor("getting setup links", loadSetupLinkData(sobjectInfo.sobjectName).then(function(res) {
-      setupLinkData(res);
-    }));
 
   }));
 
