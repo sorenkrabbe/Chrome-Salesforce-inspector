@@ -109,14 +109,14 @@ function askSalesforce(url, progressHandler, options) {
   });
 }
 
-function askSalesforceSoap(request) {
+function askSalesforceSoap(url, namespace, request) {
   return new Promise(function(resolve, reject) {
     if (!session) {
       reject(new Error("Session not found"));
       return;
     }
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "https://" + session.hostname + '/services/Soap/u/35.0?cache=' + Math.random(), true);
+    xhr.open("POST", "https://" + session.hostname + url + "?cache=" + Math.random(), true);
     xhr.setRequestHeader('Content-Type', "text/xml");
     xhr.setRequestHeader('SOAPAction', '""');
     xhr.onreadystatechange = function() {
@@ -128,7 +128,7 @@ function askSalesforceSoap(request) {
         }
       }
     }
-    xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="urn:partner.soap.sforce.com"><SessionHeader><sessionId>' + session.key + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="urn:partner.soap.sforce.com">' + request + '</soapenv:Body></soapenv:Envelope>');
+    xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="' + namespace + '"><SessionHeader><sessionId>' + session.key + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="' + namespace + '">' + request + '</soapenv:Body></soapenv:Envelope>');
   });
 }
 

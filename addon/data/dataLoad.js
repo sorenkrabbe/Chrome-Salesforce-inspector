@@ -1,3 +1,54 @@
+"use strict";
+
+function DescribeInfo(spinFor) {
+  let sobjectAllDescribes = ko.observable({dataDescribes: null, toolingDescribes: null});
+  function getGlobal(useToolingApi) {
+    let prop = useToolingApi ? "toolingDescribes" : "dataDescribes";
+    let allDescribes = sobjectAllDescribes();
+    if (!allDescribes[prop]) {
+      allDescribes[prop] = new Map();
+      console.log(useToolingApi ? "getting tooling objects" : "getting objects");
+      spinFor(askSalesforce(useToolingApi ? "/services/data/v35.0/tooling/sobjects/" : "/services/data/v35.0/sobjects/").then(function(res) {
+        for (let sobjectDescribe of res.sobjects) {
+          allDescribes[prop].set(sobjectDescribe.name.toLowerCase(), {describeGlobalResult: sobjectDescribe, isLoading: false, describeSobject: null});
+        }
+        sobjectAllDescribes.valueHasMutated();
+      }));
+    }
+    return allDescribes[prop];
+  }
+  // Makes global and sobject describe API calls, and caches the results.
+  // If the result of an API call is not already cashed, empty data is returned immediately, and the API call is made asynchronously.
+  // The caller is notified using a Knockout observable when the API call completes, so it can make the call again to get the cached results.
+  return {
+    // A Knockout observable to listen for updates to describe data
+    dataUpdate: sobjectAllDescribes,
+    // Returns an array of DescribeGlobalSObjectResult, or an empty array if the data is not loaded
+    describeGlobal(useToolingApi) {
+      return Array.from(getGlobal(useToolingApi).values()).map(sobjectInfo => sobjectInfo.describeGlobalResult);
+    },
+    // Returns an object where sobjectFound indicates if the object exists, and sobjectDescribe contains a DescribeSObjectResult if the object exists and has been loaded
+    describeSobject(useToolingApi, sobjectName) {
+      var sobjectInfo = getGlobal(useToolingApi).get(sobjectName.toLowerCase());
+      if (!sobjectInfo) {
+        return {sobjectFound: false, sobjectDescribe: null};
+      }
+      if (!sobjectInfo.isLoading) {
+        console.log("getting fields for " + sobjectInfo.describeGlobalResult.name);
+        sobjectInfo.isLoading = true;
+        spinFor(askSalesforce(sobjectInfo.describeGlobalResult.urls.describe).then(function(res) {
+          sobjectInfo.describeSobject = res;
+          sobjectAllDescribes.valueHasMutated();
+        }, function() {
+          sobjectInfo.isLoading = false; // Request failed, allow trying again
+          sobjectAllDescribes.valueHasMutated();
+        }));
+      }
+      return {sobjectFound: true, sobjectDescribe: sobjectInfo.describeSobject};
+    }
+  };
+}
+
 // Copy text to the clipboard, without rendering it, since rendering is slow.
 function copyToClipboard(value) {
   // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.

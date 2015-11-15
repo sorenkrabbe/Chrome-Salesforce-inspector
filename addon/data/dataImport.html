@@ -16,6 +16,14 @@
   <div class="conf-section">
     <div class="conf-subsection">
       <div class="conf-line">
+        <label class="conf-input" title="With the tooling API you can query more metadata, but you cannot query regular data">
+          <span class="conf-label"></span>
+          <span class="conf-value">
+            <input type="checkbox" data-bind="checked: useToolingApi, disable: isWorking()"> Use Tooling API?
+          </span>
+        </label>
+      </div>
+      <div class="conf-line">
         <label class="conf-input">
           <span class="conf-label">Action</span>
           <span class="conf-value">
@@ -76,7 +84,7 @@
         </label>
         <span data-bind="visible: isWorking(), text: activeBatches()"></span>
       </div>
-      <datalist id="sobjectlist" data-bind="foreach: sobjectList"><option data-bind="attr: {value: $data}"></datalist>
+      <datalist id="sobjectlist" data-bind="foreach: sobjectList()"><option data-bind="attr: {value: $data}"></datalist>
       <datalist id="idlookuplist" data-bind="foreach: idLookupList()"><option data-bind="attr: {value: $data}"></datalist>
       <datalist id="columnlist" data-bind="foreach: columnList()"><option data-bind="attr: {value: $data}"></datalist>
     </div>

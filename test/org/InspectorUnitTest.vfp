@@ -5,6 +5,7 @@
     <script src="https://localhost:8080/addon/data/inspector.js"></script>
     <script src="https://localhost:8080/addon/data/chromePopup.js"></script>
     <script src="https://localhost:8080/addon/data/showAllData.js"></script>
+    <script src="https://localhost:8080/addon/data/dataLoad.js"></script>
     <script src="https://localhost:8080/addon/data/dataExport.js"></script>
     <script src="https://localhost:8080/addon/data/dataImport.js"></script>
     <script src="https://localhost:8080/addon/data/apiExplore.js"></script>

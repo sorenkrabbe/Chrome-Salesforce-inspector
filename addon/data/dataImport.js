@@ -26,7 +26,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
 function dataImportVm(copyToClipboard) {
 
-  var sobjectDataDescribes = ko.observable({});
   var importData = ko.observable();
 
   var vm = {
@@ -61,6 +60,7 @@ function dataImportVm(copyToClipboard) {
       }
       vm.dataError("");
       var header = data.shift().map(makeColumn);
+      updateResult(null); // Two updates, the first clears state from the scrolltable
       updateResult({header: header, data: data});
     },
     invalidInput: function() {
@@ -76,54 +76,47 @@ function dataImportVm(copyToClipboard) {
       return importData().importTable && importData().importTable.header;
     },
 
-    sobjectList: ko.observable([]),
+    sobjectList: function() {
+      return describeInfo.describeGlobal(vm.useToolingApi()).filter(function(sobjectDescribe) { return sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable; }).map(function(sobjectDescribe) { return sobjectDescribe.name; });
+    },
     idLookupList: function() {
       var sobjectName = vm.importType();
-      var sobjectDescribe = sobjectDataDescribes()[sobjectName.toLowerCase()];
+      var sobjectDescribe = describeInfo.describeSobject(vm.useToolingApi(), sobjectName).sobjectDescribe;
 
       if (!sobjectDescribe) {
-        return [];
-      }
-      if (!sobjectDescribe.fields) {
-        maybeGetFields(sobjectDescribe);
         return [];
       }
       return sobjectDescribe.fields.filter(function(field) { return field.idLookup; }).map(function(field) { return field.name; });
     },
     columnList: function() {
-      var sobjectName = vm.importType();
-      var sobjectDescribe = sobjectDataDescribes()[sobjectName.toLowerCase()];
       var importAction = vm.importAction();
-      var idFieldName = vm.idFieldName();
 
       var res = [];
       if (importAction == "delete") {
         res.push("Id");
-      } else if (sobjectDescribe) {
-        if (sobjectDescribe.fields) {
+      } else {
+        var sobjectName = vm.importType();
+        var useToolingApi = vm.useToolingApi();
+        var sobjectDescribe = describeInfo.describeSobject(useToolingApi, sobjectName).sobjectDescribe;
+        if (sobjectDescribe) {
+          var idFieldName = vm.idFieldName();
           sobjectDescribe.fields.forEach(function(field) {
             if (field.createable || field.updateable) {
               res.push(field.name);
               field.referenceTo.forEach(function(referenceSobjectName) {
-                var referenceSobjectDescribe = sobjectDataDescribes()[referenceSobjectName.toLowerCase()];
+                var referenceSobjectDescribe = describeInfo.describeSobject(useToolingApi, referenceSobjectName).sobjectDescribe;
                 if (referenceSobjectDescribe) {
-                  if (referenceSobjectDescribe.fields) {
-                    referenceSobjectDescribe.fields.forEach(function(referenceField) {
-                      if (referenceField.idLookup) {
-                        res.push(field.relationshipName + ":" + referenceSobjectDescribe.name + ":" + referenceField.name);
-                      }
-                    });
-                  } else {
-                    maybeGetFields(referenceSobjectDescribe);
-                  }
+                  referenceSobjectDescribe.fields.forEach(function(referenceField) {
+                    if (referenceField.idLookup) {
+                      res.push(field.relationshipName + ":" + referenceSobjectDescribe.name + ":" + referenceField.name);
+                    }
+                  });
                 }
               });
             } else if (field.idLookup && field.name.toLowerCase() == idFieldName.toLowerCase()) {
               res.push(field.name);
             }
           });
-        } else {
-          maybeGetFields(sobjectDescribe);
         }
       }
       res.push("__Status");
@@ -132,6 +125,7 @@ function dataImportVm(copyToClipboard) {
       res.push("__Errors");
       return res;
     },
+    useToolingApi: ko.observable(false),
     dataFormat: ko.observable("excel"),
     importAction: ko.observable("create"),
     importActionValid: function() {
@@ -280,6 +274,7 @@ function dataImportVm(copyToClipboard) {
         actionColumnIndex: actionColumnIndex,
         errorColumnIndex: errorColumnIndex,
         importAction: vm.importAction(),
+        useToolingApi: vm.useToolingApi(),
         sobjectType: vm.importType(),
         idFieldName: vm.idFieldName(),
         inputIdColumnIndex: vm.inputIdColumnIndex()
@@ -367,35 +362,8 @@ function dataImportVm(copyToClipboard) {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  /**
-   * sobjectDescribes is a map.
-   * Keys are lowercased sobject API names.
-   * Values are DescribeGlobalSObjectResult objects with two extra properties:
-   *   - The "fields" property contains and array of DescribeFieldResult objects of all fields on the given sobject.
-   *     The "fields" property does not exist if fields are not yet loaded.
-   *   - The "fieldsRequest" contains a boolean, which is true if fields are loaded or a request to load them is in progress.
-   */
-  function maybeGetFields(sobjectDescribe) {
-    if (!sobjectDescribe.fieldsRequest) {
-      console.log("getting fields for " + sobjectDescribe.name);
-      sobjectDescribe.fieldsRequest = true;
-      spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(res) {
-        sobjectDescribe.fields = res.fields;
-        sobjectDataDescribes.valueHasMutated();
-      }, function() {
-        sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
-      }));
-    }
-  }
-  spinFor(askSalesforce("/services/data/v35.0/sobjects/").then(function(res) {
-    vm.sobjectList(res.sobjects.filter(function(sobjectDescribe) { return sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable; }).map(function(sobjectDescribe) { return sobjectDescribe.name; }));
-    res.sobjects.forEach(function(sobjectDescribe) {
-      sobjectDataDescribes()[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
-    });
-    sobjectDataDescribes.valueHasMutated();
-  }));
-
-  spinFor(askSalesforceSoap("<getUserInfo/>").then(function(res) {
+  var describeInfo = new DescribeInfo(spinFor);
+  spinFor(askSalesforceSoap("/services/Soap/u/35.0", "urn:partner.soap.sforce.com", "<getUserInfo/>").then(function(res) {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
@@ -499,9 +467,7 @@ function dataImportVm(copyToClipboard) {
         doc.documentElement.appendChild(deleteId);
       } else {
         var sobjects = doc.createElement("sObjects");
-        var type = doc.createElement("type");
-        type.textContent = importState.sobjectType;
-        sobjects.appendChild(type);
+        sobjects.setAttribute("xsi:type", importState.sobjectType);
         for (var c = 0; c < row.length; c++) {
           if (header[c][0] != "_") {
             var columnName = header[c].split(":");
@@ -521,14 +487,12 @@ function dataImportVm(copyToClipboard) {
                 var field = doc.createElement(columnName[0]);
                 field.textContent = row[c];
               } else {
-                var subType = doc.createElement("type");
-                subType.textContent = columnName[1];
                 // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
                 var subField = doc.createElement(columnName[2]);
                 subField.textContent = row[c];
                 // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
                 var field = doc.createElement(columnName[0]);
-                field.appendChild(subType);
+                field.setAttribute("xsi:type", columnName[1]);
                 field.appendChild(subField);
               }
               sobjects.appendChild(field);
@@ -547,7 +511,7 @@ function dataImportVm(copyToClipboard) {
     updateResult(importData().importTable);
     executeBatch();
 
-    spinFor(askSalesforceSoap(batchXml).then(function(res) {
+    spinFor(askSalesforceSoap(importState.useToolingApi ? "/services/Soap/T/35.0" : "/services/Soap/c/35.0", importState.useToolingApi ? "urn:tooling.soap.sforce.com" : "urn:enterprise.soap.sforce.com", batchXml).then(function(res) {
       var results = res.querySelectorAll("Body result");
       for (var i = 0; i < results.length; i++) {
         var result = results[i];

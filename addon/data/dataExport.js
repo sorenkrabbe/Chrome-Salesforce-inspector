@@ -152,46 +152,10 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  /**
-   * sobjectDescribes is a map.
-   * Keys are lowercased sobject API names.
-   * Values are DescribeGlobalSObjectResult objects with two extra properties:
-   *   - The "fields" property contains and array of DescribeFieldResult objects of all fields on the given sobject.
-   *     The "fields" property does not exist if fields are not yet loaded.
-   *   - The "fieldsRequest" contains a boolean, which is true if fields are loaded or a request to load them is in progress.
-   */
-  var sobjectDataDescribes = {};
-  var sobjectToolingDescribes = {};
-  var describeState = 0;
-  function maybeGetFields(sobjectDescribe) {
-    if (!sobjectDescribe.fieldsRequest) {
-      console.log("getting fields for " + sobjectDescribe.name);
-      sobjectDescribe.fieldsRequest = true;
-      spinFor(askSalesforce(sobjectDescribe.urls.describe).then(function(res) {
-        sobjectDescribe.fields = res.fields;
-        describeState++;
-        queryAutocompleteHandler();
-      }, function() {
-        sobjectDescribe.fieldsRequest = false; // Request failed, allow trying again
-      }));
-    }
-  }
-  spinFor(askSalesforce("/services/data/v35.0/sobjects/").then(function(res) {
-    res.sobjects.forEach(function(sobjectDescribe) {
-      sobjectDataDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
-    });
-    describeState++;
-    queryAutocompleteHandler();
-  }));
-  spinFor(askSalesforce("/services/data/v35.0/tooling/sobjects/").then(function(res) {
-    res.sobjects.forEach(function(sobjectDescribe) {
-      sobjectToolingDescribes[sobjectDescribe.name.toLowerCase()] = sobjectDescribe;
-    });
-    describeState++;
-    queryAutocompleteHandler();
-  }));
+  var describeInfo = new DescribeInfo(spinFor);
+  describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
 
-  spinFor(askSalesforceSoap("<getUserInfo/>").then(function(res) {
+  spinFor(askSalesforceSoap("/services/Soap/u/35.0", "urn:partner.soap.sforce.com", "<getUserInfo/>").then(function(res) {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
@@ -212,15 +176,15 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
   var autocompleteState = "";
   var autocompleteProgress = {};
   function queryAutocompleteHandler(e) {
-    var sobjectDescribes = vm.queryTooling() ? sobjectToolingDescribes : sobjectDataDescribes;
+    var useToolingApi = vm.queryTooling();
     var query = queryInput.getValue();
     var selStart = queryInput.getSelStart();
     var selEnd = queryInput.getSelEnd();
     var ctrlSpace = e && e.ctrlSpace;
 
     // Skip the calculation when no change is made. This improves performance and prevents async operations (Ctrl+Space) from being canceled when they should not be.
-    var newAutocompleteState = [vm.queryTooling(), describeState, query, selStart, selEnd].join("$");
-    if (newAutocompleteState == autocompleteState && !ctrlSpace) {
+    var newAutocompleteState = [useToolingApi, query, selStart, selEnd].join("$");
+    if (newAutocompleteState == autocompleteState && !ctrlSpace && !(e && e.newDescribe)) {
       return;
     }
     autocompleteState = newAutocompleteState;
@@ -244,8 +208,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
       var ar = [];
-      for (var sName in sobjectDescribes) {
-        var sobjectDescribe = sobjectDescribes[sName];
+      for (let sobjectDescribe of describeInfo.describeGlobal(useToolingApi)) {
         if (sobjectDescribe.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || sobjectDescribe.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1) {
           ar.push({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " "});
         }
@@ -277,15 +240,15 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
       }
     }
     vm.sobjectName(sobjectName);
-    var sobjectDescribe = sobjectDescribes[sobjectName.toLowerCase()];
+    let describeSobject = describeInfo.describeSobject(useToolingApi, sobjectName);
+    var sobjectDescribe = describeSobject.sobjectDescribe;
 
-    if (!sobjectDescribe) {
+    if (!describeSobject.sobjectFound) {
       vm.autocompleteTitle("Unknown object: " + sobjectName);
       vm.autocompleteResults([]);
       return;
     }
-    if (!sobjectDescribe.fields) {
-      maybeGetFields(sobjectDescribe);
+    if (!sobjectDescribe) {
       vm.autocompleteTitle("Loading metadata for object: " + sobjectName);
       vm.autocompleteResults([]);
       return;
@@ -333,12 +296,11 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
             .filter(function(field) { return field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase(); })
             .forEach(function(field) {
               field.referenceTo.forEach(function(referencedSobjectName) {
-                var referencedSobjectDescribe = sobjectDescribes[referencedSobjectName.toLowerCase()];
-                if (referencedSobjectDescribe) {
-                  if (referencedSobjectDescribe.fields) {
-                    newContextSobjectDescribes.add(referencedSobjectDescribe);
+                let describeReferencedSobject = describeInfo.describeSobject(useToolingApi, referencedSobjectName.toLowerCase());
+                if (describeReferencedSobject.sobjectFound) {
+                  if (describeReferencedSobject.sobjectDescribe) {
+                    newContextSobjectDescribes.add(describeReferencedSobject.sobjectDescribe);
                   } else {
-                    maybeGetFields(referencedSobjectDescribe);
                     isLoading = true;
                   }
                 }
@@ -381,7 +343,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         }
         var sobjectDescribe = contextValueFields[0].sobjectDescribe;
         var field = contextValueFields[0].field;
-        var queryMethod = vm.queryTooling() ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+        var queryMethod = useToolingApi ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
         var acQuery = "select " + field.name + " from " + sobjectDescribe.name + " where " + field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + field.name + " limit 100";
         spinFor(askSalesforce("/services/data/v35.0/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
           .catch(function(err) {

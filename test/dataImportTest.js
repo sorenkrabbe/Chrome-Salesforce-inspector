@@ -113,20 +113,19 @@ function* dataImportTest() {
     {Name: "test5", Checkbox__c: true, Number__c: 500.05, Lookup__r: null}
   ], records);
 
-
   // Create excel
   vm.dataFormat("excel");
   vm.importAction("create");
-  vm.dataResultFormat("excel");
-  dataInput.value = '"Name"\t"Number__c"\r\ntest6\t600.06\r\n"test7"\t"700.07"\r\n';
+  vm.setData('"Name"\t"Number__c"\r\ntest6\t600.06\r\n"test7"\t"700.07"\r\n');
   vm.doImport();
   assertEquals({text: "2 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
   assertEquals(null, vm.confirmPopup());
-  assertEquals('"Name"\t"Number__c"\t"__Status"\t"__Id"\t"__Action"\t"__Errors"\r\n"test6"\t"600.06"\t"Processing"\t""\t""\t""\r\n"test7"\t"700.07"\t"Processing"\t""\t""\t""', vm.importResult().text);
+  assertEquals({Queued: 0, Processing: 2, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "Number__c", "__Status", "__Id", "__Action", "__Errors"], ["test6", "600.06", "Processing", "", "", ""], ["test7", "700.07", "Processing", "", "", ""]], vm.importTableResult().table);
   yield waitForSpinner();
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name"\t"Number__c"\t"__Status"\t"__Id"\t"__Action"\t"__Errors"\r\n"test6"\t"600.06"\t"Succeeded"\t"123456789012345678"\t"Inserted"\t""\r\n"test7"\t"700.07"\t"Succeeded"\t"123456789012345678"\t"Inserted"\t""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "Number__c", "__Status", "__Id", "__Action", "__Errors"], ["test6", "600.06", "Succeeded", "--id--", "Inserted", ""], ["test7", "700.07", "Succeeded", "--id--", "Inserted", ""]], vm.importTableResult().table.map(row => row.map(cell => /^[a-zA-Z0-9]{18}$/.test(cell) ? "--id--" : cell)));
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
@@ -142,15 +141,14 @@ function* dataImportTest() {
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
   vm.dataFormat("csv");
   vm.importAction("update");
-  vm.dataResultFormat("csv");
-  dataInput.value = 'Id,Name,Number__c\r\n' + records[4].Id + ',test5update,500.50\r\n' + records[5].Id + ',test6update,600.60\r\n';
+  vm.setData('Id,Name,Number__c\r\n' + records[4].Id + ',test5update,500.50\r\n' + records[5].Id + ',test6update,600.60\r\n');
   vm.doImport();
   assertEquals({text: "2 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
-  assertEquals('"Id","Name","Number__c","__Status","__Id","__Action","__Errors"\r\n"' + records[4].Id + '","test5update","500.50","Processing","","",""\r\n"' + records[5].Id + '","test6update","600.60","Processing","","",""', vm.importResult().text);
+  assertEquals([["Id", "Name", "Number__c", "__Status", "__Id", "__Action", "__Errors"], [records[4].Id, "test5update", "500.50", "Processing", "", "", ""], [records[5].Id, "test6update", "600.60", "Processing", "", "", ""]], vm.importTableResult().table);
   yield waitForSpinner();
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Id","Name","Number__c","__Status","__Id","__Action","__Errors"\r\n"' + records[4].Id + '","test5update","500.50","Succeeded","' + records[4].Id + '","Updated",""\r\n"' + records[5].Id + '","test6update","600.60","Succeeded","' + records[5].Id + '","Updated",""', vm.importResult().text);
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0}, vm.importCounts());
+  assertEquals([["Id", "Name", "Number__c", "__Status", "__Id", "__Action", "__Errors"], [records[4].Id, "test5update", "500.50", "Succeeded", records[4].Id, "Updated", ""], [records[5].Id, "test6update", "600.60", "Succeeded", records[5].Id, "Updated", ""]], vm.importTableResult().table);
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
@@ -166,16 +164,16 @@ function* dataImportTest() {
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
   vm.dataFormat("csv");
   vm.importAction("delete");
-  vm.dataResultFormat("csv");
-  dataInput.value = 'Id,_foo*,__Status\r\n' + records[5].Id + ',foo,Canceled\r\n' + records[6].Id + ',foo,Succeeded';
+  vm.setData('Id,_foo*,__Status\r\n' + records[5].Id + ',foo,Queued\r\n' + records[6].Id + ',foo,Succeeded');
+  assertEquals({Queued: 1, Processing: 0, Succeeded: 1, Failed: 0}, vm.importCounts());
   vm.doImport();
-  assertEquals({text: "1 records will be imported. 1 records will be skipped because they have __Status Succeeded.", action: undefined}, vm.confirmPopup());
+  assertEquals({text: "1 records will be imported. 1 records will be skipped because they have __Status Succeeded or Failed.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
-  assertEquals({Queued: 0, Processing: 1, Succeeded: 1, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Id","_foo*","__Status","__Id","__Action","__Errors"\r\n"' + records[5].Id + '","foo","Processing","","",""\r\n"' + records[6].Id + '","foo","Succeeded","","",""', vm.importResult().text);
+  assertEquals({Queued: 0, Processing: 1, Succeeded: 1, Failed: 0}, vm.importCounts());
+  assertEquals([["Id", "_foo*", "__Status", "__Id", "__Action", "__Errors"], [records[5].Id, "foo", "Processing", "", "", ""], [records[6].Id, "foo", "Succeeded", "", "", ""]], vm.importTableResult().table);
   yield waitForSpinner();
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Id","_foo*","__Status","__Id","__Action","__Errors"\r\n"' + records[5].Id + '","foo","Succeeded","' + records[5].Id + '","Deleted",""\r\n"' + records[6].Id + '","foo","Succeeded","","",""', vm.importResult().text);
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0}, vm.importCounts());
+  assertEquals([["Id", "_foo*", "__Status", "__Id", "__Action", "__Errors"], [records[5].Id, "foo", "Succeeded", records[5].Id, "Deleted", ""], [records[6].Id, "foo", "Succeeded", "", "", ""]], vm.importTableResult().table);
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
@@ -190,15 +188,14 @@ function* dataImportTest() {
   vm.dataFormat("csv");
   vm.importAction("upsert");
   vm.externalId("Name");
-  vm.dataResultFormat("csv");
-  dataInput.value = 'Name,Number__c\r\ntest2,222\r\ntest6,666\r\n';
+  vm.setData('Name,Number__c\r\ntest2,222\r\ntest6,666\r\n');
   vm.doImport();
   assertEquals({text: "2 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
-  assertEquals('"Name","Number__c","__Status","__Id","__Action","__Errors"\r\n"test2","222","Processing","","",""\r\n"test6","666","Processing","","",""', vm.importResult().text);
+  assertEquals([["Name", "Number__c", "__Status", "__Id", "__Action", "__Errors"], ["test2", "222", "Processing", "", "", ""], ["test6", "666", "Processing", "", "", ""]], vm.importTableResult().table);
   yield waitForSpinner();
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name","Number__c","__Status","__Id","__Action","__Errors"\r\n"test2","222","Succeeded","123456789012345678","Updated",""\r\n"test6","666","Succeeded","123456789012345678","Inserted",""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 2, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "Number__c", "__Status", "__Id", "__Action", "__Errors"], ["test2", "222", "Succeeded", "--id--", "Updated", ""], ["test6", "666", "Succeeded", "--id--", "Inserted", ""]], vm.importTableResult().table.map(row => row.map(cell => /^[a-zA-Z0-9]{18}$/.test(cell) ? "--id--" : cell)));
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test1", Checkbox__c: false, Number__c: 100.01, Lookup__r: null},
@@ -214,19 +211,18 @@ function* dataImportTest() {
   yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
   vm.dataFormat("csv");
   vm.importAction("create");
-  vm.dataResultFormat("csv");
   vm.batchSize("3");
   vm.batchConcurrency("2");
-  dataInput.value = 'Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25';
+  vm.setData('Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25');
   vm.doImport();
   assertEquals({text: "16 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
   assertEquals(null, vm.confirmPopup());
-  assertEquals({Queued: 10, Processing: 6, Succeeded: 0, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Processing","","",""\r\n"test11","Processing","","",""\r\n"test12","Processing","","",""\r\n"test13","Processing","","",""\r\n"test14","Processing","","",""\r\n"test15","Processing","","",""\r\n"test16","Queued","","",""\r\n"test17","Queued","","",""\r\n"test18","Queued","","",""\r\n"test19","Queued","","",""\r\n"test20","Queued","","",""\r\n"test21","Queued","","",""\r\n"test22","Queued","","",""\r\n"test23","Queued","","",""\r\n"test24","Queued","","",""\r\n"test25","Queued","","",""', vm.importResult().text);
+  assertEquals({Queued: 10, Processing: 6, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Processing", "", "", ""], ["test11", "Processing", "", "", ""], ["test12", "Processing", "", "", ""], ["test13", "Processing", "", "", ""], ["test14", "Processing", "", "", ""], ["test15", "Processing", "", "", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table);
   yield waitForSpinner();
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 16, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Succeeded","123456789012345678","Inserted",""\r\n"test11","Succeeded","123456789012345678","Inserted",""\r\n"test12","Succeeded","123456789012345678","Inserted",""\r\n"test13","Succeeded","123456789012345678","Inserted",""\r\n"test14","Succeeded","123456789012345678","Inserted",""\r\n"test15","Succeeded","123456789012345678","Inserted",""\r\n"test16","Succeeded","123456789012345678","Inserted",""\r\n"test17","Succeeded","123456789012345678","Inserted",""\r\n"test18","Succeeded","123456789012345678","Inserted",""\r\n"test19","Succeeded","123456789012345678","Inserted",""\r\n"test20","Succeeded","123456789012345678","Inserted",""\r\n"test21","Succeeded","123456789012345678","Inserted",""\r\n"test22","Succeeded","123456789012345678","Inserted",""\r\n"test23","Succeeded","123456789012345678","Inserted",""\r\n"test24","Succeeded","123456789012345678","Inserted",""\r\n"test25","Succeeded","123456789012345678","Inserted",""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 16, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Succeeded", "--id--", "Inserted", ""], ["test11", "Succeeded", "--id--", "Inserted", ""], ["test12", "Succeeded", "--id--", "Inserted", ""], ["test13", "Succeeded", "--id--", "Inserted", ""], ["test14", "Succeeded", "--id--", "Inserted", ""], ["test15", "Succeeded", "--id--", "Inserted", ""], ["test16", "Succeeded", "--id--", "Inserted", ""], ["test17", "Succeeded", "--id--", "Inserted", ""], ["test18", "Succeeded", "--id--", "Inserted", ""], ["test19", "Succeeded", "--id--", "Inserted", ""], ["test20", "Succeeded", "--id--", "Inserted", ""], ["test21", "Succeeded", "--id--", "Inserted", ""], ["test22", "Succeeded", "--id--", "Inserted", ""], ["test23", "Succeeded", "--id--", "Inserted", ""], ["test24", "Succeeded", "--id--", "Inserted", ""], ["test25", "Succeeded", "--id--", "Inserted", ""]], vm.importTableResult().table.map(row => row.map(cell => /^[a-zA-Z0-9]{18}$/.test(cell) ? "--id--" : cell)));
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test10"}, {Name: "test11"}, {Name: "test12"}, {Name: "test13"}, {Name: "test14"}, {Name: "test15"}, {Name: "test16"}, {Name: "test17"}, {Name: "test18"}, {Name: "test19"}, {Name: "test20"}, {Name: "test21"}, {Name: "test22"}, {Name: "test23"}, {Name: "test24"}, {Name: "test25"}
@@ -236,25 +232,24 @@ function* dataImportTest() {
   yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
   vm.dataFormat("csv");
   vm.importAction("create");
-  vm.dataResultFormat("csv");
   vm.batchSize("3");
   vm.batchConcurrency("2");
-  dataInput.value = 'Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25';
+  vm.setData('Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25');
   vm.doImport();
   assertEquals({text: "16 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
   assertEquals(null, vm.confirmPopup());
   assertNotEquals(0, vm.activeBatches());
-  assertEquals({Queued: 10, Processing: 6, Succeeded: 0, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Processing","","",""\r\n"test11","Processing","","",""\r\n"test12","Processing","","",""\r\n"test13","Processing","","",""\r\n"test14","Processing","","",""\r\n"test15","Processing","","",""\r\n"test16","Queued","","",""\r\n"test17","Queued","","",""\r\n"test18","Queued","","",""\r\n"test19","Queued","","",""\r\n"test20","Queued","","",""\r\n"test21","Queued","","",""\r\n"test22","Queued","","",""\r\n"test23","Queued","","",""\r\n"test24","Queued","","",""\r\n"test25","Queued","","",""', vm.importResult().text);
+  assertEquals({Queued: 10, Processing: 6, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Processing", "", "", ""], ["test11", "Processing", "", "", ""], ["test12", "Processing", "", "", ""], ["test13", "Processing", "", "", ""], ["test14", "Processing", "", "", ""], ["test15", "Processing", "", "", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table);
   vm.stopImport();
   assertNotEquals(0, vm.activeBatches());
-  assertEquals({Queued: 0, Processing: 6, Succeeded: 0, Failed: 0, Canceled: 10}, vm.importResult().counts);
-  assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Processing","","",""\r\n"test11","Processing","","",""\r\n"test12","Processing","","",""\r\n"test13","Processing","","",""\r\n"test14","Processing","","",""\r\n"test15","Processing","","",""\r\n"test16","Canceled","","",""\r\n"test17","Canceled","","",""\r\n"test18","Canceled","","",""\r\n"test19","Canceled","","",""\r\n"test20","Canceled","","",""\r\n"test21","Canceled","","",""\r\n"test22","Canceled","","",""\r\n"test23","Canceled","","",""\r\n"test24","Canceled","","",""\r\n"test25","Canceled","","",""', vm.importResult().text);
+  assertEquals({Queued: 10, Processing: 6, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Processing", "", "", ""], ["test11", "Processing", "", "", ""], ["test12", "Processing", "", "", ""], ["test13", "Processing", "", "", ""], ["test14", "Processing", "", "", ""], ["test15", "Processing", "", "", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table);
   yield waitForSpinner();
   assertEquals(0, vm.activeBatches());
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 6, Failed: 0, Canceled: 10}, vm.importResult().counts);
-assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Succeeded","123456789012345678","Inserted",""\r\n"test11","Succeeded","123456789012345678","Inserted",""\r\n"test12","Succeeded","123456789012345678","Inserted",""\r\n"test13","Succeeded","123456789012345678","Inserted",""\r\n"test14","Succeeded","123456789012345678","Inserted",""\r\n"test15","Succeeded","123456789012345678","Inserted",""\r\n"test16","Canceled","","",""\r\n"test17","Canceled","","",""\r\n"test18","Canceled","","",""\r\n"test19","Canceled","","",""\r\n"test20","Canceled","","",""\r\n"test21","Canceled","","",""\r\n"test22","Canceled","","",""\r\n"test23","Canceled","","",""\r\n"test24","Canceled","","",""\r\n"test25","Canceled","","",""', vm.importResult().text.replace(/"[a-z+-9]{18}"/ig, '"123456789012345678"'));
+  assertEquals({Queued: 10, Processing: 0, Succeeded: 6, Failed: 0}, vm.importCounts());
+assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Succeeded", "--id--", "Inserted", ""], ["test11", "Succeeded", "--id--", "Inserted", ""], ["test12", "Succeeded", "--id--", "Inserted", ""], ["test13", "Succeeded", "--id--", "Inserted", ""], ["test14", "Succeeded", "--id--", "Inserted", ""], ["test15", "Succeeded", "--id--", "Inserted", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table.map(row => row.map(cell => /^[a-zA-Z0-9]{18}$/.test(cell) ? "--id--" : cell)));
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test10"}, {Name: "test11"}, {Name: "test12"}, {Name: "test13"}, {Name: "test14"}, {Name: "test15"}
@@ -263,58 +258,59 @@ assertEquals('"Name","__Status","__Id","__Action","__Errors"\r\n"test10","Succee
   // Errors (local validations)
   vm.dataFormat("csv");
   vm.importAction("create");
-  dataInput.value = '';
-  vm.doImport();
-  assertEquals(null, vm.confirmPopup());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "=== ERROR ===\nno data", hasMore: null}, vm.importResult());
-  assertEquals({value: '', selectionStart: 0, selectionEnd: 0}, dataInput);
+  vm.setData('');
+  assertEquals(true, vm.invalidInput());
+  assertEquals("Error: no data", vm.dataError());
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  dataInput.value = '"foo","bar"\r\n"baz","unclosed quote';
-  vm.doImport();
-  assertEquals(null, vm.confirmPopup());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "=== ERROR ===\nQuote not closed", hasMore: null}, vm.importResult());
-  assertEquals({value: '"foo","bar"\r\n"baz","unclosed quote', selectionStart: '"foo","bar"\r\n"baz",'.length, selectionEnd: '"foo","bar"\r\n"baz","'.length}, dataInput);
+  vm.setData('"foo","bar"\r\n"baz","unclosed quote');
+  assertEquals(true, vm.invalidInput());
+  assertEquals("Error: Quote not closed", vm.dataError());
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  dataInput.value = '"foo","bar"\r\n"foo","bar"text after quote';
-  vm.doImport();
-  assertEquals(null, vm.confirmPopup());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "=== ERROR ===\nunexpected token \'t\'", hasMore: null}, vm.importResult());
-  assertEquals({value: '"foo","bar"\r\n"foo","bar"text after quote', selectionStart: '"foo","bar"\r\n"foo","bar"'.length, selectionEnd: '"foo","bar"\r\n"foo","bar"t'.length}, dataInput);
+  vm.setData('"foo","bar"\r\n"foo","bar"text after quote');
+  assertEquals(true, vm.invalidInput());
+  assertEquals("Error: unexpected token 't'", vm.dataError());
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  dataInput.value = 'a,b\r\nc,d\r\ne';
-  vm.doImport();
-  assertEquals(null, vm.confirmPopup());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "=== ERROR ===\nrow 3 has 1 cells, expected 2", hasMore: null}, vm.importResult());
-  assertEquals({value: 'a,b\r\nc,d\r\ne', selectionStart: 'a,b\r\nc,d\r\n'.length, selectionEnd: 'a,b\r\nc,d\r\ne'.length}, dataInput);
+  vm.setData('a,b\r\nc,d\r\ne');
+  assertEquals(true, vm.invalidInput());
+  assertEquals("Error: row 3 has 1 cells, expected 2", vm.dataError());
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  dataInput.value = 'Name';
-  vm.doImport();
-  assertEquals(null, vm.confirmPopup());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "=== ERROR ===\nNo records to import", hasMore: null}, vm.importResult());
+  vm.setData('Name');
+  assertEquals(true, vm.invalidInput());
+  assertEquals("Error: No records to import", vm.dataError());
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  dataInput.value = 'Na*me\r\ntest0';
-  vm.doImport();
-  assertEquals(null, vm.confirmPopup());
-  assertEquals({counts: {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0, Canceled: 0}, text: "=== ERROR ===\nInvalid column name: Na*me", hasMore: null}, vm.importResult());
+  vm.setData('Na*me\r\ntest0');
+  assertEquals(true, vm.invalidInput());
+  assertEquals("", vm.dataError());
+  assertEquals("Error: Invalid field name", vm.columns()[0].columnError());
+  assertEquals({Queued: 1, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+
+  vm.setData('a,b\r\nc,d');
+  assertEquals(false, vm.invalidInput());
+  assertEquals("", vm.dataError());
+  assertEquals({Queued: 1, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
   // Errors (whole batch)
   yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
   vm.dataFormat("csv");
   vm.importAction("create");
-  vm.dataResultFormat("csv");
-  dataInput.value = 'Name,unknownfield\r\ntest2,222\r\ntest6,666\r\n';
+  vm.setData('Name,unknownfield\r\ntest2,222\r\ntest6,666\r\n');
   vm.doImport();
   assertEquals({text: "2 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
-  assertEquals({Queued: 0, Processing: 2, Succeeded: 0, Failed: 0, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name","unknownfield","__Status","__Id","__Action","__Errors"\r\n"test2","222","Processing","","",""\r\n"test6","666","Processing","","",""', vm.importResult().text);
+  assertEquals({Queued: 0, Processing: 2, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "unknownfield", "__Status", "__Id", "__Action", "__Errors"], ["test2", "222", "Processing", "", "", ""], ["test6", "666", "Processing", "", "", ""]], vm.importTableResult().table);
   yield waitForSpinner();
-  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 2, Canceled: 0}, vm.importResult().counts);
-  assertEquals('"Name","unknownfield","__Status","__Id","__Action","__Errors"\r\n"test2","222","Failed","","","INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."\r\n"test6","666","Failed","","","INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."', vm.importResult().text);
+  assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 2}, vm.importCounts());
+  assertEquals([["Name", "unknownfield", "__Status", "__Id", "__Action", "__Errors"], ["test2", "222", "Failed", "", "", "INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."], ["test6", "666", "Failed", "", "", "INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."]], vm.importTableResult().table);
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([], records);
 
   // Big result
-  // TODO Write test for hasMore/showMore
+  // TODO Write test for clipboard copy
   // TODO Write test for showStatus
 }

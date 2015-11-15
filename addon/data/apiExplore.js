@@ -46,7 +46,7 @@ function apiExploreVm(options, popupWin) {
   }
 
   var apiPromise = options.apiUrls ? Promise.all(options.apiUrls.map(function(url) { return askSalesforce(url); })): askSalesforce(options.apiUrl);
-  spinFor(Promise.all([apiPromise, askSalesforceSoap("<getUserInfo/>")]).then(function(results) {
+  spinFor(Promise.all([apiPromise, askSalesforceSoap("/services/Soap/u/35.0", "urn:partner.soap.sforce.com", "<getUserInfo/>")]).then(function(results) {
     var result = results[0];
     var userInfo = results[1];
 

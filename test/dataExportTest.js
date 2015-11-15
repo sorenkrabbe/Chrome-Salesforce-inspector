@@ -51,12 +51,12 @@ function* dataExportTest() {
 
   assertEquals("select Id from Account", queryInput.value);
   queryInput.selectionStart = queryInput.selectionEnd = "select Id from Account".length; // When the cursor is placed after object name, we will try to autocomplete that once the global describe loads, and we will not try to load object field describes, so we can test loading those separately
+  vm.queryAutocompleteHandler();
 
   // Load global describe and user info
   yield waitForSpinner();
 
   // Autocomplete object names
-  vm.queryAutocompleteHandler();
   assertEquals("Objects:", vm.autocompleteTitle());
   assertEquals(["Account", "AccountContactRole"], getValues(vm.autocompleteResults()).slice(0, 2));
 
@@ -229,6 +229,7 @@ function* dataExportTest() {
   // Autocomplete tooling API
   setQuery("select Id from ApexCla", "", "");
   vm.queryTooling(true);
+  yield waitForSpinner();
   assertEquals("Objects:", vm.autocompleteTitle());
   assertEquals(["ApexClass", "ApexClassMember"], getValues(vm.autocompleteResults()));
   vm.autocompleteClick(vm.autocompleteResults()[0]);
