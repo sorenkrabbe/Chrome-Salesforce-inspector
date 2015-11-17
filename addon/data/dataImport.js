@@ -292,7 +292,7 @@ function dataImportVm(copyToClipboard) {
     showDescribe: function() {
       showAllData({
         recordAttributes: {type: vm.importType(), url: null},
-        useToolingApi: false
+        useToolingApi: vm.useToolingApi()
       });
     },
     doImport: function() {
