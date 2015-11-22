@@ -20,18 +20,19 @@
       <label><input type="checkbox" data-bind="checked: showFieldValueColumn, enable: canView()"> Value</label>
       <label><input type="checkbox" data-bind="checked: showFieldTypeColumn"> Type</label>
     </span>
-    <span>
+    <span class="object-actions">
       <a href="about:blank" data-bind="visible: canView(), attr: {href: viewLink()}" target="_blank" title="View this record in Salesforce">View</a>
       <a href="about:blank" data-bind="visible: objectName(), click: showObjectMetadata">More</a>
       <a href="about:blank" data-bind="visible: objectName(), click: openSetup">Setup</a>
-      <button title="Inline edit the values of this record" data-bind="enable: canEdit(), visible: !isEditing(), click: doEdit">Edit</button>
-      <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: doSave">Save</button>
     </span>
   </div>
   <div data-bind="css: {body: true, empty: !showFieldLabelColumn() && !showFieldHelptextColumn() && !showFieldDescriptionColumn() && !showFieldValueColumn() && !showFieldTypeColumn()}">
     <h1>
       <span data-bind="text: objectName()"></span>
       <span data-bind="text: recordHeading()"></span>
+      <button title="Inline edit the values of this record" data-bind="enable: canEdit() && showFieldValueColumn(), visible: !isEditing(), click: doEdit">Edit</button>
+      <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: doSave">Save</button>
+      <button title="Inline edit the values of this record" data-bind="visible: isEditing(), click: cancelEdit">Cancel</button>
     </h1>
     <div data-bind="foreach: errorMessages, visible: errorMessages().length > 0" class="error-message"><div data-bind="text: $data"></div></div>
     <table>
@@ -44,7 +45,7 @@
         <th class="field-type" tabindex="0" data-bind="click: sortByType, visible: showFieldTypeColumn">Type</th>
         <th class="field-actions">Actions</th>
       </thead>
-      <tbody id="dataTableBody" data-bind="foreach: fieldRows">
+      <tbody id="dataTableBody" data-bind="foreach: fieldRows, event: {click: tableClick, mousemove: tableMouseMove, mousedown: tableMouseDown}">
         <tr data-bind="css: {fieldCalculated: fieldIsCalculated(), fieldHidden: fieldIsHidden()}, visible: visible(), attr: {title: summary()}">
           <td data-bind="text: fieldName" class="field-name"></td>
           <td data-bind="text: fieldLabel(), visible: $parent.showFieldLabelColumn" class="field-label"></td>
@@ -56,12 +57,13 @@
             <span data-bind="text: fieldDesc()"></span>
             <!-- ko if: !hasFieldDesc() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
           </td>
-          <td class="field-value" data-bind="visible: $parent.showFieldValueColumn">
-            <!-- ko if: isId() && !showEdit() --><a href="about:blank" data-bind="text: dataStringValue(), click: showRecordId" class="value-text"></a><!-- /ko -->
-            <!-- ko if: !isId() && !showEdit() --><span data-bind="text: dataStringValue()" class="value-text"></span><!-- /ko -->
-            <!-- ko if: !hasDataValue() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
-            <!-- ko if: hasBlankValue() --><span class="value-blank">(Blank)</span><!-- /ko -->
-            <textarea data-bind="visible: showEdit(), value: dataStringValue"></textarea>
+          <td class="field-value" data-bind="visible: $parent.showFieldValueColumn, event: {dblclick: tryEdit}">
+            <!-- ko if: isId() && !isEditing() --><a href="about:blank" data-bind="text: dataStringValue(), click: showRecordId" class="value-text"></a><!-- /ko -->
+            <!-- ko if: !isId() && !isEditing() --><span data-bind="text: dataStringValue()" class="value-text"></span><!-- /ko -->
+            <!-- ko if: !hasDataValue() && !isEditing() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
+            <!-- ko if: hasBlankValue() && !isEditing() --><span class="value-blank">(Blank)</span><!-- /ko -->
+            <textarea data-bind="visible: isEditing(), hasFocus: hasFocus, value: dataEditValue"></textarea>
+            <a href="about:blank" data-bind="visible: isEditing(), click: cancelEdit" class="undo-button">&#x21B6;</a>
           </td>
           <td class="field-type" data-bind="visible: $parent.showFieldTypeColumn">
             <span data-bind="text: fieldTypeDesc(), visible: !referenceTypes()"></span>

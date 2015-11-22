@@ -11,6 +11,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   var objectData = ko.observable(null);
   var recordData = ko.observable(null);
+  var fieldMap = {};
+  var isDragging = false;
 
   var vm = {
     spinnerCount: ko.observable(0),
@@ -81,10 +83,30 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       vm.closeFieldDetails();
       vm.fieldRowsFilter(field.key + "=" + JSON.stringify(field.value));
     },
+    tableMouseDown() {
+      isDragging = false;
+      return true;
+    },
+    tableMouseMove() {
+      isDragging = true;
+      return true;
+    },
+    tableClick(_, e) {
+      if (!e.target.closest("a, textarea") && !isDragging) {
+        var td = e.target.closest("td");
+        getSelection().selectAllChildren(td);
+      }
+      return true;
+    },
     canEdit: function() {
       return objectData() && objectData().updateable && recordData() && recordData().Id;
     },
     doEdit: function() {
+      for (let fieldRow of vm.fieldRows()) {
+        if (fieldRow.canEdit()) {
+          fieldRow.dataEditValue(fieldRow.dataStringValue());
+        }
+      }
       vm.isEditing(true);
     },
     doSave: function() {
@@ -92,13 +114,23 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       vm.fieldRows().forEach(function(fieldRow) {
         fieldRow.saveDataValue(record);
       });
+      var recordUrl = objectData().urls.rowTemplate.replace("{ID}", recordData().Id);
       spinFor(
         "saving record",
-        askSalesforce("/services/data/v35.0/sobjects/" + objectData().name + "/" + recordData().Id, null, {method: "PATCH", body: record})
+        askSalesforce(recordUrl, null, {method: "PATCH", body: record})
           .then(function() {
-            vm.errorMessages.push("Record saved successfully");
+            clearRecordData();
+            spinFor("retrieving record", askSalesforce(recordUrl).then(function(res) {
+              setRecordData(res);
+            }));
           })
       );
+    },
+    cancelEdit() {
+      for (let fieldRow of vm.fieldRows()) {
+        fieldRow.dataEditValue(null);
+      }
+      vm.isEditing(false);
     },
     canView: function() {
       return recordData() && recordData().Id;
@@ -137,10 +169,14 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     var fieldVm = {
       fieldDescribe: ko.observable(),
       dataTypedValue: ko.observable(),
-      dataStringValue: ko.observable(""),
+      dataEditValue: ko.observable(null),
+      hasFocus: ko.observable(false),
       entityParticle: ko.observable(),
       fieldParticleMetadata: ko.observable(),
 
+      dataStringValue() {
+        return fieldVm.dataTypedValue() == null ? "" : "" + fieldVm.dataTypedValue();
+      },
       fieldLabel: function() {
         if (fieldVm.fieldDescribe()) {
           return fieldVm.fieldDescribe().label;
@@ -213,11 +249,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       hasBlankValue: function() {
         return fieldVm.dataTypedValue() === null;
       },
-      saveDataValue: function(recordData) {
-        if (fieldVm.fieldDescribe() && fieldVm.fieldDescribe().updateable) {
-          recordData[fieldVm.fieldDescribe().name] = fieldVm.dataStringValue() == "" ? null : fieldVm.dataStringValue();
-        }
-      },
       openSetup: function() {
         return openFieldSetup(vm.objectName(), fieldName);
       },
@@ -233,8 +264,26 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         // Entity particle does not contain any of this information
         return fieldName + "\n(Details not available)";
       },
-      showEdit: function() {
-        return vm.isEditing() && fieldVm.fieldDescribe() && fieldVm.fieldDescribe().updateable;
+      isEditing() {
+        return typeof fieldVm.dataEditValue() == "string";
+      },
+      canEdit() {
+        return fieldVm.fieldDescribe() && fieldVm.fieldDescribe().updateable;
+      },
+      tryEdit() {
+        if (!fieldVm.isEditing() && vm.canEdit() && fieldVm.canEdit()) {
+          fieldVm.dataEditValue(fieldVm.dataStringValue());
+          fieldVm.hasFocus(true);
+          vm.isEditing(true);
+        }
+      },
+      cancelEdit() {
+        fieldVm.dataEditValue(null);
+      },
+      saveDataValue(recordData) {
+        if (fieldVm.isEditing()) {
+          recordData[fieldVm.fieldDescribe().name] = fieldVm.dataEditValue() == "" ? null : fieldVm.dataEditValue();
+        }
       },
       isId: function() {
         if (fieldVm.fieldDescribe()) {
@@ -391,6 +440,30 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   ko.applyBindings(vm, document.documentElement);
 
+  function setRecordData(res) {
+    for (var name in res) {
+      if (name != "attributes") {
+        var fieldRow = fieldMap[name];
+        if (!fieldRow) {
+          fieldRow = new FieldRow(name);
+          vm.fieldRows.push(fieldRow);
+          fieldMap[name] = fieldRow;
+        }
+        fieldRow.dataTypedValue(res[name]);
+      }
+    }
+    resortFieldRows();
+    recordData(res);
+  }
+  function clearRecordData() {
+    for (let fieldRow of vm.fieldRows()) {
+      fieldRow.dataTypedValue(undefined);
+      fieldRow.dataEditValue(null);
+    }
+    vm.isEditing(false);
+    recordData(null);
+  }
+
   function spinFor(actionName, promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
     promise
@@ -454,8 +527,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
     vm.sobjectName(sobjectInfo.sobjectName);
 
-    var fieldMap = {};
-
     // Fetch object data using object describe call
     spinFor("describing object", sobjectInfo.sobjectDescribePromise.then(function(sobjectDescribe) {
       // Display the retrieved object data
@@ -479,20 +550,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     if (sobjectInfo.recordDataPromise) {
       spinFor("retrieving record", sobjectInfo.recordDataPromise.then(function(res) {
         vm.showFieldValueColumn(true);
-        for (var name in res) {
-          if (name != "attributes") {
-            var fieldRow = fieldMap[name];
-            if (!fieldRow) {
-              fieldRow = new FieldRow(name);
-              vm.fieldRows.push(fieldRow);
-              fieldMap[name] = fieldRow;
-            }
-            fieldRow.dataTypedValue(res[name]);
-            fieldRow.dataStringValue(res[name] == null ? "" : "" + res[name]);
-          }
-        }
-        resortFieldRows();
-        recordData(res);
+        setRecordData(res);
       }));
     }
 
