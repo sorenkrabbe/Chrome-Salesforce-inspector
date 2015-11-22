@@ -42,10 +42,12 @@ var sobjects = null;
 function openPopup() {
   var el = document.createElement('div');
   el.innerHTML = '<div class="insext-popup">\
-    <img id="insext-spinner" src="/img/loading32.gif" hidden>\
+    <div id="insext-spinner" hidden>&#x25dc;</div>\
     <h3>Salesforce inspector</h3>\
-    <button id="insext-showStdPageDetailsBtn">Show field metadata (m)</button>\
-    <button id="insext-showAllDataBtn">Show all data (a)</button>\
+    <div id="insext-thispage">\
+      <button id="insext-showStdPageDetailsBtn">Show field metadata (m)</button>\
+      <button id="insext-showAllDataBtn">Show all data (a)</button>\
+    </div>\
     <input id="insext-showAllDataInp" placeholder="Record ID, ID prefix or Sobject name" list="insext-sobjects">\
     <datalist id="insext-sobjects"></datalist>\
     <button id="insext-dataExportBtn">Data Export (e)</button>\
@@ -179,10 +181,8 @@ function openPopup() {
   var isDevConsole = document.querySelector('body.ApexCSIPage');
   var inAura = document.querySelector('#auraLoadingBox');
   if (isDevConsole) {
-    document.querySelector('#insext-showStdPageDetailsBtn').style.display = "none";
-    document.querySelector('#insext-showAllDataBtn').style.display = "none";
+    document.querySelector('#insext-thispage').style.display = "none";
   } else {
-    document.querySelector('#insext-showAllDataInp').style.display = "none";
     document.querySelector('#insext-apiExploreBtn').style.display = "none";
   }
   if (inAura || detailsShown || !recordId) {
@@ -200,7 +200,8 @@ function openPopup() {
   document.querySelector('#insext-aboutLnk').addEventListener('click', function(){ 
     open('https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'); 
   });
-  if (isDevConsole) {
+  document.querySelector('#insext-showAllDataInp').addEventListener("focus", function focusListener(e) {
+    e.target.removeEventListener("focus", focusListener);
     if (sobjects == null) {
       sobjects = new Promise(function(resolve, reject) {
         document.querySelector("#insext-spinner").removeAttribute("hidden");
@@ -228,5 +229,5 @@ function openPopup() {
         datalist.appendChild(option);
       });
     });
-  }
+  });
 }
