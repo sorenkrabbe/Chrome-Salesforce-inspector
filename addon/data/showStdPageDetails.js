@@ -1,3 +1,4 @@
+"use strict";
 function showStdPageDetails(recordId) {
   var fieldDetailsByLabel = {};
   var metadataResponse = {};

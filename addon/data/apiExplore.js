@@ -1,8 +1,10 @@
+"use strict";
 if (!this.isUnitTest) {
 
 var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 var options = args.options;
 orgId = args.orgId;
+initPopup(true);
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
   var popupWin = window;

@@ -23,6 +23,13 @@
     display: block;
     font-size: 12px;
 }
+#insext h3 {
+    font-weight: bold;
+    font-size: 100%;
+    margin: 0;
+    display: inline;
+    font-family: inherit;
+}
 #insext .insext-btn {
     width: 15px;
     height: 33px;
@@ -46,8 +53,9 @@
     width: 20px; 
 }
 #insext .insext-btn img {
-    width: 16px;
-    height: 20px;
+    width: 10px;
+    height: 15px;
+    margin: 2px;
 }
 #insext .insext-btn img:hover {
     opacity: 1.0; 
