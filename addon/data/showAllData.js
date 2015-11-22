@@ -110,6 +110,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       vm.isEditing(true);
     },
     doSave: function() {
+      vm.errorMessages.remove(e => e.startsWith("Error saving record:"));
       var record = {};
       vm.fieldRows().forEach(function(fieldRow) {
         fieldRow.saveDataValue(record);
@@ -127,6 +128,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       );
     },
     cancelEdit() {
+      vm.errorMessages.remove(e => e.startsWith("Error saving record:"));
       for (let fieldRow of vm.fieldRows()) {
         fieldRow.dataEditValue(null);
       }
