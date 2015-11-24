@@ -41,6 +41,19 @@ Version number must be manually incremented in [version.json](version.json) file
 
 **Firefox:** Manually so far
 
+Design Principles
+-----
+(we don't live up to all of them. pull requests welcome)
+* Stay completely inactive until the user explicitly interacts with it. The tool has the potential to break Salesforce functionality when used, since we rely on monkey patching and internal APIs. We must ensure that you cannot break Salesforce just by having the tool installed or enabled. For example, we won't fix the setup search placeholder bug.
+* For manual ad-hoc tasks only. The tool is designed to help administrators and developers interact with Salesforce in the browser. It is after all a browser add-on. Enabling automation is a non-goal.
+* User experience is important. Features should be intuitive and discoverable, but efficiency is more important than discoverability. More advanced features should be hidden, and primary features shuld be central. Performance is key.
+* Automatically provide as much contextual information as possible, without overwhelming the user. Information that is presented automatically when needed is a lot more useful than information you need to explicitly request. For example, provide autocomplete for every input.
+* Provide easy access to the raw Salesforce API. Enhance the interaction in a way that does not break the core use case, if our enhancements fails. For example, ensure we can display the result of a data export even if we cannot parse the SOQL query.
+* It is fine to implement features that are already available in the core Salesforce UI, if we can make it easier, smarter or faster.
+* Ensure that it works for as many users as possible. (for system administrators, for standard users, with person accounts, with multi currency, with large data volumes, with professional edition, on a slow network etc.)
+* Be conservative about the number and complexity of Salesforce API requests we make, but don't sacrifice the other principles to do so.
+* Focus on system administrators, developers and integrators.
+
 About
 -----
 By Søren Krabbe (soren.krabbe@capgemini.com) and Jesper Kristensen
