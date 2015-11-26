@@ -1,5 +1,40 @@
 "use strict";
 
+// Inspired by C# System.Linq.Enumerable
+function Enumerable(iterable) {
+  this[Symbol.iterator] = iterable[Symbol.iterator].bind(iterable);
+}
+Enumerable.prototype = {
+  map: function*(f) {
+    for (let e of this) {
+      yield f(e);
+    }
+  },
+  filter: function*(f) {
+    for (let e of this) {
+      if (f(e)) {
+        yield e;
+      }
+    }
+  },
+  flatMap: function*(f) {
+    for (let e of this) {
+      yield* f(e);
+    }
+  },
+  concat: function*(other) {
+    yield* this;
+    yield* other;
+  },
+  toArray() {
+    return Array.from(this);
+  }
+}
+Object.assign(Enumerable.prototype.map.prototype, Enumerable.prototype);
+Object.assign(Enumerable.prototype.filter.prototype, Enumerable.prototype);
+Object.assign(Enumerable.prototype.flatMap.prototype, Enumerable.prototype);
+Object.assign(Enumerable.prototype.concat.prototype, Enumerable.prototype);
+
 function DescribeInfo(spinFor) {
   let sobjectAllDescribes = ko.observable({dataDescribes: null, toolingDescribes: null});
   function getGlobal(useToolingApi) {

@@ -22,12 +22,12 @@
     <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + 'px'}"></textarea>
     <div class="autocomplete-box" data-bind="css: {expanded: expandAutocomplete}">
       <span class="autocomplete-results">
-        <span data-bind="text: autocompleteTitle"></span>
-        <span data-bind="foreach: autocompleteResults">
+        <span data-bind="text: autocompleteResults().title"></span>
+        <span data-bind="foreach: autocompleteResults().results">
           <a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a>
         </span>
       </span>
-      <a href="about:blank" class="char-btn" data-bind="click: showDescribe, visible: sobjectName(), attr: {title: 'Show field info for the ' + sobjectName() + ' object'}">i</a>
+      <a href="about:blank" class="char-btn" data-bind="click: showDescribe, visible: autocompleteResults().sobjectName, attr: {title: 'Show field info for the ' + autocompleteResults().sobjectName + ' object'}">i</a>
       <a href="about:blank" class="char-btn" data-bind="click: toggleExpand, text: expandAutocomplete() ? '-' : '+'" title="Show all suggestions or only the first line"></a>
     </div>
     <div data-bind="visible: showHelp">

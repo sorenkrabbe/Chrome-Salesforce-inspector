@@ -1,34 +1,33 @@
 "use strict";
 if (!this.isUnitTest) {
 
-var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
-var options = args.options;
+let args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
+let options = args.options;
 orgId = args.orgId;
 initPopup(true);
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
-  var popupWin = window;
 
-  var queryInput = document.querySelector("#query");
+  let queryInput = document.querySelector("#query");
 
-  var queryInputVm = {
-    setValue: function(v) { queryInput.value = v; },
-    getValue: function() { return queryInput.value; },
-    getSelStart: function() { return queryInput.selectionStart; },
-    getSelEnd: function() { return queryInput.selectionEnd; },
-    insertText: function(text, selStart, selEnd) {
+  let queryInputVm = {
+    setValue(v) { queryInput.value = v; },
+    getValue() { return queryInput.value; },
+    getSelStart() { return queryInput.selectionStart; },
+    getSelEnd() { return queryInput.selectionEnd; },
+    insertText(text, selStart, selEnd) {
       queryInput.focus();
       queryInput.setRangeText(text, selStart, selEnd, "end");
     }
   };
 
-  var queryHistoryStorage = {
-    get: function() { return localStorage.insextQueryHistory; },
-    set: function(v) { localStorage.insextQueryHistory = v; },
-    clear: function() { localStorage.removeItem("insextQueryHistory"); }
+  let queryHistoryStorage = {
+    get() { return localStorage.insextQueryHistory; },
+    set(v) { localStorage.insextQueryHistory = v; },
+    clear() { localStorage.removeItem("insextQueryHistory"); }
   };
 
-  var vm = dataExportVm(options, queryInputVm, queryHistoryStorage, copyToClipboard);
+  let vm = dataExportVm(options, queryInputVm, queryHistoryStorage, copyToClipboard);
   ko.applyBindings(vm, document.documentElement);
 
   function queryAutocompleteEvent() {
@@ -50,11 +49,11 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   initScrollTable(
     document.querySelector("#result-table"),
-    ko.computed(function() { return vm.exportResult().exportedData; }),
-    ko.computed(function() { return vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth(); })
+    ko.computed(() => vm.exportResult().exportedData),
+    ko.computed(() => vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth())
   );
 
-  var resultBox = document.querySelector("#result-box");
+  let resultBox = document.querySelector("#result-box");
   function recalculateHeight() {
     vm.resultBoxOffsetTop(resultBox.offsetTop);
   }
@@ -68,17 +67,17 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     // Instead we listen to a few events which are often fired at the same time.
     // This is not required in Firefox, and Mozilla reviewers don't like it for performance reasons, so we only do this in Chrome via browser detection.
     queryInput.addEventListener("mousemove", recalculateHeight);
-    popupWin.addEventListener("mouseup", recalculateHeight);
+    addEventListener("mouseup", recalculateHeight);
   }
   vm.showHelp.subscribe(recalculateHeight);
   vm.autocompleteResults.subscribe(recalculateHeight);
   vm.expandAutocomplete.subscribe(recalculateHeight);
   function resize() {
-    vm.winInnerHeight(popupWin.innerHeight);
-    vm.winInnerWidth(popupWin.innerWidth);
+    vm.winInnerHeight(innerHeight);
+    vm.winInnerWidth(innerWidth);
     recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
   }
-  popupWin.addEventListener("resize", resize);
+  addEventListener("resize", resize);
   resize();
 
 });
@@ -88,7 +87,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard) {
   options = options || {};
 
-  var vm = {
+  let vm = {
     spinnerCount: ko.observable(0),
     showHelp: ko.observable(false),
     userInfo: ko.observable("..."),
@@ -97,49 +96,47 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     resultBoxOffsetTop: ko.observable(0),
     queryAll: ko.observable(false),
     queryTooling: ko.observable(false),
-    autocompleteTitle: ko.observable("\u00A0"),
-    autocompleteResults: ko.observable([]),
+    autocompleteResults: ko.observable({sobjectName: "", title: "\u00A0", results: []}),
     autocompleteClick: null,
     exportResult: ko.observable({isWorking: false, exportStatus: "Ready", exportError: null, exportedData: null}),
     queryHistory: ko.observable(getQueryHistory()),
     selectedHistoryEntry: ko.observable(),
-    sobjectName: ko.observable(""),
     expandAutocomplete: ko.observable(false),
     resultsFilter: ko.observable(""),
-    toggleHelp: function() {
+    toggleHelp() {
       vm.showHelp(!vm.showHelp());
     },
-    toggleExpand: function() {
+    toggleExpand() {
       vm.expandAutocomplete(!vm.expandAutocomplete());
     },
-    showDescribe: function() {
+    showDescribe() {
       showAllData({
-        recordAttributes: {type: vm.sobjectName(), url: null},
+        recordAttributes: {type: vm.autocompleteResults().sobjectName, url: null},
         useToolingApi: vm.queryTooling()
       });
     },
-    selectHistoryEntry: function() {
+    selectHistoryEntry() {
       if (vm.selectedHistoryEntry() != undefined) {
         queryInput.setValue(vm.selectedHistoryEntry());
         vm.selectedHistoryEntry(undefined);
       }
     },
-    clearHistory: function() {
+    clearHistory() {
       clearQueryHistory();
       vm.queryHistory([]);
     },
     queryAutocompleteHandler: queryAutocompleteHandler,
     doExport: doExport,
-    canCopy: function() {
+    canCopy() {
       return vm.exportResult().exportedData != null;
     },
-    copyAsExcel: function() {
+    copyAsExcel() {
       copyToClipboard(vm.exportResult().exportedData.csvSerialize("\t"));
     },
-    copyAsCsv: function() {
+    copyAsCsv() {
       copyToClipboard(vm.exportResult().exportedData.csvSerialize(","));
     },
-    copyAsJson: function() {
+    copyAsJson() {
       copyToClipboard(JSON.stringify(vm.exportResult().exportedData.records, null, "  "));
     },
     stopExport: stopExport
@@ -147,13 +144,13 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
 
   function spinFor(promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
-    promise.catch(function (e) { console.error("spinFor", e); }).then(stopSpinner, stopSpinner);
+    promise.catch(e => console.error("spinFor", e)).then(stopSpinner, stopSpinner);
   }
   function stopSpinner() {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  var describeInfo = new DescribeInfo(spinFor);
+  let describeInfo = new DescribeInfo(spinFor);
   describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
 
   spinFor(askSalesforceSoap("/services/Soap/u/35.0", "urn:partner.soap.sforce.com", "<getUserInfo/>").then(function(res) {
@@ -174,17 +171,17 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
    * Inserts all autocomplete field suggestions when Ctrl+Space is pressed.
    * Does not yet support subqueries.
    */
-  var autocompleteState = "";
-  var autocompleteProgress = {};
+  let autocompleteState = "";
+  let autocompleteProgress = {};
   function queryAutocompleteHandler(e) {
-    var useToolingApi = vm.queryTooling();
-    var query = queryInput.getValue();
-    var selStart = queryInput.getSelStart();
-    var selEnd = queryInput.getSelEnd();
-    var ctrlSpace = e && e.ctrlSpace;
+    let useToolingApi = vm.queryTooling();
+    let query = queryInput.getValue();
+    let selStart = queryInput.getSelStart();
+    let selEnd = queryInput.getSelEnd();
+    let ctrlSpace = e && e.ctrlSpace;
 
     // Skip the calculation when no change is made. This improves performance and prevents async operations (Ctrl+Space) from being canceled when they should not be.
-    var newAutocompleteState = [useToolingApi, query, selStart, selEnd].join("$");
+    let newAutocompleteState = [useToolingApi, query, selStart, selEnd].join("$");
     if (newAutocompleteState == autocompleteState && !ctrlSpace && !(e && e.newDescribe)) {
       return;
     }
@@ -201,29 +198,28 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     };
 
     // Find the token we want to autocomplete. This is the selected text, or the last word before the cursor.
-    var searchTerm = selStart != selEnd
+    let searchTerm = selStart != selEnd
       ? query.substring(selStart, selEnd)
       : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0];
     selStart = selEnd - searchTerm.length;
 
     // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
-      var ar = [];
-      for (let sobjectDescribe of describeInfo.describeGlobal(useToolingApi)) {
-        if (sobjectDescribe.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || sobjectDescribe.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1) {
-          ar.push({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " "});
-        }
-      }
-      vm.sobjectName("");
-      vm.autocompleteTitle("Objects:");
-      vm.autocompleteResults(ar);
+      vm.autocompleteResults({
+        sobjectName: "",
+        title: "Objects:",
+        results: new Enumerable(describeInfo.describeGlobal(useToolingApi))
+          .filter(sobjectDescribe => sobjectDescribe.name.toLowerCase().includes(searchTerm.toLowerCase()) || sobjectDescribe.label.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map(sobjectDescribe => ({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " "}))
+          .toArray()
+      });
       return;
     }
 
-      var sobjectName, isAfterFrom;
+    let sobjectName, isAfterFrom;
     // Find out what sobject we are querying, by using the word after the "from" keyword.
     // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
-    var fromKeywordMatch = /(^|\s)from\s+([a-z0-9_]*)/i.exec(query);
+    let fromKeywordMatch = /(^|\s)from\s+([a-z0-9_]*)/i.exec(query);
     if (fromKeywordMatch) {
       sobjectName = fromKeywordMatch[2];
       isAfterFrom = selStart > fromKeywordMatch.index + 1;
@@ -234,24 +230,31 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         sobjectName = fromKeywordMatch[1];
         isAfterFrom = false;
       } else {
-        vm.sobjectName("");
-        vm.autocompleteTitle("\"from\" keyword not found");
-        vm.autocompleteResults([]);
+        vm.autocompleteResults({
+          sobjectName: "",
+          title: "\"from\" keyword not found",
+          results: []
+        });
         return;
       }
     }
-    vm.sobjectName(sobjectName);
     let describeSobject = describeInfo.describeSobject(useToolingApi, sobjectName);
-    var sobjectDescribe = describeSobject.sobjectDescribe;
+    let sobjectDescribe = describeSobject.sobjectDescribe;
 
     if (!describeSobject.sobjectFound) {
-      vm.autocompleteTitle("Unknown object: " + sobjectName);
-      vm.autocompleteResults([]);
+      vm.autocompleteResults({
+        sobjectName: sobjectName,
+        title: "Unknown object: " + sobjectName,
+        results: []
+      });
       return;
     }
     if (!sobjectDescribe) {
-      vm.autocompleteTitle("Loading metadata for object: " + sobjectName);
-      vm.autocompleteResults([]);
+      vm.autocompleteResults({
+        sobjectName: sobjectName,
+        title: "Loading metadata for object: " + sobjectName,
+        results: []
+      });
       return;
     }
 
@@ -265,13 +268,13 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
      * then the searchTerm we want to autocomplete is "Cus", the fieldName is "Type", the contextPath is "Account." and the sobjectName is "Contact"
      */
 
-    var contextEnd = selStart;
+    let contextEnd = selStart;
 
     // If we are on the right hand side of a comparison operator, autocomplete field values
-    var isFieldValue = query.substring(0, selStart).match(/\s*[<>=!]+\s*('?[^'\s]*)$/);
-    var fieldName = null;
+    let isFieldValue = query.substring(0, selStart).match(/\s*[<>=!]+\s*('?[^'\s]*)$/);
+    let fieldName = null;
     if (isFieldValue) {
-      var fieldEnd = selStart - isFieldValue[0].length;
+      let fieldEnd = selStart - isFieldValue[0].length;
       fieldName = query.substring(0, fieldEnd).match(/[a-zA-Z0-9_]*$/)[0];
       contextEnd = fieldEnd - fieldName.length;
       selStart -= isFieldValue[1].length;
@@ -284,71 +287,78 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     The context sobjects for "Who" is {"Task"}.
     The context sobjects for "Name" is {"Contact", "Lead"}.
     */
-    var contextSobjectDescribes = [sobjectDescribe];
-    var contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0];
-    var isLoading = false;
+    let contextSobjectDescribes = new Enumerable([sobjectDescribe]);
+    let contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0];
+    let isLoading = false;
     if (contextPath) {
-      var contextFields = contextPath.split(".");
+      let contextFields = contextPath.split(".");
       contextFields.pop(); // always empty
-      contextFields.forEach(function(referenceFieldName) {
-        var newContextSobjectDescribes = new Set();
-        contextSobjectDescribes.forEach(function(sobjectDescribe) {
-          sobjectDescribe.fields
-            .filter(function(field) { return field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase(); })
-            .forEach(function(field) {
-              field.referenceTo.forEach(function(referencedSobjectName) {
-                let describeReferencedSobject = describeInfo.describeSobject(useToolingApi, referencedSobjectName.toLowerCase());
-                if (describeReferencedSobject.sobjectFound) {
-                  if (describeReferencedSobject.sobjectDescribe) {
-                    newContextSobjectDescribes.add(describeReferencedSobject.sobjectDescribe);
-                  } else {
-                    isLoading = true;
-                  }
-                }
-              });
-            });
-        });
-        contextSobjectDescribes = [];
-        newContextSobjectDescribes.forEach(function(d) { contextSobjectDescribes.push(d); });
-      });
+      for (let referenceFieldName of contextFields) {
+        let newContextSobjectDescribes = new Set();
+        for (let referencedSobjectName of contextSobjectDescribes
+          .flatMap(contextSobjectDescribe => contextSobjectDescribe.fields)
+          .filter(field => field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase())
+          .flatMap(field => field.referenceTo))
+        {
+          let describeReferencedSobject = describeInfo.describeSobject(useToolingApi, referencedSobjectName);
+          if (describeReferencedSobject.sobjectFound) {
+            if (describeReferencedSobject.sobjectDescribe) {
+              newContextSobjectDescribes.add(describeReferencedSobject.sobjectDescribe);
+            } else {
+              isLoading = true;
+            }
+          }
+        }
+        contextSobjectDescribes = new Enumerable(newContextSobjectDescribes);
+      }
     }
 
-    if (contextSobjectDescribes.length == 0) {
-      vm.autocompleteTitle(isLoading ? "Loading metadata..." : "Unknown field: " + sobjectName + "." + contextPath);
-      vm.autocompleteResults([]);
+    if (contextSobjectDescribes.toArray().length == 0) {
+      vm.autocompleteResults({
+        sobjectName: sobjectName,
+        title: isLoading ? "Loading metadata..." : "Unknown field: " + sobjectName + "." + contextPath,
+        results: []
+      });
       return;
     }
 
     if (isFieldValue) {
       // Autocomplete field values
-      var contextValueFields = [];
-      contextSobjectDescribes.forEach(function(sobjectDescribe) {
-        sobjectDescribe.fields
-          .filter(function(field) { return field.name.toLowerCase() == fieldName.toLowerCase(); })
-          .forEach(function(field) {
-            contextValueFields.push({sobjectDescribe: sobjectDescribe, field: field});
-          });
-      });
+      let contextValueFields = contextSobjectDescribes
+        .flatMap(sobjectDescribe => sobjectDescribe.fields
+          .filter(field => field.name.toLowerCase() == fieldName.toLowerCase())
+          .map(field => ({sobjectDescribe: sobjectDescribe, field: field}))
+        )
+        .toArray();
       if (contextValueFields.length == 0) {
-        vm.autocompleteTitle("Unknown field: " + sobjectDescribe.name + "." + contextPath + fieldName);
-        vm.autocompleteResults([]);
+        vm.autocompleteResults({
+          sobjectName: sobjectName,
+          title: "Unknown field: " + sobjectDescribe.name + "." + contextPath + fieldName,
+          results: []
+        });
         return;
       }
-      var fieldNames = contextValueFields.map(function(contextValueField) { return contextValueField.sobjectDescribe.name + "." + contextValueField.field.name; }).join(", ");
+      let fieldNames = contextValueFields.map(contextValueField => contextValueField.sobjectDescribe.name + "." + contextValueField.field.name).join(", ");
       if (ctrlSpace) {
         // Since this performs a Salesforce API call, we ask the user to opt in by pressing Ctrl+Space
         if (contextValueFields.length > 1) {
-          vm.autocompleteTitle("Multiple possible fields: " + fieldNames);
-          vm.autocompleteResults([]);
+          vm.autocompleteResults({
+            sobjectName: sobjectName,
+            title: "Multiple possible fields: " + fieldNames,
+            results: []
+          });
           return;
         }
-        var sobjectDescribe = contextValueFields[0].sobjectDescribe;
-        var field = contextValueFields[0].field;
-        var queryMethod = useToolingApi ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
-        var acQuery = "select " + field.name + " from " + sobjectDescribe.name + " where " + field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + field.name + " limit 100";
+        let contextValueField = contextValueFields[0];
+        let queryMethod = useToolingApi ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+        let acQuery = "select " + contextValueField.field.name + " from " + contextValueField.sobjectDescribe.name + " where " + contextValueField.field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + contextValueField.field.name + " limit 100";
         spinFor(askSalesforce("/services/data/v35.0/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
           .catch(function(err) {
-            vm.autocompleteTitle("Error: " + ((err && err.askSalesforceError) || err));
+            vm.autocompleteResults({
+              sobjectName: sobjectName,
+              title: "Error: " + ((err && err.askSalesforceError) || err),
+              results: []
+            });
             return null;
           })
           .then(function queryHandler(data) {
@@ -356,124 +366,126 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
             if (!data) {
               return;
             }
-            var ar = [];
-            data.records.forEach(function(record) {
-              var value = record[field.name];
-              if (value) {
-                ar.push({value: "'" + value + "'", title: value, suffix: " "});
-              }
+            vm.autocompleteResults({
+              sobjectName: sobjectName,
+              title: fieldNames + " values:",
+              results: new Enumerable(data.records)
+                .map(record => record[contextValueField.field.name])
+                .filter(value => value)
+                .map(value => ({value: "'" + value + "'", title: value, suffix: " "}))
+                .toArray()
             });
-            vm.autocompleteTitle(fieldNames + " values:");
-            vm.autocompleteResults(ar);
           }));
-        vm.autocompleteTitle("Loading " + fieldNames + " values...");
-        vm.autocompleteResults([]);
+        vm.autocompleteResults({
+          sobjectName: sobjectName,
+          title: "Loading " + fieldNames + " values...",
+          results: []
+        });
         return;
       }
-      var ar = [];
-      contextValueFields.forEach(function(contextValueField) {
-        var field = contextValueField.field;
-        field.picklistValues.forEach(function(pickVal) {
-          ar.push({value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " "});
-        });
+      var ar = new Enumerable(contextValueFields).flatMap(function*(contextValueField) {
+        let field = contextValueField.field;
+        yield* field.picklistValues.map(pickVal => ({value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " "}));
         if (field.type == "boolean") {
-          ar.push({value: "true", title: "true", suffix: " "});
-          ar.push({value: "false", title: "false", suffix: " "});
+          yield {value: "true", title: "true", suffix: " "};
+          yield {value: "false", title: "false", suffix: " "};
         }
         if (field.type == "date" || field.type == "datetime") {
           let pad = (n, d) => ("000" + n).slice(-d);
-          var d = new Date();
+          let d = new Date();
           if (field.type == "date") {
-            ar.push({value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2), title: "Today", suffix: " "});
+            yield {value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2), title: "Today", suffix: " "};
           }
           if (field.type == "datetime") {
-            ar.push({value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2) + "T"
+            yield {value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2) + "T"
               + pad(d.getHours(), 2) + ":" + pad(d.getMinutes(), 2) + ":" + pad(d.getSeconds(), 2) + "." + pad(d.getMilliseconds(), 3)
               + (d.getTimezoneOffset() <= 0 ? "+" : "-") + pad(Math.floor(Math.abs(d.getTimezoneOffset()) / 60), 2)
-              + ":" + pad(Math.abs(d.getTimezoneOffset()) % 60, 2), title: "Now", suffix: " "});
+              + ":" + pad(Math.abs(d.getTimezoneOffset()) % 60, 2), title: "Now", suffix: " "};
           }
           // from http://www.salesforce.com/us/developer/docs/soql_sosl/Content/sforce_api_calls_soql_select_dateformats.htm Spring 15
-          ar.push({value: "YESTERDAY", title: "Starts 12:00:00 the day before and continues for 24 hours.", suffix: " "});
-          ar.push({value: "TODAY", title: "Starts 12:00:00 of the current day and continues for 24 hours.", suffix: " "});
-          ar.push({value: "TOMORROW", title: "Starts 12:00:00 after the current day and continues for 24 hours.", suffix: " "});
-          ar.push({value: "LAST_WEEK", title: "Starts 12:00:00 on the first day of the week before the most recent first day of the week and continues for seven full days. First day of the week is determined by your locale.", suffix: " "});
-          ar.push({value: "THIS_WEEK", title: "Starts 12:00:00 on the most recent first day of the week before the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " "});
-          ar.push({value: "NEXT_WEEK", title: "Starts 12:00:00 on the most recent first day of the week after the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " "});
-          ar.push({value: "LAST_MONTH", title: "Starts 12:00:00 on the first day of the month before the current day and continues for all the days of that month.", suffix: " "});
-          ar.push({value: "THIS_MONTH", title: "Starts 12:00:00 on the first day of the month that the current day is in and continues for all the days of that month.", suffix: " "});
-          ar.push({value: "NEXT_MONTH", title: "Starts 12:00:00 on the first day of the month after the month that the current day is in and continues for all the days of that month.", suffix: " "});
-          ar.push({value: "LAST_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the last 90 days.", suffix: " "});
-          ar.push({value: "NEXT_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the next 90 days.", suffix: " "});
-          ar.push({value: "LAST_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the last n days.", suffix: " "});
-          ar.push({value: "NEXT_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the next n days.", suffix: " "});
-          ar.push({value: "NEXT_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next week and continues for the next n weeks.", suffix: " "});
-          ar.push({value: "LAST_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous week and continues for the last n weeks.", suffix: " "});
-          ar.push({value: "NEXT_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next month and continues for the next n months.", suffix: " "});
-          ar.push({value: "LAST_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous month and continues for the last n months.", suffix: " "});
-          ar.push({value: "THIS_QUARTER", title: "Starts 12:00:00 of the current quarter and continues to the end of the current quarter.", suffix: " "});
-          ar.push({value: "LAST_QUARTER", title: "Starts 12:00:00 of the previous quarter and continues to the end of that quarter.", suffix: " "});
-          ar.push({value: "NEXT_QUARTER", title: "Starts 12:00:00 of the next quarter and continues to the end of that quarter.", suffix: " "});
-          ar.push({value: "NEXT_N_QUARTERS:n", title: "Starts 12:00:00 of the next quarter and continues to the end of the nth quarter.", suffix: " "});
-          ar.push({value: "LAST_N_QUARTERS:n", title: "Starts 12:00:00 of the previous quarter and continues to the end of the previous nth quarter.", suffix: " "});
-          ar.push({value: "THIS_YEAR", title: "Starts 12:00:00 on January 1 of the current year and continues through the end of December 31 of the current year.", suffix: " "});
-          ar.push({value: "LAST_YEAR", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of that year.", suffix: " "});
-          ar.push({value: "NEXT_YEAR", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of that year.", suffix: " "});
-          ar.push({value: "NEXT_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of the nth year.", suffix: " "});
-          ar.push({value: "LAST_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of the previous nth year.", suffix: " "});
-          ar.push({value: "THIS_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the current fiscal quarter and continues through the end of the last day of the fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "LAST_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "NEXT_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "NEXT_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of the nth fiscal quarter. The fiscal year is defined in the company profile under Setup atCompany Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "LAST_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of the previous nth fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "THIS_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the current fiscal year and continues through the end of the last day of the fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "LAST_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "NEXT_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "NEXT_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of the nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
-          ar.push({value: "LAST_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of the previous nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "});
+          yield {value: "YESTERDAY", title: "Starts 12:00:00 the day before and continues for 24 hours.", suffix: " "};
+          yield {value: "TODAY", title: "Starts 12:00:00 of the current day and continues for 24 hours.", suffix: " "};
+          yield {value: "TOMORROW", title: "Starts 12:00:00 after the current day and continues for 24 hours.", suffix: " "};
+          yield {value: "LAST_WEEK", title: "Starts 12:00:00 on the first day of the week before the most recent first day of the week and continues for seven full days. First day of the week is determined by your locale.", suffix: " "};
+          yield {value: "THIS_WEEK", title: "Starts 12:00:00 on the most recent first day of the week before the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " "};
+          yield {value: "NEXT_WEEK", title: "Starts 12:00:00 on the most recent first day of the week after the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " "};
+          yield {value: "LAST_MONTH", title: "Starts 12:00:00 on the first day of the month before the current day and continues for all the days of that month.", suffix: " "};
+          yield {value: "THIS_MONTH", title: "Starts 12:00:00 on the first day of the month that the current day is in and continues for all the days of that month.", suffix: " "};
+          yield {value: "NEXT_MONTH", title: "Starts 12:00:00 on the first day of the month after the month that the current day is in and continues for all the days of that month.", suffix: " "};
+          yield {value: "LAST_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the last 90 days.", suffix: " "};
+          yield {value: "NEXT_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the next 90 days.", suffix: " "};
+          yield {value: "LAST_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the last n days.", suffix: " "};
+          yield {value: "NEXT_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the next n days.", suffix: " "};
+          yield {value: "NEXT_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next week and continues for the next n weeks.", suffix: " "};
+          yield {value: "LAST_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous week and continues for the last n weeks.", suffix: " "};
+          yield {value: "NEXT_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next month and continues for the next n months.", suffix: " "};
+          yield {value: "LAST_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous month and continues for the last n months.", suffix: " "};
+          yield {value: "THIS_QUARTER", title: "Starts 12:00:00 of the current quarter and continues to the end of the current quarter.", suffix: " "};
+          yield {value: "LAST_QUARTER", title: "Starts 12:00:00 of the previous quarter and continues to the end of that quarter.", suffix: " "};
+          yield {value: "NEXT_QUARTER", title: "Starts 12:00:00 of the next quarter and continues to the end of that quarter.", suffix: " "};
+          yield {value: "NEXT_N_QUARTERS:n", title: "Starts 12:00:00 of the next quarter and continues to the end of the nth quarter.", suffix: " "};
+          yield {value: "LAST_N_QUARTERS:n", title: "Starts 12:00:00 of the previous quarter and continues to the end of the previous nth quarter.", suffix: " "};
+          yield {value: "THIS_YEAR", title: "Starts 12:00:00 on January 1 of the current year and continues through the end of December 31 of the current year.", suffix: " "};
+          yield {value: "LAST_YEAR", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of that year.", suffix: " "};
+          yield {value: "NEXT_YEAR", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of that year.", suffix: " "};
+          yield {value: "NEXT_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of the nth year.", suffix: " "};
+          yield {value: "LAST_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of the previous nth year.", suffix: " "};
+          yield {value: "THIS_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the current fiscal quarter and continues through the end of the last day of the fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "LAST_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "NEXT_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "NEXT_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of the nth fiscal quarter. The fiscal year is defined in the company profile under Setup atCompany Profile | Fiscal Year.", suffix: " "};
+          yield {value: "LAST_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of the previous nth fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "THIS_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the current fiscal year and continues through the end of the last day of the fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "LAST_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "NEXT_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "NEXT_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of the nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
+          yield {value: "LAST_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of the previous nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " "};
         }
         if (field.nillable) {
-          ar.push({value: "null", title: "null", suffix: " "});
+          yield {value: "null", title: "null", suffix: " "};
         }
+      })
+      .filter(res => res.value.toLowerCase().includes(searchTerm.toLowerCase()) || res.title.toLowerCase().includes(searchTerm.toLowerCase()))
+      .toArray();
+      vm.autocompleteResults({
+        sobjectName: sobjectName,
+        title: fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"),
+        results: ar
       });
-      ar = ar.filter(function(res) { return res.value.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || res.title.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1; });
-      vm.autocompleteTitle(fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"));
-      vm.autocompleteResults(ar);
       return;
     } else {
       // Autocomplete field names and functions
       if (ctrlSpace) {
-        var ar = [];
-        contextSobjectDescribes.forEach(function(sobjectDescribe) {
-          sobjectDescribe.fields
-            .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || field.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1; })
-            .forEach(function(field) {
-              ar.push(contextPath + field.name);
-            });
-        });
+        let ar = contextSobjectDescribes
+          .flatMap(sobjectDescribe => sobjectDescribe.fields)
+          .filter(field => field.name.toLowerCase().includes(searchTerm.toLowerCase()) || field.label.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map(field => contextPath + field.name)
+          .toArray();
         if (ar.length > 0) {
           queryInput.insertText(ar.join(", ") + (isAfterFrom ? " " : ", "), selStart - contextPath.length, selEnd);
         }
         queryAutocompleteHandler();
         return;
       }
-      var ar = [];
-      contextSobjectDescribes.forEach(function(sobjectDescribe) {
-        sobjectDescribe.fields
-          .filter(function(field) { return field.name.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1 || field.label.toLowerCase().indexOf(searchTerm.toLowerCase()) > -1; })
-          .forEach(function(field) {
-            ar.push({value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", "});
+      vm.autocompleteResults({
+        sobjectName: sobjectName,
+        title: contextSobjectDescribes.map(sobjectDescribe => sobjectDescribe.name).toArray().join(", ") + " fields:",
+        results: contextSobjectDescribes
+          .flatMap(sobjectDescribe => sobjectDescribe.fields)
+          .filter(field => field.name.toLowerCase().includes(searchTerm.toLowerCase()) || field.label.toLowerCase().includes(searchTerm.toLowerCase()))
+          .flatMap(function*(field) {
+            yield {value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", "};
             if (field.relationshipName) {
-              ar.push({value: field.relationshipName + ".", title: field.label, suffix: ""});
+               yield {value: field.relationshipName + ".", title: field.label, suffix: ""};
             }
-          });
+          })
+          .concat(
+            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"])
+              .filter(fn => fn.toLowerCase().startsWith(searchTerm.toLowerCase()))
+              .map(fn => ({value: fn, title: fn + "()", suffix: "("}))
+          )
+          .toArray()
       });
-      ["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"]
-        .filter(function (fn) { return fn.toLowerCase().indexOf(searchTerm.toLowerCase()) == 0; })
-        .forEach(function(fn) {
-          ar.push({value: fn, title: fn + "()", suffix: "("});
-        });
-      vm.autocompleteTitle(contextSobjectDescribes.map(function(sobjectDescribe) { return sobjectDescribe.name; }).join(", ") + " fields:");
-      vm.autocompleteResults(ar);
       return;
     }
   }
@@ -484,22 +496,22 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
     We don't care, because we don't need a stable set of columns for our use case.
     */
-    var columnIdx = new Map();
-    var header = ["_"];
+    let columnIdx = new Map();
+    let header = ["_"];
     function discoverColumns(record, prefix, row) {
-      for (var field in record) {
+      for (let field in record) {
         if (field == "attributes") {
           continue;
         }
-        var column = prefix + field;
-        var c;
+        let column = prefix + field;
+        let c;
         if (columnIdx.has(column)) {
           c = columnIdx.get(column);
         } else {
           c = header.length;
           columnIdx.set(column, c);
-          for (var r = 0; r < rt.table.length; r++) {
-            rt.table[r].push(undefined);
+          for (let row of rt.table) {
+            row.push(undefined);
           }
           header[c] = column;
           rt.colVisibilities.push(true);
@@ -527,16 +539,15 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
       colVisibilities: [true],
       isTooling: false,
       totalSize: -1,
-      addToTable: function(expRecords) {
+      addToTable(expRecords) {
         rt.records = rt.records.concat(expRecords);
         if (rt.table.length == 0 && expRecords.length > 0) {
           rt.table.push(header);
           rt.rowVisibilities.push(true);
         }
-        var filter = vm.resultsFilter();
-        for (var i = 0; i < expRecords.length; i++) {
-          var record = expRecords[i];
-          var row = new Array(header.length);
+        let filter = vm.resultsFilter();
+        for (let record of expRecords) {
+          let row = new Array(header.length);
           row[0] = record;
           rt.table.push(row);
           rt.rowVisibilities.push(isVisible(row, filter));
@@ -544,15 +555,15 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         }
       },
       csvSerialize: separator => rt.table.map(row => row.map(cell => "\"" + cellToString(cell).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n"),
-      updateVisibility: function() {
+      updateVisibility() {
         let filter = vm.resultsFilter();
         for (let r = 1 /* always show header */; r < rt.table.length; r++) {
           rt.rowVisibilities[r] = isVisible(rt.table[r], filter);
         }
       },
-      renderCell: function(cell, td) {
+      renderCell(cell, td) {
         if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
-          var a = document.createElement("a");
+          let a = document.createElement("a");
           a.href = "about:blank";
           a.title = "Show all data";
           a.addEventListener("click", function(e) {
@@ -571,12 +582,10 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     return rt;
   }
 
-  vm.queryTooling.subscribe(function() {
-    queryAutocompleteHandler();
-  });
+  vm.queryTooling.subscribe(() => queryAutocompleteHandler());
 
   function getQueryHistory() {
-    var queryHistory;
+    let queryHistory;
     try {
       queryHistory = JSON.parse(queryHistoryStorage.get());
     } catch(e) {}
@@ -587,8 +596,8 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
   }
 
   function addToQueryHistory(query) {
-    var queryHistory = getQueryHistory();
-    var historyIndex = queryHistory.indexOf(query);
+    let queryHistory = getQueryHistory();
+    let historyIndex = queryHistory.indexOf(query);
     if (historyIndex > -1) {
       queryHistory.splice(historyIndex, 1);
     }
@@ -604,19 +613,19 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     queryHistoryStorage.clear();
   }
 
-  var exportProgress = {};
+  let exportProgress = {};
   function doExport() {
-    var exportedData = new RecordTable();
+    let exportedData = new RecordTable();
     exportedData.isTooling = vm.queryTooling();
-    var query = queryInput.getValue();
-    var queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+    let query = queryInput.getValue();
+    let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
     spinFor(askSalesforce("/services/data/v35.0/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
       exportedData.addToTable(data.records);
       if (data.totalSize != -1) {
         exportedData.totalSize = data.totalSize;
       }
       if (!data.done) {
-        var pr = askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
+        let pr = askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
         vm.exportResult({
           isWorking: true,
           exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
