@@ -22,7 +22,8 @@
       "js": [
         "data/inspector.js",
         "data/chromePopup.js",
-        "data/showStdPageDetails.js"
+        "data/showStdPageDetails.js",
+        "data/utils/mousetrap.min.js"
       ]
     }
   ],
@@ -33,4 +34,3 @@
   "incognito": "split",
   "manifest_version": 2
 }
-
