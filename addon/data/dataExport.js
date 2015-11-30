@@ -30,9 +30,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   let vm = dataExportVm(options, queryInputVm, queryHistoryStorage, copyToClipboard);
   ko.applyBindings(vm, document.documentElement);
 
-  Mousetrap(document.body).bind('ctrl+space', function(e) {
-    vm.queryAutocompleteHandler({ctrlSpace: true});
-  });
   function queryAutocompleteEvent() {
     vm.queryAutocompleteHandler();
   }
@@ -43,6 +40,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   queryInput.addEventListener("mouseup", queryAutocompleteEvent);
 
   // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
+  Mousetrap(document.body).bind('ctrl+space', function(e) {
+    vm.queryAutocompleteHandler({ctrlSpace: true});
+  });
 
   initScrollTable(
     document.querySelector("#result-table"),
