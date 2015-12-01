@@ -46,7 +46,6 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     vm.queryAutocompleteHandler({ctrlSpace: true});
   });
   Mousetrap(document.body).bind('ctrl+enter', function(e) {
-    console.log('ctrl+enter');
     vm.doExport();
   });
 
