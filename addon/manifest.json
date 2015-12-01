@@ -22,7 +22,7 @@
       "js": [
         "data/inspector.js",
         "data/chromePopup.js",
-        "data/showStdPageDetails.js",
+        "data/showStdPageDetails.js"
       ]
     }
   ],
