@@ -313,7 +313,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
       }
     }
 
-    if (contextSobjectDescribes.toArray().length == 0) {
+    if (!contextSobjectDescribes.some()) {
       vm.autocompleteResults({
         sobjectName: sobjectName,
         title: isLoading ? "Loading metadata..." : "Unknown field: " + sobjectName + "." + contextPath,

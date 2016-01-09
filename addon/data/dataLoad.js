@@ -5,6 +5,7 @@ function Enumerable(iterable) {
   this[Symbol.iterator] = iterable[Symbol.iterator].bind(iterable);
 }
 Enumerable.prototype = {
+  __proto__: function*(){}.prototype,
   map: function*(f) {
     for (let e of this) {
       yield f(e);
@@ -26,14 +27,20 @@ Enumerable.prototype = {
     yield* this;
     yield* other;
   },
+  some() {
+    for (let e of this) {
+      return true;
+    }
+    return false;
+  },
   toArray() {
     return Array.from(this);
   }
 }
-Object.assign(Enumerable.prototype.map.prototype, Enumerable.prototype);
-Object.assign(Enumerable.prototype.filter.prototype, Enumerable.prototype);
-Object.assign(Enumerable.prototype.flatMap.prototype, Enumerable.prototype);
-Object.assign(Enumerable.prototype.concat.prototype, Enumerable.prototype);
+Enumerable.prototype.map.prototype = Enumerable.prototype;
+Enumerable.prototype.filter.prototype = Enumerable.prototype;
+Enumerable.prototype.flatMap.prototype = Enumerable.prototype;
+Enumerable.prototype.concat.prototype = Enumerable.prototype;
 
 function DescribeInfo(spinFor) {
   let sobjectAllDescribes = ko.observable({dataDescribes: null, toolingDescribes: null});
