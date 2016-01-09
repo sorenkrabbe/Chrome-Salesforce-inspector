@@ -4,7 +4,7 @@ var session, orgId;
 
 function openFieldSetup(sobjectName, fieldName) {
   let w = open(""); // Open the new tab synchronously, to avoid the pop-up blocker, then later redirect it when we have the URL
-  if (!fieldName.endsWith("__c")) {
+  if (!fieldName.endsWith("__c") && !fieldName.endsWith("__pc")) {
     if (fieldName.substr(-2) == "Id" && fieldName != "Id") {
       fieldName = fieldName.slice(0, -2);
     }
@@ -26,13 +26,18 @@ function openFieldSetup(sobjectName, fieldName) {
     }
   } else {
     let parts = fieldName.split("__");
-    let namespacePrefix, developerName;
+    let namespacePrefix, developerName, suffix;
     if (parts.length == 2) {
       namespacePrefix = "";
       developerName = parts[0];
+      suffix = parts[1];
     } else { // parts.length == 3
       namespacePrefix = parts[0];
       developerName = parts[1];
+      suffix = parts[2];
+    }
+    if (suffix == "pc" && sobjectName == "Account") {
+      sobjectName = "Contact";
     }
     askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id from CustomField where EntityDefinition.QualifiedApiName = '" + sobjectName + "' and NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
       .then(res => w.location = "https://" + session.hostname + "/" + res.records[0].Id.slice(0, -3))
