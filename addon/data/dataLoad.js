@@ -237,7 +237,7 @@ function initScrollTable(scroller, dataObs, resizeObs) {
         var visibilityChange = newVisible - colVisible[c];
         totalWidth += visibilityChange * colWidths[c];
         if (c < firstColIdx) {
-          firstColTop += visibilityChange * colWidths[c];
+          firstColLeft += visibilityChange * colWidths[c];
         }
         colVisible[c] = newVisible;
       }
