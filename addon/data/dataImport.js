@@ -282,6 +282,7 @@ function dataImportVm(copyToClipboard) {
       });
 
       vm.isProcessingQueue(true);
+      vm.batchMaxConcurrency(1);
       executeBatch();
     },
     confirmPopupNo: function() {
