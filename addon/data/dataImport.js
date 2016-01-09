@@ -305,8 +305,8 @@ function dataImportVm(copyToClipboard) {
           + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded or Failed." : "")
       });
     },
-    stopImport: function() {
-      vm.isProcessingQueue(false);
+    toggleProcessing: function() {
+      vm.isProcessingQueue(!vm.isProcessingQueue());
     },
     retryFailed: function() {
       if (!importData().importTable) {

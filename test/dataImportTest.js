@@ -242,7 +242,7 @@ function* dataImportTest() {
   assertNotEquals(0, vm.activeBatches());
   assertEquals({Queued: 10, Processing: 6, Succeeded: 0, Failed: 0}, vm.importCounts());
   assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Processing", "", "", ""], ["test11", "Processing", "", "", ""], ["test12", "Processing", "", "", ""], ["test13", "Processing", "", "", ""], ["test14", "Processing", "", "", ""], ["test15", "Processing", "", "", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table);
-  vm.stopImport();
+  vm.toggleProcessing();
   assertNotEquals(0, vm.activeBatches());
   assertEquals({Queued: 10, Processing: 6, Succeeded: 0, Failed: 0}, vm.importCounts());
   assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Processing", "", "", ""], ["test11", "Processing", "", "", ""], ["test12", "Processing", "", "", ""], ["test13", "Processing", "", "", ""], ["test14", "Processing", "", "", ""], ["test15", "Processing", "", "", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table);

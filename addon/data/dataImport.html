@@ -103,7 +103,7 @@
     <span class="conf-label"></span>
     <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>
     <button data-bind="click: doImport, disable: invalidInput() || isWorking() || importCounts().Queued == 0">Import</button>
-    <button data-bind="enable: isProcessingQueue, click: stopImport">Cancel queued</button>
+    <button data-bind="enable: isWorking() && importCounts().Queued != 0, click: toggleProcessing, text: isWorking() && importCounts().Queued != 0 && !isProcessingQueue() ? 'Resume queued' : 'Cancel queued'"></button>
     <button data-bind="enable: importCounts().Failed > 0, click: retryFailed" style="margin-right: 20px">Retry failed</button>
     <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy import result to clipboard for pasting into Excel or similar">Copy Excel</button>
     <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy import result to clipboard for saving as a CSV file">Copy CSV</button>
