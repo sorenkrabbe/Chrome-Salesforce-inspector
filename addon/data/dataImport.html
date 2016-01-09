@@ -28,8 +28,7 @@
         <label class="conf-input">
           <span class="conf-label">Action</span>
           <span class="conf-value">
-            <select data-bind="value: importAction, css: {confError: importActionError()}, disable: isWorking()"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select>
-            <div class="conf-error" data-bind="visible: importActionError(), text: importActionError()"></div>
+            <select data-bind="value: importAction, disable: isWorking()"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select>
           </span>
         </label>
       </div>
@@ -91,6 +90,7 @@
     </div>
     <div class="conf-subsection columns-mapping">
       <div class="columns-label">Field mapping</div>
+      <div class="conf-error confError" data-bind="visible: importIdColumnError(), text: importIdColumnError()"></div>
       <div class="conf-value" data-bind="foreach: columns()">
         <div class="conf-line">
           <input type="text" list="columnlist" data-bind="value: columnValue, css: {confError: columnError()}, disable: $parent.isWorking()">

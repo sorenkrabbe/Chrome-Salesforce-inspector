@@ -68,7 +68,7 @@ function dataImportVm(copyToClipboard) {
       // We should try to allow imports to succeed even if our validation logic does not exactly match the one in Salesforce.
       // We only hard-fail on errors that prevent us from building the API request.
       // When possible, we submit the request with errors and let Salesforce give a descriptive message in the response.
-      return !vm.importActionValid() || !importData().importTable || !importData().importTable.header.every(function(col) { return col.columnIgnore() || col.columnValid(); });
+      return !vm.importIdColumnValid() || !importData().importTable || !importData().importTable.header.every(function(col) { return col.columnIgnore() || col.columnValid(); });
     },
     isWorking: function() {
       return vm.activeBatches() != 0 || vm.isProcessingQueue();
@@ -129,11 +129,11 @@ function dataImportVm(copyToClipboard) {
     useToolingApi: ko.observable(false),
     dataFormat: ko.observable("excel"),
     importAction: ko.observable("create"),
-    importActionValid: function() {
+    importIdColumnValid: function() {
       return vm.importAction() == "create" || vm.inputIdColumnIndex() > -1;
     },
-    importActionError: function() {
-      if (!vm.importActionValid()) {
+    importIdColumnError: function() {
+      if (!vm.importIdColumnValid()) {
         return "Error: The field mapping has no '" + vm.idFieldName() + "' column";
       }
       return "";
