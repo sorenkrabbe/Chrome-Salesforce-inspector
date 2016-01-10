@@ -85,7 +85,7 @@ function* dataExportTest() {
   setQuery("select Id, shipp", "", " from Account");
   assertEquals("select Id, shipp from Account", queryInput.value);
   assertEquals("Account fields:", vm.autocompleteResults().title);
-  assertEquals(["ShippingStreet", "ShippingCity", "ShippingState", "ShippingPostalCode", "ShippingCountry", "ShippingLatitude", "ShippingLongitude", "ShippingGeocodeAccuracy", "ShippingAddress"], getValues(vm.autocompleteResults().results));
+  assertEquals(["ShippingAddress", "ShippingCity", "ShippingCountry", "ShippingGeocodeAccuracy", "ShippingLatitude", "ShippingLongitude", "ShippingPostalCode", "ShippingState", "ShippingStreet"], getValues(vm.autocompleteResults().results));
   vm.queryAutocompleteHandler({ctrlSpace: true});
   assertEquals("select Id, ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry, ShippingLatitude, ShippingLongitude, ShippingGeocodeAccuracy, ShippingAddress,  from Account", queryInput.value);
   
@@ -93,9 +93,9 @@ function* dataExportTest() {
   setQuery("select Id, OWNE", "", " from Account");
   assertEquals("select Id, OWNE from Account", queryInput.value);
   assertEquals("Account fields:", vm.autocompleteResults().title);
-  assertEquals(["Ownership", "OwnerId", "Owner."], getValues(vm.autocompleteResults().results));
+  assertEquals(["Owner.", "OwnerId", "Ownership"], getValues(vm.autocompleteResults().results));
   // Select relationship field in SELECT
-  vm.autocompleteClick(vm.autocompleteResults().results[2]);
+  vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("select Id, Owner. from Account", queryInput.value);
   assertEquals("Loading metadata...", vm.autocompleteResults().title);
   assertEquals([], vm.autocompleteResults().results);
@@ -135,15 +135,15 @@ function* dataExportTest() {
   // Autocomplete picklist value
   setQuery("select Id from Account where Type = cust", "", "");
   assertEquals("Account.Type values:", vm.autocompleteResults().title);
-  assertEquals(["'Customer - Direct'", "'Customer - Channel'"], getValues(vm.autocompleteResults().results));
+  assertEquals(["'Customer - Channel'", "'Customer - Direct'"], getValues(vm.autocompleteResults().results));
   vm.autocompleteClick(vm.autocompleteResults().results[1]);
-  assertEquals("select Id from Account where Type = 'Customer - Channel' ", queryInput.value);
+  assertEquals("select Id from Account where Type = 'Customer - Direct' ", queryInput.value);
 
   // Autocomplete boolean value
   setQuery("select Id from Account where IsDeleted != ", "", "");
   assertEquals("Account.IsDeleted values:", vm.autocompleteResults().title);
-  assertEquals(["true", "false"], getValues(vm.autocompleteResults().results));
-  vm.autocompleteClick(vm.autocompleteResults().results[0]);
+  assertEquals(["false", "true"], getValues(vm.autocompleteResults().results));
+  vm.autocompleteClick(vm.autocompleteResults().results[1]);
   assertEquals("select Id from Account where IsDeleted != true ", queryInput.value);
 
   // Autocomplete datetime value
@@ -225,6 +225,11 @@ function* dataExportTest() {
   setQuery("select Id from Account where UnknownRelation.FieldName", "", "");
   assertEquals("Unknown field: Account.UnknownRelation.", vm.autocompleteResults().title);
   assertEquals([], getValues(vm.autocompleteResults().results));
+
+  // Autocomplete sort order
+  setQuery("select Id", "", " from Account");
+  assertEquals("Account fields:", vm.autocompleteResults().title);
+  assertEquals("Id", getValues(vm.autocompleteResults().results)[0]);
 
   // Autocomplete tooling API
   setQuery("select Id from ApexCla", "", "");
