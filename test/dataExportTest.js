@@ -231,6 +231,20 @@ function* dataExportTest() {
   assertEquals("Account fields:", vm.autocompleteResults().title);
   assertEquals("Id", getValues(vm.autocompleteResults().results)[0]);
 
+  // Autocomplete before subquery
+  setQuery("select Id from Opportunity where AccountId", "", " in (select AccountId from Asset where Price = null) and StageName = 'Closed Won'");
+  yield waitForSpinner();
+  assertEquals("Opportunity fields:", vm.autocompleteResults().title);
+
+  // Autocomplete in subquery
+  setQuery("select Id from Opportunity where AccountId in (select AccountId from Asset where Price", "", " = null) and StageName = 'Closed Won'");
+  yield waitForSpinner();
+  assertEquals("Asset fields:", vm.autocompleteResults().title);
+
+  // Autocomplete after subquery
+  setQuery("select Id from Opportunity where AccountId in (select AccountId from Asset where Price = null) and StageName", "", " = 'Closed Won'");
+  assertEquals("Opportunity fields:", vm.autocompleteResults().title);
+
   // Autocomplete tooling API
   setQuery("select Id from ApexCla", "", "");
   vm.queryTooling(true);

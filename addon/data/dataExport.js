@@ -169,7 +169,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
    * Autocompletes field values (picklist values, date constants, boolean values).
    * Autocompletes any textual field value by performing a Salesforce API query when Ctrl+Space is pressed.
    * Inserts all autocomplete field suggestions when Ctrl+Space is pressed.
-   * Does not yet support subqueries.
+   * Supports subqueries in where clauses, but not in select clauses.
    */
   let autocompleteState = "";
   let autocompleteProgress = {};
@@ -255,7 +255,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
 
     let sobjectName, isAfterFrom;
     // Find out what sobject we are querying, by using the word after the "from" keyword.
-    // Assuming no subqueries, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
+    // Assuming no subqueries in the select clause, we should find the correct sobjectName. There should be only one "from" keyword, and strings (which may contain the word "from") are only allowed after the real "from" keyword.
     let fromKeywordMatch = /(^|\s)from\s+([a-z0-9_]*)/i.exec(query);
     if (fromKeywordMatch) {
       sobjectName = fromKeywordMatch[2];
@@ -273,6 +273,16 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
           results: []
         });
         return;
+      }
+    }
+    // If we are in a subquery, try to detect that.
+    fromKeywordMatch = /\(\s*select.*\sfrom\s+([a-z0-9_]*)/i.exec(query);
+    if (fromKeywordMatch && fromKeywordMatch.index < selStart) {
+      let subQuery = query.substring(fromKeywordMatch.index, selStart);
+      // Try to detect if the subquery ends before the selection
+      if (subQuery.split(")").length < subQuery.split("(").length) {
+        sobjectName = fromKeywordMatch[1];
+        isAfterFrom = selStart > fromKeywordMatch.index + fromKeywordMatch[0].length;
       }
     }
     let describeSobject = describeInfo.describeSobject(useToolingApi, sobjectName);
