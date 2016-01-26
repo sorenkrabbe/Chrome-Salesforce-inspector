@@ -28,8 +28,7 @@
         <label class="conf-input">
           <span class="conf-label">Action</span>
           <span class="conf-value">
-            <select data-bind="value: importAction, css: {confError: importActionError()}, disable: isWorking()"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select>
-            <div class="conf-error" data-bind="visible: importActionError(), text: importActionError()"></div>
+            <select data-bind="value: importAction, disable: isWorking()"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select>
           </span>
         </label>
       </div>
@@ -91,6 +90,7 @@
     </div>
     <div class="conf-subsection columns-mapping">
       <div class="columns-label">Field mapping</div>
+      <div class="conf-error confError" data-bind="visible: importIdColumnError(), text: importIdColumnError()"></div>
       <div class="conf-value" data-bind="foreach: columns()">
         <div class="conf-line">
           <input type="text" list="columnlist" data-bind="value: columnValue, css: {confError: columnError()}, disable: $parent.isWorking()">
@@ -103,7 +103,7 @@
     <span class="conf-label"></span>
     <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>
     <button data-bind="click: doImport, disable: invalidInput() || isWorking() || importCounts().Queued == 0">Import</button>
-    <button data-bind="enable: isProcessingQueue, click: stopImport">Cancel queued</button>
+    <button data-bind="enable: isWorking() && importCounts().Queued != 0, click: toggleProcessing, text: isWorking() && importCounts().Queued != 0 && !isProcessingQueue() ? 'Resume queued' : 'Cancel queued'"></button>
     <button data-bind="enable: importCounts().Failed > 0, click: retryFailed" style="margin-right: 20px">Retry failed</button>
     <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy import result to clipboard for pasting into Excel or similar">Copy Excel</button>
     <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy import result to clipboard for saving as a CSV file">Copy CSV</button>

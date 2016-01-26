@@ -1,3 +1,4 @@
+"use strict";
 var sessions = {};
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.message == "putSession") {
@@ -6,8 +7,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.message == "getSession") {
     sendResponse(sessions[request.orgId]);
   }
+  function createWin(a, b) {
+    if (window.mozContact) {
+      delete a.type;
+    }
+    chrome.windows.create(a, b);
+  }
   if (request.message == "dataExport") {
-    chrome.windows.create(
+    createWin(
       {
         url: chrome.extension.getURL("data/dataExport.html") + "?" + request.args, 
         type: "popup",
@@ -18,7 +25,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     );
   }
   if (request.message == "dataImport") {
-    chrome.windows.create(
+    createWin(
       {
         url: chrome.extension.getURL("data/dataImport.html") + "?" + request.args, 
         type: "popup",
@@ -29,7 +36,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     );
   }
   if (request.message == "showAllData") {
-    chrome.windows.create(
+    createWin(
       {
         url: chrome.extension.getURL("data/showAllData.html") + "?" + request.args, 
         type: "popup",
@@ -40,7 +47,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     );
   }
   if (request.message == "apiExplore") {
-    chrome.windows.create(
+    createWin(
       {
         url: chrome.extension.getURL("data/apiExplore.html") + "?" + request.args, 
         type: "popup",
