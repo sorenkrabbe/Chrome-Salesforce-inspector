@@ -1,7 +1,7 @@
 {
   "name": "Salesforce inspector",
   "description": "Productivity tools for Salesforce administrators and developers to inspect data and metadata directly from the Salesforce UI.",
-  "version": "0.8",
+  "version": "0.9",
   "applications": {
     "gecko": {
       "id": "jid1-DBcuAQpfLMcvOQ@jetpack"
