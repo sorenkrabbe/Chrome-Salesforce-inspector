@@ -39,13 +39,17 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   queryInput.addEventListener("keyup", queryAutocompleteEvent);
   queryInput.addEventListener("mouseup", queryAutocompleteEvent);
 
+  // FraCarma: SHORTCUTS start
+
   // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
-  queryInput.addEventListener("keypress", function(e) {
-    if (e.charCode == 32 /* space */ && e.ctrlKey) {
-      e.preventDefault();
-      vm.queryAutocompleteHandler({ctrlSpace: true});
-    }
+  Mousetrap(document.body).bind('ctrl+space', function(e) {
+    vm.queryAutocompleteHandler({ctrlSpace: true});
   });
+  Mousetrap(document.body).bind('ctrl+enter', function(e) {
+    vm.doExport();
+  });
+
+
 
   initScrollTable(
     document.querySelector("#result-table"),
