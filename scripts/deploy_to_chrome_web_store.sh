@@ -37,7 +37,7 @@ sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/manifest.json
 sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/data/chromePopup.js
 
 log_message "1.2) Create ZIP file"
-zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* version.json docs\* test\* README.md \*.bak
+zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* version.json docs\* test\* \*.md \*.bak
 
 log_message "2) Push to chrome web store"
 
