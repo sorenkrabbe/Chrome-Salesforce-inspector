@@ -40,8 +40,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   queryInput.addEventListener("mouseup", queryAutocompleteEvent);
 
   // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
-  queryInput.addEventListener("keypress", function(e) {
-    if (e.charCode == 32 /* space */ && e.ctrlKey) {
+  // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown.
+  queryInput.addEventListener("keydown", function(e) {
+    if (e.which == 32 /* space */ && e.ctrlKey) {
       e.preventDefault();
       vm.queryAutocompleteHandler({ctrlSpace: true});
     }
