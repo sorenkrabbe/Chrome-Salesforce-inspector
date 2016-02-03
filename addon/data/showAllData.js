@@ -69,6 +69,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     sortChildsByField() {
       childRowList.sortRows("field");
     },
+    sortChildsByLabel() {
+      childRowList.sortRows("label");
+    },
     detailsFilterFocus: ko.observable(false),
     detailsFilter: ko.observable(""),
     detailsBox: ko.observable(null),
@@ -453,10 +456,17 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         }
         return "(Unknown)";
       },
+      childLabel() {
+        if (childVm.relatedListInfo()) {
+          return childVm.relatedListInfo().relatedList.label;
+        }
+        return "";
+      },
       sortKeys: {
         name: () => (childVm.childName || "").trim(),
         object: () => (childVm.childObject() || "").trim(),
-        field: () => (childVm.childField() || "").trim()
+        field: () => (childVm.childField() || "").trim(),
+        label: () => (childVm.childLabel() || "").trim()
       },
       visible: function() {
         var values = vm.rowsFilter().trim().split(/[ \t]+/);
@@ -469,7 +479,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
               return false;
             }
           } else {
-            var row = childVm.childName + "," + childVm.childObject() + "," + childVm.childField();
+            var row = childVm.childName + "," + childVm.childObject() + "," + childVm.childField() + "," + childVm.childLabel();
             return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
           }
         });

@@ -84,6 +84,7 @@
         <th class="child-name" tabindex="0" data-bind="click: sortChildsByName">Relationship Name</th>
         <th class="child-object" tabindex="0" data-bind="click: sortChildsByObject">Child Object</th>
         <th class="child-field" tabindex="0" data-bind="click: sortChildsByField">Field</th>
+        <th class="child-label" tabindex="0" data-bind="click: sortChildsByLabel">Label</th>
         <th class="child-actions">Actions</th>
       </thead>
       <tbody id="dataTableBody" data-bind="foreach: childRows, event: {click: tableClick, mousemove: tableMouseMove, mousedown: tableMouseDown}">
@@ -91,6 +92,7 @@
           <td data-bind="text: childName" class="child-name"></td>
           <td class="child-object"><a href="about:blank" data-bind="text: childObject(), click: showChildObject"></a></td>
           <td data-bind="text: childField()" class="child-field"></td>
+          <td data-bind="text: childLabel()" class="child-label"></td>
           <td class="child-actions">
             <a href="about:blank" data-bind="click: openDetails">More</a>
             <a href="about:blank" data-bind="click: queryList, visible: $parent.canView()" title="Export records in this related list">List</a>
