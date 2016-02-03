@@ -11,7 +11,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   var objectData = ko.observable(null);
   var recordData = ko.observable(null);
-  var fieldMap = {};
+  var layoutInfo = ko.observable(null);
   var isDragging = false;
 
   var vm = {
@@ -34,35 +34,44 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       return (objectData() ? "ALL DATA: " + objectData().name + " " : "") + vm.recordHeading();
     },
     errorMessages: ko.observableArray(),
-    fieldRowsFilterFocus: ko.observable(true),
-    fieldRowsFilter: ko.observable(""),
+    rowsFilterFocus: ko.observable(true),
+    rowsFilter: ko.observable(""),
     fieldRows: ko.observableArray(),
     childRows: ko.observableArray(),
     clearAndFocusFilter: function() {
-      vm.fieldRowsFilter("");
-      vm.fieldRowsFilterFocus(true);
+      vm.rowsFilter("");
+      vm.rowsFilterFocus(true);
     },
-    sortByName: function() {
-      sortFieldRows("name");
+    sortFieldsByName() {
+      fieldRowList.sortRows("name");
     },
-    sortByLabel: function() {
-      sortFieldRows("label");
+    sortFieldsByLabel() {
+      fieldRowList.sortRows("label");
     },
-    sortByHelptext: function() {
-      sortFieldRows("helptext");
+    sortFieldsByHelptext() {
+      fieldRowList.sortRows("helptext");
     },
-    sortByDesc: function() {
-      sortFieldRows("desc");
+    sortFieldsByDesc() {
+      fieldRowList.sortRows("desc");
     },
-    sortByValue: function() {
-      sortFieldRows("dataValue");
+    sortFieldsByValue() {
+      fieldRowList.sortRows("dataValue");
     },
-    sortByType: function() {
-      sortFieldRows("type");
+    sortFieldsByType() {
+      fieldRowList.sortRows("type");
     },
-    fieldDetailsFilterFocus: ko.observable(false),
-    fieldDetailsFilter: ko.observable(""),
-    fieldDetails: ko.observable(null),
+    sortChildsByName() {
+      childRowList.sortRows("name");
+    },
+    sortChildsByObject() {
+      childRowList.sortRows("object");
+    },
+    sortChildsByField() {
+      childRowList.sortRows("field");
+    },
+    detailsFilterFocus: ko.observable(false),
+    detailsFilter: ko.observable(""),
+    detailsBox: ko.observable(null),
     isEditing: ko.observable(false),
     hasEntityParticles: ko.observable(false),
     showFieldLabelColumn: ko.observable(true),
@@ -70,18 +79,19 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     showFieldDescriptionColumn: ko.observable(false),
     showFieldValueColumn: ko.observable(false),
     showFieldTypeColumn: ko.observable(true),
-    closeFieldDetails: function() {
-      vm.fieldDetails(null);
+    closeDetailsBox: function() {
+      vm.detailsBox(null);
     },
     showObjectMetadata: function() {
       var objectDescribe = objectData();
       var props = {};
-      addProperties(props, objectDescribe, "", {fields: true, childRelationships: true});
+      addProperties(props, objectDescribe, "desc.", {fields: true, childRelationships: true});
+      addProperties(props, layoutInfo(), "layout.", {detailLayoutSections: true, editLayoutSections: true, relatedLists: true});
       showAllFieldMetadata(objectDescribe.name, props, false);
     },
-    fieldDetailsFilterClick: function(field) {
-      vm.closeFieldDetails();
-      vm.fieldRowsFilter(field.key + "=" + JSON.stringify(field.value));
+    detailsFilterClick: function(field) {
+      vm.closeDetailsBox();
+      vm.rowsFilter(field.key + "=" + JSON.stringify(field.value));
     },
     tableMouseDown() {
       isDragging = false;
@@ -150,6 +160,41 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     vm.fieldRows().forEach(function(fieldRow) { fieldRow.showFieldDescription(); });
   });
 
+  function RowList(rows, constructor) {
+    var map = {};
+    var sortCol = "name";
+    var sortDir = 1;
+    var list = {
+      getRow(name) {
+        if (!name) { // related lists may not have a name
+          let row = new constructor(name);
+          rows.push(row);
+          return row;
+        }
+        let row = map[name];
+        if (!row) {
+          row = new constructor(name);
+          rows.push(row);
+          map[name] = row;
+        }
+        return row;
+      },
+      sortRows(col) {
+        sortDir = col == sortCol ? -sortDir : 1;
+        sortCol = col;
+        list.resortRows();
+      },
+      resortRows() {
+        rows.sort(function(a, b) {
+          return sortDir * a.sortKeys[sortCol]().localeCompare(b.sortKeys[sortCol]());
+        });
+      }
+    };
+    return list;
+  }
+
+  var fieldRowList = new RowList(vm.fieldRows, FieldRow);
+
   function FieldRow(fieldName) {
     function fieldProperties() {
       var props = {};
@@ -165,6 +210,24 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       if (fieldVm.fieldParticleMetadata()) {
         addProperties(props, fieldVm.fieldParticleMetadata(), "meta.", {});
       }
+      if (fieldVm.detailLayoutInfo()) {
+        addProperties(props, fieldVm.detailLayoutInfo().indexes, "layout.", {});
+        addProperties(props, fieldVm.detailLayoutInfo().section, "layoutSection.", {layoutRows: true});
+        addProperties(props, fieldVm.detailLayoutInfo().row, "layoutRow.", {layoutItems: true});
+        addProperties(props, fieldVm.detailLayoutInfo().item, "layoutItem.", {layoutComponents: true});
+        addProperties(props, fieldVm.detailLayoutInfo().component, "layoutComponent.", {details: true});
+      } else if (layoutInfo()) {
+        addProperties(props, {shownOnLayout: false}, "layout.", {});
+      }
+      if (fieldVm.editLayoutInfo()) {
+        addProperties(props, fieldVm.editLayoutInfo().indexes, "editLayout.", {});
+        addProperties(props, fieldVm.editLayoutInfo().section, "editLayoutSection.", {layoutRows: true});
+        addProperties(props, fieldVm.editLayoutInfo().row, "editLayoutRow.", {layoutItems: true});
+        addProperties(props, fieldVm.editLayoutInfo().item, "editLayoutItem.", {layoutComponents: true});
+        addProperties(props, fieldVm.editLayoutInfo().component, "editLayoutComponent.", {details: true});
+      } else if (layoutInfo()) {
+        addProperties(props, {shownOnLayout: false}, "editLayout.", {});
+      }
       return props;
     }
 
@@ -172,6 +235,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       fieldDescribe: ko.observable(),
       dataTypedValue: ko.observable(),
       dataEditValue: ko.observable(null),
+      detailLayoutInfo: ko.observable(),
+      editLayoutInfo: ko.observable(),
       hasFocus: ko.observable(false),
       entityParticle: ko.observable(),
       fieldParticleMetadata: ko.observable(),
@@ -252,7 +317,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         return fieldVm.dataTypedValue() === null;
       },
       openSetup: function() {
-        return openFieldSetup(vm.objectName(), fieldName);
+        openFieldSetup(vm.objectName(), fieldName);
       },
       summary: function() {
         var fieldDescribe = fieldVm.fieldDescribe();
@@ -309,15 +374,15 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         });
       },
       sortKeys: {
-        name: function() { return fieldVm.fieldName.trim(); },
-        label: function() { return fieldVm.fieldLabel().trim(); },
-        helptext: function() { return (fieldVm.fieldHelptext() || "").trim(); },
-        desc: function() { return (fieldVm.fieldDesc() || "").trim(); },
-        dataValue: function() { return fieldVm.hasDataValue() ? fieldVm.dataStringValue().trim() : "\uFFFD"; },
-        type: function() { return fieldVm.fieldTypeDesc().trim(); }
+        name: () => fieldVm.fieldName.trim(),
+        label: () => fieldVm.fieldLabel().trim(),
+        helptext: () => (fieldVm.fieldHelptext() || "").trim(),
+        desc: () => (fieldVm.fieldDesc() || "").trim(),
+        dataValue: () => fieldVm.hasDataValue() ? fieldVm.dataStringValue().trim() : "\uFFFD",
+        type: () => fieldVm.fieldTypeDesc().trim()
       },
       visible: function() {
-        var values = vm.fieldRowsFilter().trim().split(/[ \t]+/);
+        var values = vm.rowsFilter().trim().split(/[ \t]+/);
         return values.every(function(value) {
           var pair = value.split("=");
           if (pair.length == 2) {
@@ -350,19 +415,51 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     return fieldVm;
   }
 
-  function ChildRow(childDescribe) {
+  var childRowList = new RowList(vm.childRows, ChildRow);
+  
+  function ChildRow(childName) {
     function childProperties() {
       var props = {};
-      addProperties(props, childDescribe, "child.", {});
+      if (childVm.childDescribe()) {
+        addProperties(props, childVm.childDescribe(), "child.", {});
+      }
+      if (childVm.relatedListInfo()) {
+        addProperties(props, childVm.relatedListInfo(), "layout.", {});
+      } else if (layoutInfo()) {
+        addProperties(props, {shownOnLayout: false}, "layout.", {});
+      }
       return props;
     }
 
     var childVm = {
-      childName: childDescribe.relationshipName,
-      childObject: childDescribe.childSObject,
-      childField: childDescribe.field,
+      childDescribe: ko.observable(),
+      relatedListInfo: ko.observable(),
+      childName: childName,
+      childObject() {
+        if (childVm.childDescribe()) {
+          return childVm.childDescribe().childSObject;
+        }
+        if (childVm.relatedListInfo()) {
+          return childVm.relatedListInfo().relatedList.sobject;
+        }
+        return "(Unknown)";
+      },
+      childField() {
+        if (childVm.childDescribe()) {
+          return childVm.childDescribe().field;
+        }
+        if (childVm.relatedListInfo()) {
+          return childVm.relatedListInfo().relatedList.field;
+        }
+        return "(Unknown)";
+      },
+      sortKeys: {
+        name: () => (childVm.childName || "").trim(),
+        object: () => (childVm.childObject() || "").trim(),
+        field: () => (childVm.childField() || "").trim()
+      },
       visible: function() {
-        var values = vm.fieldRowsFilter().trim().split(/[ \t]+/);
+        var values = vm.rowsFilter().trim().split(/[ \t]+/);
         return values.every(function(value) {
           var pair = value.split("=");
           if (pair.length == 2) {
@@ -372,25 +469,46 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
               return false;
             }
           } else {
-            var row = childVm.childName + "," + childVm.childObject + "," + childVm.childField;
+            var row = childVm.childName + "," + childVm.childObject() + "," + childVm.childField();
             return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
           }
         });
       },
       openDetails: function() {
-        showAllFieldMetadata(childDescribe.relationshipName, childProperties(), true);
+        showAllFieldMetadata(childName, childProperties(), true);
       },
       showChildObject: function() {
-        showAllData({
-          recordAttributes: {type: childDescribe.childSObject, url: null},
-          useToolingApi: false
-        });
+        let childDescribe = childVm.childDescribe();
+        if (childDescribe) {
+          showAllData({
+            recordAttributes: {type: childDescribe.childSObject, url: null},
+            useToolingApi: false
+          });
+        }
       },
       openSetup: function() {
-        return openFieldSetup(childDescribe.childSObject, childDescribe.field);
+        let childDescribe = childVm.childDescribe();
+        if (childDescribe) {
+          openFieldSetup(childDescribe.childSObject, childDescribe.field);
+          return;
+        }
+        let relatedListInfo = childVm.relatedListInfo();
+        if (relatedListInfo) {
+          openFieldSetup(relatedListInfo.relatedList.sobject, relatedListInfo.relatedList.field);
+          return;
+        }
       },
       queryList: function() {
-        dataExport({query: "select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'"});
+        let relatedListInfo = childVm.relatedListInfo();
+        if (relatedListInfo) {
+          dataExport({query: "select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + recordData().Id + "'"});
+          return;
+        }
+        let childDescribe = childVm.childDescribe();
+        if (childDescribe) {
+          dataExport({query: "select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'"});
+          return;
+        }
       }
     };
     return childVm;
@@ -418,26 +536,13 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         isNumber: typeof value == "number",
         isBoolean: typeof value == "boolean",
         visible: function() {
-          var value = vm.fieldDetailsFilter().trim().toLowerCase();
+          var value = vm.detailsFilter().trim().toLowerCase();
           return !value || this.toLowerCase().indexOf(value) != -1;
         }.bind(key + "," + value)
       });
     }
-    vm.fieldDetails({rows: fieldDetailVms, name: name, showFilterButton: showFilterButton});
-    vm.fieldDetailsFilterFocus(true);
-  }
-
-  var sortCol = "name";
-  var sortDir = 1;
-  function sortFieldRows(col) {
-    sortDir = col == sortCol ? -sortDir : 1;
-    sortCol = col;
-    resortFieldRows();
-  }
-  function resortFieldRows() {
-    vm.fieldRows.sort(function(a, b) {
-      return sortDir * a.sortKeys[sortCol]().localeCompare(b.sortKeys[sortCol]());
-    });
+    vm.detailsBox({rows: fieldDetailVms, name: name, showFilterButton: showFilterButton});
+    vm.detailsFilterFocus(true);
   }
 
   ko.applyBindings(vm, document.documentElement);
@@ -445,25 +550,65 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   function setRecordData(res) {
     for (var name in res) {
       if (name != "attributes") {
-        var fieldRow = fieldMap[name];
-        if (!fieldRow) {
-          fieldRow = new FieldRow(name);
-          vm.fieldRows.push(fieldRow);
-          fieldMap[name] = fieldRow;
-        }
-        fieldRow.dataTypedValue(res[name]);
+        fieldRowList.getRow(name).dataTypedValue(res[name]);
       }
     }
-    resortFieldRows();
+    fieldRowList.resortRows();
     recordData(res);
+    spinFor(
+      "describing layout",
+      askSalesforce("/services/data/v35.0/sobjects/" + vm.sobjectName() + "/describe/layouts/" + (res.RecordTypeId || "012000000000000AAA")).then(function(layoutDescribe) {
+        for (let layoutType of [{sections: "detailLayoutSections", observable: "detailLayoutInfo"}, {sections: "editLayoutSections", observable: "editLayoutInfo"}]) {
+          layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
+            section.layoutRows.forEach((row, rowIndex) => {
+              row.layoutItems.forEach((item, itemIndex) => {
+                item.layoutComponents.forEach((component, componentIndex) => {
+                  if (component.type == "Field") {
+                    fieldRowList.getRow(component.value)[layoutType.observable]({
+                      indexes: {
+                        shownOnLayout: true,
+                        sectionIndex: sectionIndex,
+                        rowIndex: rowIndex,
+                        itemIndex: itemIndex,
+                        componentIndex: componentIndex
+                      },
+                      section: section,
+                      row: row,
+                      item: item,
+                      component: component
+                    });
+                  }
+                });
+              });
+            });
+          });
+        }
+        fieldRowList.resortRows();
+        layoutDescribe.relatedLists.forEach((child, childIndex) => {
+          childRowList.getRow(child.name).relatedListInfo({
+            shownOnLayout: true,
+            relatedListIndex: childIndex,
+            relatedList: child
+          });
+        });
+        childRowList.resortRows();
+        layoutInfo(layoutDescribe);
+      })
+    );
   }
   function clearRecordData() {
     for (let fieldRow of vm.fieldRows()) {
       fieldRow.dataTypedValue(undefined);
       fieldRow.dataEditValue(null);
+      fieldRow.detailLayoutInfo(undefined);
+      fieldRow.editLayoutInfo(undefined);
+    }
+    for (let childRow of vm.childRows()) {
+      childRow.relatedListInfo(undefined);
     }
     vm.isEditing(false);
     recordData(null);
+    layoutInfo(null);
   }
 
   function spinFor(actionName, promise) {
@@ -534,18 +679,13 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       // Display the retrieved object data
       objectData(sobjectDescribe);
       sobjectDescribe.fields.forEach(function(fieldDescribe) {
-        var fieldRow = fieldMap[fieldDescribe.name];
-        if (!fieldRow) {
-          fieldRow = new FieldRow(fieldDescribe.name);
-          vm.fieldRows.push(fieldRow);
-          fieldMap[fieldDescribe.name] = fieldRow;
-        }
-        fieldRow.fieldDescribe(fieldDescribe);
+        fieldRowList.getRow(fieldDescribe.name).fieldDescribe(fieldDescribe);
       });
-      resortFieldRows();
+      fieldRowList.resortRows();
       sobjectDescribe.childRelationships.forEach(function(childDescribe) {
-        vm.childRows.push(new ChildRow(childDescribe));
+        childRowList.getRow(childDescribe.relationshipName).childDescribe(childDescribe);
       });
+      childRowList.resortRows();
     }));
 
     // Fetch record data using record retrieve call
@@ -564,16 +704,10 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + sobjectInfo.sobjectName + "'"))
       .then(function(res) {
         res.records.forEach(function(entityParticle) {
-          var fieldRow = fieldMap[entityParticle.QualifiedApiName];
-          if (!fieldRow) {
-            fieldRow = new FieldRow(entityParticle.QualifiedApiName);
-            vm.fieldRows.push(fieldRow);
-            fieldMap[entityParticle.QualifiedApiName] = fieldRow;
-          }
-          fieldRow.entityParticle(entityParticle);
+          fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle(entityParticle);
         });
         vm.hasEntityParticles(true);
-        resortFieldRows();
+        fieldRowList.resortRows();
       }));
 
   }));
