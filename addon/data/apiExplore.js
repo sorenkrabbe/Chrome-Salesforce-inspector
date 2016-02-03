@@ -76,6 +76,7 @@ function apiExploreVm(options, popupWin) {
     interface TextView {
       String name; // Name of the table
       String value; // The table serialized in TSV format
+      any[][]? table; // The table
     }
 
     In addition to building the table views of the JSON structure, we also scan it for values that look like API resource URLs, so we can display links to these.
@@ -117,7 +118,9 @@ function apiExploreVm(options, popupWin) {
         tViews[childViewName] = childView = tViews[childViewName] || {name: childViewName, parent: tView, rows: [], columnMap: {}, columnList: []};
 
         for (var i = 0; i < object.length; i++) {
-          object[i]["#"] = i;
+          if (object[i] && typeof object[i] == "object") {
+            object[i]["#"] = i;
+          }
 
           // Create the new row
           var childRow = {value: object[i], cells: [], parent: tRow};
@@ -210,7 +213,7 @@ function apiExploreVm(options, popupWin) {
         ["Organization name", userInfo.querySelector("Body organizationName").textContent],
         ["Extract time", new Date().toISOString()]
       ], "\t") + "\r\n\r\n";
-      textViews.push({name: "Rows: " + tView.name, value: csvSignature + csvSerialize(table, "\t")});
+      textViews.push({name: "Rows: " + tView.name, value: csvSignature + csvSerialize(table, "\t"), table: table});
     }
     vm.textViews(textViews);
     // Don't update selectedTextView. No radio button will be selected, leaving the text area blank.

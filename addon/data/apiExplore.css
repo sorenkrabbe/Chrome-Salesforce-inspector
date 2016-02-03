@@ -23,3 +23,9 @@ input[type=radio] {
   margin: 0;
   vertical-align: middle;
 }
+table {
+  border-collapse: collapse;
+}
+td,th {
+  border: 1px solid gray;
+}
