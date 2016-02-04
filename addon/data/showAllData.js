@@ -16,7 +16,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   var vm = {
     spinnerCount: ko.observable(0),
-    recordHeading: function() {
+    recordHeading() {
       if (recordData()) {
         return "(" + recordData().Name + " / " + recordData().Id + ")";
       }
@@ -26,11 +26,11 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       return "Loading all data...";
     },
     sobjectName: ko.observable(),
-    objectName: function() {
+    objectName() {
       // Get with correct case if available, otherwise just return the input.
       return objectData() ? objectData().name : vm.sobjectName();
     },
-    title: function() {
+    title() {
       return (objectData() ? "ALL DATA: " + objectData().name + " " : "") + vm.recordHeading();
     },
     errorMessages: ko.observableArray(),
@@ -38,7 +38,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     rowsFilter: ko.observable(""),
     fieldRows: ko.observableArray(),
     childRows: ko.observableArray(),
-    clearAndFocusFilter: function() {
+    clearAndFocusFilter() {
       vm.rowsFilter("");
       vm.rowsFilterFocus(true);
     },
@@ -82,17 +82,17 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     showFieldDescriptionColumn: ko.observable(false),
     showFieldValueColumn: ko.observable(false),
     showFieldTypeColumn: ko.observable(true),
-    closeDetailsBox: function() {
+    closeDetailsBox() {
       vm.detailsBox(null);
     },
-    showObjectMetadata: function() {
-      var objectDescribe = objectData();
-      var props = {};
+    showObjectMetadata() {
+      let objectDescribe = objectData();
+      let props = {};
       addProperties(props, objectDescribe, "desc.", {fields: true, childRelationships: true});
       addProperties(props, layoutInfo(), "layout.", {detailLayoutSections: true, editLayoutSections: true, relatedLists: true});
       showAllFieldMetadata(objectDescribe.name, props, false);
     },
-    detailsFilterClick: function(field) {
+    detailsFilterClick(field) {
       vm.closeDetailsBox();
       vm.rowsFilter(field.key + "=" + JSON.stringify(field.value));
     },
@@ -106,15 +106,15 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     },
     tableClick(_, e) {
       if (!e.target.closest("a, textarea") && !isDragging) {
-        var td = e.target.closest("td");
+        let td = e.target.closest("td");
         getSelection().selectAllChildren(td);
       }
       return true;
     },
-    canEdit: function() {
+    canEdit() {
       return objectData() && objectData().updateable && recordData() && recordData().Id;
     },
-    doEdit: function() {
+    doEdit() {
       for (let fieldRow of vm.fieldRows()) {
         if (fieldRow.canEdit()) {
           fieldRow.dataEditValue(fieldRow.dataStringValue());
@@ -122,13 +122,11 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       }
       vm.isEditing(true);
     },
-    doSave: function() {
+    doSave() {
       vm.errorMessages.remove(e => e.startsWith("Error saving record:"));
-      var record = {};
-      vm.fieldRows().forEach(function(fieldRow) {
-        fieldRow.saveDataValue(record);
-      });
-      var recordUrl = objectData().urls.rowTemplate.replace("{ID}", recordData().Id);
+      let record = {};
+      vm.fieldRows().forEach(fieldRow => fieldRow.saveDataValue(record));
+      let recordUrl = objectData().urls.rowTemplate.replace("{ID}", recordData().Id);
       spinFor(
         "saving record",
         askSalesforce(recordUrl, null, {method: "PATCH", body: record})
@@ -145,38 +143,38 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       }
       vm.isEditing(false);
     },
-    canView: function() {
+    canView() {
       return recordData() && recordData().Id;
     },
-    viewLink: function() {
+    viewLink() {
       return recordData() && recordData().Id && "https://" + session.hostname + "/" + recordData().Id;
     },
-    openSetup: function() {
+    openSetup() {
       return openObjectSetup(vm.objectName());
     },
   };
 
   var fetchFieldDescriptions = vm.showFieldDescriptionColumn.subscribe(function() {
     fetchFieldDescriptions.dispose();
-    vm.fieldRows().forEach(function(fieldRow) { fieldRow.showFieldDescription(); });
+    vm.fieldRows().forEach(fieldRow => fieldRow.showFieldDescription());
   });
 
   function RowList(rows, constructor) {
-    var map = {};
-    var sortCol = "name";
-    var sortDir = 1;
-    var list = {
+    let map = new Map();
+    let sortCol = "name";
+    let sortDir = 1;
+    let list = {
       getRow(name) {
         if (!name) { // related lists may not have a name
           let row = new constructor(name);
           rows.push(row);
           return row;
         }
-        let row = map[name];
+        let row = map.get(name);
         if (!row) {
           row = new constructor(name);
           rows.push(row);
-          map[name] = row;
+          map.set(name, row);
         }
         return row;
       },
@@ -186,9 +184,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         list.resortRows();
       },
       resortRows() {
-        rows.sort(function(a, b) {
-          return sortDir * a.sortKeys[sortCol]().localeCompare(b.sortKeys[sortCol]());
-        });
+        rows.sort((a, b) => sortDir * a.sortKeys[sortCol]().localeCompare(b.sortKeys[sortCol]()));
       }
     };
     return list;
@@ -198,7 +194,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   function FieldRow(fieldName) {
     function fieldProperties() {
-      var props = {};
+      let props = {};
       if (typeof fieldVm.dataTypedValue() != "undefined") {
         addProperties(props, {dataValue: fieldVm.dataTypedValue()}, "", {});
       }
@@ -232,7 +228,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       return props;
     }
 
-    var fieldVm = {
+    let fieldVm = {
       fieldDescribe: ko.observable(),
       dataTypedValue: ko.observable(),
       dataEditValue: ko.observable(null),
@@ -245,7 +241,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       dataStringValue() {
         return fieldVm.dataTypedValue() == null ? "" : "" + fieldVm.dataTypedValue();
       },
-      fieldLabel: function() {
+      fieldLabel() {
         if (fieldVm.fieldDescribe()) {
           return fieldVm.fieldDescribe().label;
         }
@@ -255,20 +251,20 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         return "Unknown Label";
       },
       fieldName: fieldName,
-      hasFieldHelptext: function() {
+      hasFieldHelptext() {
         return typeof fieldVm.fieldHelptext() != "undefined";
       },
-      fieldHelptext: function() {
+      fieldHelptext() {
         return fieldVm.fieldDescribe() && fieldVm.fieldDescribe().inlineHelpText;
       },
-      hasFieldDesc: function() {
+      hasFieldDesc() {
         return typeof fieldVm.fieldDesc() != "undefined";
       },
-      fieldDesc: function() {
+      fieldDesc() {
         return fieldVm.fieldParticleMetadata() && fieldVm.fieldParticleMetadata().Metadata.description;
       },
-      fieldTypeDesc: function() {
-        var fieldDescribe = fieldVm.fieldDescribe();
+      fieldTypeDesc() {
+        let fieldDescribe = fieldVm.fieldDescribe();
         if (fieldDescribe) {
           return fieldDescribe.type == "reference"
           ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
@@ -277,7 +273,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
             + (fieldDescribe.precision || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
             + (fieldDescribe.calculated ? "*" : "");
         }
-        var particle = fieldVm.entityParticle();
+        let particle = fieldVm.entityParticle();
         if (particle) {
           return particle.DataType == "reference" && particle.FieldDefinition.ReferenceTo.referenceTo
           ? "[" + particle.FieldDefinition.ReferenceTo.referenceTo.join(", ") + "]"
@@ -288,18 +284,18 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         }
         return "(Unknown)";
       },
-      referenceTypes: function() {
-        var fieldDescribe = fieldVm.fieldDescribe();
+      referenceTypes() {
+        let fieldDescribe = fieldVm.fieldDescribe();
         if (fieldDescribe) {
           return fieldDescribe.type == "reference" ? fieldDescribe.referenceTo : null;
         }
-        var particle = fieldVm.entityParticle();
+        let particle = fieldVm.entityParticle();
         if (particle) {
           return particle.DataType == "reference" ? particle.FieldDefinition.ReferenceTo.referenceTo : null;
         }
         return [];
       },
-      fieldIsCalculated: function() {
+      fieldIsCalculated() {
         if (fieldVm.fieldDescribe()) {
           return fieldVm.fieldDescribe().calculated;
         }
@@ -308,25 +304,25 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         }
         return false;
       },
-      fieldIsHidden: function() {
+      fieldIsHidden() {
         return !fieldVm.fieldDescribe();
       },
-      hasDataValue: function() {
+      hasDataValue() {
         return typeof fieldVm.dataTypedValue() != "undefined";
       },
-      hasBlankValue: function() {
+      hasBlankValue() {
         return fieldVm.dataTypedValue() === null;
       },
-      openSetup: function() {
+      openSetup() {
         openFieldSetup(vm.objectName(), fieldName);
       },
-      summary: function() {
+      summary() {
         var fieldDescribe = fieldVm.fieldDescribe();
         if (fieldDescribe) {
           return fieldName + "\n"
             + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
             + (fieldDescribe.inlineHelpText ? "Help text: " + fieldDescribe.inlineHelpText + "\n" : "")
-            + (fieldDescribe.picklistValues && fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(function(pickval) { return pickval.value; }).join(", ") + "\n" : "")
+            + (fieldDescribe.picklistValues && fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(pickval => pickval.value).join(", ") + "\n" : "")
             ;
         }
         // Entity particle does not contain any of this information
@@ -353,7 +349,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           recordData[fieldVm.fieldDescribe().name] = fieldVm.dataEditValue() == "" ? null : fieldVm.dataEditValue();
         }
       },
-      isId: function() {
+      isId() {
         if (fieldVm.fieldDescribe()) {
           return fieldVm.fieldDescribe().type == "reference" && !!fieldVm.dataTypedValue();
         }
@@ -362,13 +358,13 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         }
         return false;
       },
-      openDetails: function() {
+      openDetails() {
         showAllFieldMetadata(fieldName, fieldProperties(), true);
       },
-      showRecordId: function() {
+      showRecordId() {
         showAllData({recordId: fieldVm.dataTypedValue()});
       },
-      showReference: function() {
+      showReference() {
         showAllData({
           recordAttributes: {type: this, url: null},
           useToolingApi: false
@@ -382,10 +378,10 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         dataValue: () => fieldVm.hasDataValue() ? fieldVm.dataStringValue().trim() : "\uFFFD",
         type: () => fieldVm.fieldTypeDesc().trim()
       },
-      visible: function() {
-        var values = vm.rowsFilter().trim().split(/[ \t]+/);
-        return values.every(function(value) {
-          var pair = value.split("=");
+      visible() {
+        let values = vm.rowsFilter().trim().split(/[ \t]+/);
+        return values.every(value => {
+          let pair = value.split("=");
           if (pair.length == 2) {
             try {
               return fieldProperties()[pair[0]] === JSON.parse(pair[1]);
@@ -393,7 +389,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
               return false;
             }
           } else {
-            var row = fieldVm.fieldName
+            let row = fieldVm.fieldName
               + "," + (vm.showFieldLabelColumn() ? fieldVm.fieldLabel() : "")
               + "," + (vm.showFieldHelptextColumn() ? fieldVm.fieldHelptext() || "" : "")
               + "," + (vm.showFieldDescriptionColumn() ? fieldVm.fieldDesc() || "" : "")
@@ -403,7 +399,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           }
         });
       },
-      showFieldDescription: function() {
+      showFieldDescription() {
         if (!fieldVm.entityParticle()) {
           return;
         }
@@ -420,7 +416,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   
   function ChildRow(childName) {
     function childProperties() {
-      var props = {};
+      let props = {};
       if (childVm.childDescribe()) {
         addProperties(props, childVm.childDescribe(), "child.", {});
       }
@@ -432,7 +428,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       return props;
     }
 
-    var childVm = {
+    let childVm = {
       childDescribe: ko.observable(),
       relatedListInfo: ko.observable(),
       childName: childName,
@@ -466,10 +462,10 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         field: () => (childVm.childField() || "").trim(),
         label: () => (childVm.childLabel() || "").trim()
       },
-      visible: function() {
-        var values = vm.rowsFilter().trim().split(/[ \t]+/);
-        return values.every(function(value) {
-          var pair = value.split("=");
+      visible() {
+        let values = vm.rowsFilter().trim().split(/[ \t]+/);
+        return values.every(value => {
+          let pair = value.split("=");
           if (pair.length == 2) {
             try {
               return childProperties()[pair[0]] === JSON.parse(pair[1]);
@@ -477,15 +473,15 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
               return false;
             }
           } else {
-            var row = childVm.childName + "," + childVm.childObject() + "," + childVm.childField() + "," + childVm.childLabel();
+            let row = childVm.childName + "," + childVm.childObject() + "," + childVm.childField() + "," + childVm.childLabel();
             return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
           }
         });
       },
-      openDetails: function() {
+      openDetails() {
         showAllFieldMetadata(childName, childProperties(), true);
       },
-      showChildObject: function() {
+      showChildObject() {
         let childDescribe = childVm.childDescribe();
         if (childDescribe) {
           showAllData({
@@ -494,7 +490,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           });
         }
       },
-      openSetup: function() {
+      openSetup() {
         let childDescribe = childVm.childDescribe();
         if (childDescribe) {
           openFieldSetup(childDescribe.childSObject, childDescribe.field);
@@ -506,7 +502,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           return;
         }
       },
-      queryList: function() {
+      queryList() {
         let relatedListInfo = childVm.relatedListInfo();
         if (relatedListInfo) {
           dataExport({query: "select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + recordData().Id + "'"});
@@ -523,8 +519,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   }
 
   function addProperties(map, object, prefix, ignore) {
-    for (var key in object) {
-      var value = object[key];
+    for (let key in object) {
+      let value = object[key];
       if (ignore[key]) {
       } else if (value && typeof value == "object") {
         addProperties(map, value, prefix + key + ".", {});
@@ -534,19 +530,20 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     }
   }
   function showAllFieldMetadata(name, allFieldMetadata, showFilterButton) {
-    var fieldDetailVms = [];
-    for (var key in allFieldMetadata) {
-      var value = allFieldMetadata[key];
+    let fieldDetailVms = [];
+    for (let key in allFieldMetadata) {
+      let value = allFieldMetadata[key];
+      let row = key + "," + value;
       fieldDetailVms.push({
         key: key,
         value: value,
         isString: typeof value == "string",
         isNumber: typeof value == "number",
         isBoolean: typeof value == "boolean",
-        visible: function() {
-          var value = vm.detailsFilter().trim().toLowerCase();
-          return !value || this.toLowerCase().indexOf(value) != -1;
-        }.bind(key + "," + value)
+        visible() {
+          let value = vm.detailsFilter().trim().toLowerCase();
+          return !value || row.toLowerCase().indexOf(value) != -1;
+        }
       });
     }
     vm.detailsBox({rows: fieldDetailVms, name: name, showFilterButton: showFilterButton});
@@ -557,7 +554,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   function setRecordData(recordDataPromise) {
     spinFor("retrieving record", recordDataPromise.then(function(res) {
-      for (var name in res) {
+      for (let name in res) {
         if (name != "attributes") {
           fieldRowList.getRow(name).dataTypedValue(res[name]);
         }
@@ -650,25 +647,22 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       ])
       .then(function(responses) {
         var currentObjKeyPrefix = recordDesc.recordId.substring(0, 3);
-        for (var x = 0; x < responses.length; x++) {
-          var generalMetadataResponse = responses[x];
-          for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
-            var sobject = generalMetadataResponse.sobjects[i];
-            if (sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
-              vm.sobjectName(sobject.name);
-              sobjectDescribePromise = askSalesforce(sobject.urls.describe);
-              if (recordDesc.recordId.length < 15) {
-                recordDataPromise = null; // Just a prefix, don't attempt to load the record
-              } else if (sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
-                recordDataPromise = null; // Not a record ID, don't attempt to load the record
-              } else if (!sobject.retrieveable) {
-                recordDataPromise = null;
-                vm.errorMessages.push("This object does not support showing all data");
-              } else {
-                recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
-              }
-              return;
+        for (let generalMetadataResponse of responses) {
+          let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase());
+          if (sobject) {
+            vm.sobjectName(sobject.name);
+            sobjectDescribePromise = askSalesforce(sobject.urls.describe);
+            if (recordDesc.recordId.length < 15) {
+              recordDataPromise = null; // Just a prefix, don't attempt to load the record
+            } else if (sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
+              recordDataPromise = null; // Not a record ID, don't attempt to load the record
+            } else if (!sobject.retrieveable) {
+              recordDataPromise = null;
+              vm.errorMessages.push("This object does not support showing all data");
+            } else {
+              recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
             }
+            return;
           }
         }
         throw 'Unknown salesforce object: ' + recordDesc.recordId;
@@ -692,13 +686,13 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     spinFor("describing object", sobjectDescribePromise.then(function(sobjectDescribe) {
       // Display the retrieved object data
       objectData(sobjectDescribe);
-      sobjectDescribe.fields.forEach(function(fieldDescribe) {
+      for (let fieldDescribe of sobjectDescribe.fields) {
         fieldRowList.getRow(fieldDescribe.name).fieldDescribe(fieldDescribe);
-      });
+      }
       fieldRowList.resortRows();
-      sobjectDescribe.childRelationships.forEach(function(childDescribe) {
+      for (let childDescribe of sobjectDescribe.childRelationships) {
         childRowList.getRow(childDescribe.relationshipName).childDescribe(childDescribe);
-      });
+      }
       childRowList.resortRows();
     }));
 
@@ -714,9 +708,9 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
     spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
       .then(function(res) {
-        res.records.forEach(function(entityParticle) {
+        for (let entityParticle of res.records) {
           fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle(entityParticle);
-        });
+        }
         vm.hasEntityParticles(true);
         fieldRowList.resortRows();
       }));
