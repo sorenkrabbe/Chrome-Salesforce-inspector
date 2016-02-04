@@ -134,9 +134,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         askSalesforce(recordUrl, null, {method: "PATCH", body: record})
           .then(function() {
             clearRecordData();
-            spinFor("retrieving record", askSalesforce(recordUrl).then(function(res) {
-              setRecordData(res);
-            }));
+            setRecordData(askSalesforce(recordUrl));
           })
       );
     },
@@ -557,54 +555,61 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
   ko.applyBindings(vm, document.documentElement);
 
-  function setRecordData(res) {
-    for (var name in res) {
-      if (name != "attributes") {
-        fieldRowList.getRow(name).dataTypedValue(res[name]);
+  function setRecordData(recordDataPromise) {
+    spinFor("retrieving record", recordDataPromise.then(function(res) {
+      for (var name in res) {
+        if (name != "attributes") {
+          fieldRowList.getRow(name).dataTypedValue(res[name]);
+        }
       }
-    }
-    fieldRowList.resortRows();
-    recordData(res);
-    spinFor(
-      "describing layout",
-      askSalesforce("/services/data/v35.0/sobjects/" + vm.sobjectName() + "/describe/layouts/" + (res.RecordTypeId || "012000000000000AAA")).then(function(layoutDescribe) {
-        for (let layoutType of [{sections: "detailLayoutSections", observable: "detailLayoutInfo"}, {sections: "editLayoutSections", observable: "editLayoutInfo"}]) {
-          layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
-            section.layoutRows.forEach((row, rowIndex) => {
-              row.layoutItems.forEach((item, itemIndex) => {
-                item.layoutComponents.forEach((component, componentIndex) => {
-                  if (component.type == "Field") {
-                    fieldRowList.getRow(component.value)[layoutType.observable]({
-                      indexes: {
-                        shownOnLayout: true,
-                        sectionIndex: sectionIndex,
-                        rowIndex: rowIndex,
-                        itemIndex: itemIndex,
-                        componentIndex: componentIndex
-                      },
-                      section: section,
-                      row: row,
-                      item: item,
-                      component: component
+      fieldRowList.resortRows();
+      recordData(res);
+      vm.showFieldValueColumn(true);
+      spinFor(
+        "describing layout",
+        sobjectDescribePromise.then(function(sobjectDescribe) {
+          if (sobjectDescribe.layoutable) {
+            return askSalesforce("/services/data/v35.0/sobjects/" + vm.sobjectName() + "/describe/layouts/" + (res.RecordTypeId || "012000000000000AAA")).then(function(layoutDescribe) {
+              for (let layoutType of [{sections: "detailLayoutSections", observable: "detailLayoutInfo"}, {sections: "editLayoutSections", observable: "editLayoutInfo"}]) {
+                layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
+                  section.layoutRows.forEach((row, rowIndex) => {
+                    row.layoutItems.forEach((item, itemIndex) => {
+                      item.layoutComponents.forEach((component, componentIndex) => {
+                        if (component.type == "Field") {
+                          fieldRowList.getRow(component.value)[layoutType.observable]({
+                            indexes: {
+                              shownOnLayout: true,
+                              sectionIndex: sectionIndex,
+                              rowIndex: rowIndex,
+                              itemIndex: itemIndex,
+                              componentIndex: componentIndex
+                            },
+                            section: section,
+                            row: row,
+                            item: item,
+                            component: component
+                          });
+                        }
+                      });
                     });
-                  }
+                  });
+                });
+              }
+              fieldRowList.resortRows();
+              layoutDescribe.relatedLists.forEach((child, childIndex) => {
+                childRowList.getRow(child.name).relatedListInfo({
+                  shownOnLayout: true,
+                  relatedListIndex: childIndex,
+                  relatedList: child
                 });
               });
+              childRowList.resortRows();
+              layoutInfo(layoutDescribe);
             });
-          });
-        }
-        fieldRowList.resortRows();
-        layoutDescribe.relatedLists.forEach((child, childIndex) => {
-          childRowList.getRow(child.name).relatedListInfo({
-            shownOnLayout: true,
-            relatedListIndex: childIndex,
-            relatedList: child
-          });
-        });
-        childRowList.resortRows();
-        layoutInfo(layoutDescribe);
-      })
-    );
+          }
+        })
+      );
+    }));
   }
   function clearRecordData() {
     for (let fieldRow of vm.fieldRows()) {
@@ -635,6 +640,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   }
 
   var sobjectInfoPromise;
+  var sobjectDescribePromise;
+  var recordDataPromise;
   if ("recordId" in recordDesc) {
     sobjectInfoPromise = Promise
       .all([
@@ -648,44 +655,41 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
           for (var i = 0; i < generalMetadataResponse.sobjects.length; i++) {
             var sobject = generalMetadataResponse.sobjects[i];
             if (sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
-              var sobjectInfo = {};
-              sobjectInfo.sobjectName = sobject.name;
-              sobjectInfo.sobjectDescribePromise = askSalesforce(sobject.urls.describe);
+              vm.sobjectName(sobject.name);
+              sobjectDescribePromise = askSalesforce(sobject.urls.describe);
               if (recordDesc.recordId.length < 15) {
-                sobjectInfo.recordDataPromise = null; // Just a prefix, don't attempt to load the record
+                recordDataPromise = null; // Just a prefix, don't attempt to load the record
               } else if (sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
-                sobjectInfo.recordDataPromise = null; // Not a record ID, don't attempt to load the record
+                recordDataPromise = null; // Not a record ID, don't attempt to load the record
               } else if (!sobject.retrieveable) {
-                sobjectInfo.recordDataPromise = null;
+                recordDataPromise = null;
                 vm.errorMessages.push("This object does not support showing all data");
               } else {
-                sobjectInfo.recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
+                recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
               }
-              return sobjectInfo;
+              return;
             }
           }
         }
         throw 'Unknown salesforce object: ' + recordDesc.recordId;
       });
   } else if ("recordAttributes" in recordDesc) {
-    var sobjectInfo = {};
-    sobjectInfo.sobjectName = recordDesc.recordAttributes.type;
-    sobjectInfo.sobjectDescribePromise = askSalesforce("/services/data/v35.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
-    if (!recordDesc.recordAttributes.url) {
-      sobjectInfo.recordDataPromise = null; // No record url
-    } else {
-      sobjectInfo.recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
-    }
-    sobjectInfoPromise = Promise.resolve(sobjectInfo);
+    sobjectInfoPromise = Promise.resolve().then(function() {
+      vm.sobjectName(recordDesc.recordAttributes.type);
+      sobjectDescribePromise = askSalesforce("/services/data/v35.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+      if (!recordDesc.recordAttributes.url) {
+        recordDataPromise = null; // No record url
+      } else {
+        recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
+      }
+    });
   } else {
-    throw "unknown input for showAllData";
+    sobjectInfoPromise = Promise.reject("unknown input for showAllData");
   }
-  spinFor("describing global", sobjectInfoPromise.then(function(sobjectInfo) {
-
-    vm.sobjectName(sobjectInfo.sobjectName);
+  spinFor("describing global", sobjectInfoPromise.then(function() {
 
     // Fetch object data using object describe call
-    spinFor("describing object", sobjectInfo.sobjectDescribePromise.then(function(sobjectDescribe) {
+    spinFor("describing object", sobjectDescribePromise.then(function(sobjectDescribe) {
       // Display the retrieved object data
       objectData(sobjectDescribe);
       sobjectDescribe.fields.forEach(function(fieldDescribe) {
@@ -699,11 +703,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     }));
 
     // Fetch record data using record retrieve call
-    if (sobjectInfo.recordDataPromise) {
-      spinFor("retrieving record", sobjectInfo.recordDataPromise.then(function(res) {
-        vm.showFieldValueColumn(true);
-        setRecordData(res);
-      }));
+    if (recordDataPromise) {
+      setRecordData(recordDataPromise);
     }
 
     // Fetch fields using a Tooling API call, which returns fields not readable by the current user, but fails if the user does not have access to the Tooling API.
@@ -711,7 +712,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     // We would like to query all meta-fields, to show them when the user clicks a field for more details.
     // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
-    spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + sobjectInfo.sobjectName + "'"))
+    spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
       .then(function(res) {
         res.records.forEach(function(entityParticle) {
           fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle(entityParticle);
