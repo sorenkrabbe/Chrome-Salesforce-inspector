@@ -619,7 +619,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
           a.title = "Show all data";
           a.addEventListener("click", function(e) {
             e.preventDefault();
-            showAllData({recordAttributes: cell.attributes, useToolingApi: vm.exportResult().isTooling});
+            showAllData({recordAttributes: cell.attributes, useToolingApi: rt.isTooling});
           });
           a.textContent = cell.attributes.type;
           td.appendChild(a);

@@ -567,8 +567,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       spinFor(
         "describing layout",
         sobjectDescribePromise.then(function(sobjectDescribe) {
-          if (sobjectDescribe.layoutable) {
-            return askSalesforce("/services/data/v35.0/sobjects/" + vm.sobjectName() + "/describe/layouts/" + (res.RecordTypeId || "012000000000000AAA")).then(function(layoutDescribe) {
+          if (sobjectDescribe.urls.layouts) {
+            return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA")).then(function(layoutDescribe) {
               for (let layoutType of [{sections: "detailLayoutSections", observable: "detailLayoutInfo"}, {sections: "editLayoutSections", observable: "editLayoutInfo"}]) {
                 layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
                   section.layoutRows.forEach((row, rowIndex) => {
