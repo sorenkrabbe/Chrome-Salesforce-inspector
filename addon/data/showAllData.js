@@ -100,8 +100,10 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
       isDragging = false;
       return true;
     },
-    tableMouseMove() {
-      isDragging = true;
+    tableMouseMove(_, e) {
+      if (e.movementX || e.movementY) {
+        isDragging = true;
+      }
       return true;
     },
     tableClick(_, e) {
