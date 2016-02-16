@@ -365,7 +365,7 @@ function dataImportVm(copyToClipboard) {
   }
 
   var describeInfo = new DescribeInfo(spinFor);
-  spinFor(askSalesforceSoap("/services/Soap/u/35.0", "urn:partner.soap.sforce.com", "<getUserInfo/>").then(function(res) {
+  spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(function(res) {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
@@ -513,7 +513,7 @@ function dataImportVm(copyToClipboard) {
     updateResult(importData().importTable);
     executeBatch();
 
-    spinFor(askSalesforceSoap(importState.useToolingApi ? "/services/Soap/T/35.0" : "/services/Soap/c/35.0", importState.useToolingApi ? "urn:tooling.soap.sforce.com" : "urn:enterprise.soap.sforce.com", batchXml).then(function(res) {
+    spinFor(askSalesforceSoap(importState.useToolingApi ? "/services/Soap/T/" + apiVersion : "/services/Soap/c/" + apiVersion, importState.useToolingApi ? "urn:tooling.soap.sforce.com" : "urn:enterprise.soap.sforce.com", batchXml).then(function(res) {
       var results = res.querySelectorAll("Body result");
       for (var i = 0; i < results.length; i++) {
         var result = results[i];

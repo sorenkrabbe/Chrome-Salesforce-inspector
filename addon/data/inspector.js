@@ -2,6 +2,8 @@
 
 var session, orgId;
 
+var apiVersion = "36.0";
+
 function openFieldSetup(sobjectName, fieldName) {
   let w = open(""); // Open the new tab synchronously, to avoid the pop-up blocker, then later redirect it when we have the URL
   if (!fieldName.endsWith("__c") && !fieldName.endsWith("__pc")) {
@@ -20,7 +22,7 @@ function openFieldSetup(sobjectName, fieldName) {
         namespacePrefix = parts[0];
         developerName = parts[1];
       }
-      askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
+      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
         .then(res => w.location = "https://" + session.hostname + "/p/setup/field/StandardFieldAttributes/d?id=" + fieldName + "&type=" + res.records[0].Id.slice(0, -3))
         .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
     }
@@ -39,7 +41,7 @@ function openFieldSetup(sobjectName, fieldName) {
     if (suffix == "pc" && sobjectName == "Account") {
       sobjectName = "Contact";
     }
-    askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id from CustomField where EntityDefinition.QualifiedApiName = '" + sobjectName + "' and NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
+    askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Id from CustomField where EntityDefinition.QualifiedApiName = '" + sobjectName + "' and NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
       .then(res => w.location = "https://" + session.hostname + "/" + res.records[0].Id.slice(0, -3))
       .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
   }
@@ -59,7 +61,7 @@ function openObjectSetup(sobjectName) {
       namespacePrefix = parts[0];
       developerName = parts[1];
     }
-    askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
+    askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
       .then(res => w.location = "https://" + session.hostname + "/" + res.records[0].Id.slice(0, -3))
       .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
   }

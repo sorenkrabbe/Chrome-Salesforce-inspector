@@ -217,7 +217,7 @@ function initPopup(inInspector) {
           }
         })
         .then(function() {
-          return askSalesforce('/services/data/v35.0/sobjects/');
+          return askSalesforce('/services/data/v' + apiVersion + '/sobjects/');
         })
         .then(function(res) {
           document.querySelector("#insext-spinner").setAttribute("hidden", "");

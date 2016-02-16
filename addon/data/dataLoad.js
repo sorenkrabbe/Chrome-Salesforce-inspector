@@ -50,7 +50,7 @@ function DescribeInfo(spinFor) {
     if (!allDescribes[prop]) {
       allDescribes[prop] = new Map();
       console.log(useToolingApi ? "getting tooling objects" : "getting objects");
-      spinFor(askSalesforce(useToolingApi ? "/services/data/v35.0/tooling/sobjects/" : "/services/data/v35.0/sobjects/").then(function(res) {
+      spinFor(askSalesforce(useToolingApi ? "/services/data/v" + apiVersion + "/tooling/sobjects/" : "/services/data/v" + apiVersion + "/sobjects/").then(function(res) {
         for (let sobjectDescribe of res.sobjects) {
           allDescribes[prop].set(sobjectDescribe.name.toLowerCase(), {describeGlobalResult: sobjectDescribe, isLoading: false, describeSobject: null});
         }

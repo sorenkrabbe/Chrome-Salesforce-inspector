@@ -405,7 +405,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
         if (!fieldVm.entityParticle()) {
           return;
         }
-        spinFor("getting field definition metadata for " + fieldName, askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle().FieldDefinition.DurableId + "'"))
+        spinFor("getting field definition metadata for " + fieldName, askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle().FieldDefinition.DurableId + "'"))
           .then(function(fieldDefs) {
             fieldVm.fieldParticleMetadata(fieldDefs.records[0]);
           }));
@@ -644,8 +644,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   if ("recordId" in recordDesc) {
     sobjectInfoPromise = Promise
       .all([
-        askSalesforce('/services/data/v35.0/sobjects/'),
-        askSalesforce('/services/data/v35.0/tooling/sobjects/')
+        askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
+        askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/")
       ])
       .then(function(responses) {
         var currentObjKeyPrefix = recordDesc.recordId.substring(0, 3);
@@ -672,7 +672,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   } else if ("recordAttributes" in recordDesc) {
     sobjectInfoPromise = Promise.resolve().then(function() {
       vm.sobjectName(recordDesc.recordAttributes.type);
-      sobjectDescribePromise = askSalesforce("/services/data/v35.0/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
+      sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
       if (!recordDesc.recordAttributes.url) {
         recordDataPromise = null; // No record url
       } else {
@@ -708,7 +708,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     // We would like to query all meta-fields, to show them when the user clicks a field for more details.
     // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
-    spinFor("querying tooling particles", askSalesforce("/services/data/v35.0/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
+    spinFor("querying tooling particles", askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
       .then(function(res) {
         for (let entityParticle of res.records) {
           fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle(entityParticle);
