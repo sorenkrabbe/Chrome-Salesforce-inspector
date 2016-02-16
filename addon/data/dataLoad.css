@@ -16,3 +16,14 @@
 .scrolltable-cell.header {
   font-weight: bold;
 }
+.pop-menu {
+  position: absolute;
+  border: 1px solid gray;
+  background-color: white;
+  padding: 5px 10px;
+  margin-left: 5px;
+  margin-top: -5px;
+}
+.pop-menu a {
+  display: block;
+}

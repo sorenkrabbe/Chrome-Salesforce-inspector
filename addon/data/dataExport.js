@@ -619,7 +619,31 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
           a.title = "Show all data";
           a.addEventListener("click", function(e) {
             e.preventDefault();
-            showAllData({recordAttributes: cell.attributes, useToolingApi: rt.isTooling});
+            let pop = document.createElement("div");
+            pop.className = "pop-menu";
+            td.appendChild(pop);
+            let aShow = document.createElement("a");
+            aShow.href = "about:blank";
+            aShow.addEventListener("click", function(e) {
+              e.preventDefault();
+              showAllData({recordAttributes: cell.attributes, useToolingApi: rt.isTooling});
+            });
+            aShow.textContent = "Show all data";
+            pop.appendChild(aShow);
+            if (cell.attributes.url) {
+              let aView = document.createElement("a");
+              aView.href = "https://" + session.hostname + "/" + cell.attributes.url.replace(/.*\//, "");
+              aView.target = "_blank";
+              aView.textContent = "View in Salesforce";
+              pop.appendChild(aView);
+            }
+            function closer(ev) {
+              if (ev != e) {
+                removeEventListener("click", closer);
+                td.removeChild(pop);
+              }
+            }
+            addEventListener("click", closer);
           });
           a.textContent = cell.attributes.type;
           td.appendChild(a);
