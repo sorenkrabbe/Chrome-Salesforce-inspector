@@ -116,6 +116,79 @@ function copyToClipboard(value) {
   }
 }
 
+function renderCell(rt, cell, td) {
+  function popLink(showAll, getRecordId, label) {
+    let a = document.createElement("a");
+    a.href = "about:blank";
+    a.title = "Show all data";
+    a.addEventListener("click", function(e) {
+      e.preventDefault();
+      let pop = document.createElement("div");
+      pop.className = "pop-menu";
+      td.appendChild(pop);
+      let aShow = document.createElement("a");
+      aShow.href = "about:blank";
+      aShow.addEventListener("click", function(e) {
+        e.preventDefault();
+        showAll();
+      });
+      aShow.textContent = "Show all data";
+      pop.appendChild(aShow);
+      let recordId = getRecordId();
+      // If the recordId ends with 0000000000AAA it is a dummy ID such as the ID for the master record type 012000000000000AAA
+      if (recordId && !recordId.endsWith("0000000000AAA")) {
+        let aView = document.createElement("a");
+        aView.href = "https://" + session.hostname + "/" + recordId;
+        aView.target = "_blank";
+        aView.textContent = "View in Salesforce";
+        pop.appendChild(aView);
+      }
+      function closer(ev) {
+        if (ev != e) {
+          removeEventListener("click", closer);
+          td.removeChild(pop);
+        }
+      }
+      addEventListener("click", closer);
+    });
+    a.textContent = label;
+    td.appendChild(a);
+  }
+  function isRecordId(recordId) {
+    // We assume a string is a Salesforce ID if it is 18 characters,
+    // contains only alphanumeric characters,
+    // the record part (after the 3 character object key prefix and 2 character instance id) starts with at least four zeroes,
+    // and the 3 character object key prefix is not all zeroes.
+    return /[a-z0-9]{5}0000[a-z0-9]{9}/i.exec(recordId) && !recordId.startsWith("000");
+  }
+  if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
+    popLink(
+      () => showAllData({recordAttributes: cell.attributes, useToolingApi: rt.isTooling}),
+      () => {
+        if (!cell.attributes.url) {
+          return false;
+        }
+        let recordId = cell.attributes.url.replace(/.*\//, "");
+        if (!isRecordId(recordId)) {
+          return false;
+        }
+        return recordId;
+      },
+      cell.attributes.type
+    );
+  } else if (typeof cell == "string" && isRecordId(cell)) {
+    popLink(
+      () => showAllData({recordId: cell}),
+      () => cell,
+      cell
+    );
+  } else if (cell == null) {
+    td.textContent = "";
+  } else {
+    td.textContent = cell;
+  }
+}
+
 /*
 A table that contains millions of records will freeze the browser if we try to render the entire table at once.
 Therefore we implement a table within a scrollable area, where the cells are only rendered, when they are scrolled into view.
@@ -151,8 +224,8 @@ interface Table {
   Cell[][] table; // a two-dimensional array of table rows and cells
   boolean[] rowVisibilities; // For each row, true if it is visible, or false if it is hidden
   boolean[] colVisibilities; // For each column, true if it is visible, or false if it is hidden
-  void renderCell(Cell cell, DOMElement element); // Render cell within element
 }
+void renderCell(Table table, Cell cell, DOMElement element); // Render cell within element
 interface Cell {
   // Anything, passed to the renderCell function
 }
@@ -321,7 +394,7 @@ function initScrollTable(scroller, dataObs, resizeObs) {
         }
         td.style.minWidth = colWidths[c] + "px";
         td.style.height = rowHeights[r] + "px"; // min-height does not work on table cells, but height acts as min-height
-        data.renderCell(cell, td);
+        renderCell(data, cell, td);
         tr.appendChild(td);
         cellsVisible = true;
       }

@@ -218,11 +218,9 @@ function dataImportVm(copyToClipboard) {
       var data = importData().taggedRows.map(row => row.cells);
       return {
         table: [header].concat(data),
+        isTooling: undefined, // Only used in data export
         rowVisibilities: [true].concat(importData().taggedRows.map(row => vm.showStatus[row.status]())),
-        colVisibilities: header.map(c => true),
-        renderCell: function(cell, td) {
-          td.textContent = cell;
-        }
+        colVisibilities: header.map(c => true)
       };
     },
     confirmPopupYes: function() {

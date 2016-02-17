@@ -611,69 +611,6 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
         for (let r = 1 /* always show header */; r < rt.table.length; r++) {
           rt.rowVisibilities[r] = isVisible(rt.table[r], filter);
         }
-      },
-      renderCell(cell, td) {
-        function popLink(showAll, getRecordId, label) {
-          let a = document.createElement("a");
-          a.href = "about:blank";
-          a.title = "Show all data";
-          a.addEventListener("click", function(e) {
-            e.preventDefault();
-            let pop = document.createElement("div");
-            pop.className = "pop-menu";
-            td.appendChild(pop);
-            let aShow = document.createElement("a");
-            aShow.href = "about:blank";
-            aShow.addEventListener("click", function(e) {
-              e.preventDefault();
-              showAll();
-            });
-            aShow.textContent = "Show all data";
-            pop.appendChild(aShow);
-            let recordId = getRecordId();
-            if (recordId) {
-              let aView = document.createElement("a");
-              aView.href = "https://" + session.hostname + "/" + recordId;
-              aView.target = "_blank";
-              aView.textContent = "View in Salesforce";
-              pop.appendChild(aView);
-            }
-            function closer(ev) {
-              if (ev != e) {
-                removeEventListener("click", closer);
-                td.removeChild(pop);
-              }
-            }
-            addEventListener("click", closer);
-          });
-          a.textContent = label;
-          td.appendChild(a);
-        }
-        if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
-          popLink(
-            () => showAllData({recordAttributes: cell.attributes, useToolingApi: rt.isTooling}),
-            () => {
-              if (cell.attributes.url) {
-                let recordId = cell.attributes.url.replace(/.*\//, "");
-                if (/[a-z0-9]{5}0000[a-z0-9]{9}/i.exec(recordId) && !recordId.endsWith("0000000000AAA")) {
-                  return recordId;
-                }
-              }
-              return false;
-            },
-            cell.attributes.type
-          );
-        } else if (typeof cell == "string" && /[a-z0-9]{5}0000[a-z0-9]{9}/i.exec(cell) && !cell.endsWith("0000000000AAA")) {
-          popLink(
-            () => showAllData({recordId: cell}),
-            () => cell,
-            cell
-          );
-        } else if (cell == null) {
-          td.textContent = "";
-        } else {
-          td.textContent = cell;
-        }
       }
     };
     return rt;
