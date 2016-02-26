@@ -1,3 +1,30 @@
+Version 0.10
+============
+
+General
+-------
+* Update API version to Spring 16.
+
+Show all data
+-------------
+* Show information about the page layout of the inspected record.
+* Make quick value selection work in Chrome again.
+
+Data export
+-----------
+* Make record IDs clickable in the result table, in adition to object names.
+* Offer to either view all data for a record or view the record in normal Salesforce UI.
+* Fix bug opening the all data window when exporting with the Tooling API.
+* Fix keyboard shortcut issue in some variations of Chrome.
+
+Data import
+-----------
+* Make record IDs clickable in the status table.
+
+API explorer
+------------
+* Display results as a table instead of CSV.
+
 Version 0.9
 ===========
 
