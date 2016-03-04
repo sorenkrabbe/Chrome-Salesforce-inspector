@@ -4,7 +4,7 @@ if (!this.isUnitTest) {
 let args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
 let options = args.options;
 orgId = args.orgId;
-initPopup(true);
+initButton(true);
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
 

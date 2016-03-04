@@ -1,0 +1,56 @@
+body {
+    padding: 11px;
+    white-space: normal;
+    font-size: 12px;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+}
+body.loading {
+    display: none;
+}
+h3 {
+    font-weight: bold;
+    font-size: 100%;
+    margin: 0;
+    display: inline;
+    font-family: inherit;
+}
+button,
+input {
+    width: 100%;
+}
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+#spinner {
+    animation: spin 1s cubic-bezier(.5, .4, .5, .6) infinite;
+    font-weight: bold;
+    font-size: 30px;
+    width: 30px;
+    height: 30px;
+    line-height: 1;
+    position: absolute;
+    top: 2px;
+    right: 20px;
+}
+#thispage {
+    margin-bottom: 10px;
+}
+#showAllDataInp {
+    font-size: .9em;
+}
+#showStdPageDetailsBtn[disabled],
+#showAllDataBtn[disabled] {
+    color: gray;
+}
+.meta {
+    font-size: 12px;
+    text-align: right;
+}
+.version {
+    float: left;
+    font-size: 0.8em;
+    margin-top: 0.2em;
+}

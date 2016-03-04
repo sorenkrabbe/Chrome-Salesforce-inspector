@@ -1,0 +1,51 @@
+#insext {
+    z-index: 1000;
+    display: block;
+    position: fixed;
+    top: 205px;
+    right: 0;
+    vertical-align: middle;
+}
+#insext .insext-popup {
+    border: none;
+    box-sizing: border-box;
+    width: 220px;
+    height: 300px;
+    position:absolute;
+    background-color: #ffffff;
+    right: 0;
+    border-radius: 11px;
+    border-top-right-radius: 0;
+    z-index: 1;
+    box-shadow: 1px 1px 5px;
+    display: none;
+}
+#insext.insext-active .insext-popup {
+    display: block;
+}
+#insext .insext-btn {
+    box-sizing: border-box;
+    width: 15px;
+    height: 33px;
+    padding: 3px 1px 2px 0;
+    background-color: #226b86;
+    border-width: 4px;
+    border-style: solid;
+    border-right-style: none;
+    border-color: #fff;
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+    box-shadow: -2px 0 2px #a0a6ab;
+    opacity: .4;
+}
+#insext .insext-btn:hover,
+#insext.insext-active .insext-btn {
+    opacity: 1;
+    width: 20px; 
+}
+#insext .insext-btn img {
+    box-sizing: border-box;
+    width: 10px;
+    height: 15px;
+    margin: 2px;
+}

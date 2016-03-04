@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="loading">
+<div id="spinner" hidden>&#x25dc;</div>
+<h3>Salesforce inspector</h3>
+<div id="thispage">
+  <button id="showStdPageDetailsBtn">Show field metadata (m)</button>
+  <button id="showAllDataBtn">Show all data (a)</button>
+</div>
+<input id="showAllDataInp" placeholder="Record ID, ID prefix or Sobject name" list="sobjects">
+<datalist id="sobjects"></datalist>
+<button id="dataExportBtn">Data Export (e)</button>
+<button id="dataImportBtn">Data Import (i)</button>
+<button id="apiExploreBtn">Explore API (x)</button>
+<div class="meta"><div class="version">(v<!--##VERSION##-->)</div><a href="#" id="aboutLnk">About</a></div>
+<script src="inspector.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

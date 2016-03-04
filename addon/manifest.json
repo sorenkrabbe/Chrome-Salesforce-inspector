@@ -16,12 +16,12 @@
       "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*", "https://*.lightning.force.com/*"],
       "all_frames": true,
       "css": [
-        "data/chromePopup.css",
+        "data/button.css",
         "data/showStdPageDetails.css"
       ],
       "js": [
         "data/inspector.js",
-        "data/chromePopup.js",
+        "data/button.js",
         "data/showStdPageDetails.js"
       ]
     }
@@ -30,6 +30,9 @@
   "background": {
     "scripts": ["main.js"]
   },
+  "web_accessible_resources": [
+    "data/popup.html"
+  ],
   "incognito": "split",
   "manifest_version": 2
 }
