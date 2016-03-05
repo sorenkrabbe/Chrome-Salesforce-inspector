@@ -21,12 +21,13 @@ function init(params) {
   addEventListener("message", function(e) {
     if (e.source == parent && e.data.insextUpdateRecordId) {
       recordId = e.data.recordId;
-      document.querySelector('#showStdPageDetailsBtn').disabled = inAura || !recordId;
+      document.querySelector('#showStdPageDetailsBtn').disabled = inAura || detailsShown || !recordId;
       document.querySelector('#showAllDataBtn').disabled = !recordId;
     }
   });
 
   var sobjects = null;
+  var detailsShown = false;
   addEventListener('keypress', keyListener);
   function keyListener(e) {
     if (e.charCode == "m".charCodeAt(0)) {
@@ -53,10 +54,11 @@ function init(params) {
   
   // Click handlers for the buttons
   function showStdPageDetailsClick() {
-    if (!recordId) {
+    if (detailsShown || !recordId) {
       return;
     }
     document.querySelector('#showStdPageDetailsBtn').disabled = true;
+    detailsShown = true;
     document.querySelector("#spinner").removeAttribute("hidden");
     parent.postMessage({insextShowStdPageDetails: true}, "*");
     addEventListener("message", function messageHandler(e) {
@@ -67,7 +69,7 @@ function init(params) {
           closePopup();
         } else {
           document.querySelector('#showStdPageDetailsBtn').disabled = false;
-          alert(e.data.error);
+          detailsShown = false;
         }
       }
     });

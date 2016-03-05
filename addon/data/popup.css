@@ -1,3 +1,6 @@
+* {
+    box-sizing: border-box;
+}
 body {
     padding: 11px;
     white-space: normal;

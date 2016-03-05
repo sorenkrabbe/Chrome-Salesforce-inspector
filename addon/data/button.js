@@ -59,7 +59,7 @@ function initButton(inInspector) {
           isDevConsole: !!document.querySelector("body.ApexCSIPage"),
           inAura: !!document.querySelector("#auraLoadingBox"),
           inInspector: inInspector
-        }, popupSrc);
+        }, "*");
         openPopup();
       }
       if (e.source == popupEl.contentWindow && e.data.insextClosePopup) {
@@ -69,19 +69,19 @@ function initButton(inInspector) {
         showStdPageDetails(getRecordId())
           .then(
             () => {
-              popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: true}, popupSrc);
+              popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: true}, "*");
             },
             error => {
               console.error(error);
-              // We stringify the error because postMessage cannot handle certain objects such as Error.
-              popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: false, error: "" + error}, popupSrc);
+              popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: false}, "*");
+              alert(error);
             }
           );
       }
     });
     rootEl.appendChild(popupEl);
     function openPopup() {
-      popupEl.contentWindow.postMessage({insextUpdateRecordId: true, recordId: getRecordId()}, popupSrc);
+      popupEl.contentWindow.postMessage({insextUpdateRecordId: true, recordId: getRecordId()}, "*");
       rootEl.classList.add("insext-active");
       // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector
       addEventListener("click", outsidePopupClick);
