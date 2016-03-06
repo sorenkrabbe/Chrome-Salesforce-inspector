@@ -27,7 +27,7 @@
           <a data-bind="text: value, attr: {title: title}, click: $parent.autocompleteClick" href="about:blank"></a>
         </span>
       </span>
-      <a href="about:blank" class="char-btn" data-bind="click: showDescribe, visible: autocompleteResults().sobjectName, attr: {title: 'Show field info for the ' + autocompleteResults().sobjectName + ' object'}">i</a>
+      <a class="char-btn" data-bind="visible: autocompleteResults().sobjectName, attr: {href: showDescribeUrl(), title: 'Show field info for the ' + autocompleteResults().sobjectName + ' object'}">i</a>
       <a href="about:blank" class="char-btn" data-bind="click: toggleExpand, text: expandAutocomplete() ? '-' : '+'" title="Show all suggestions or only the first line"></a>
     </div>
     <div data-bind="visible: showHelp">

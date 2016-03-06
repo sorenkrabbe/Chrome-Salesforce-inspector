@@ -289,8 +289,8 @@ function dataImportVm(copyToClipboard) {
     toggleHelp: function() {
       vm.showHelp(!vm.showHelp());
     },
-    showDescribe: function() {
-      showAllData({
+    showDescribeUrl: function() {
+      return showAllDataUrl({
         recordAttributes: {type: vm.importType(), url: null},
         useToolingApi: vm.useToolingApi()
       });

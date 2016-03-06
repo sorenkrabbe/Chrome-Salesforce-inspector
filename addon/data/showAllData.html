@@ -58,7 +58,7 @@
             <!-- ko if: !hasFieldDesc() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
           </td>
           <td class="field-value" data-bind="visible: $parent.showFieldValueColumn, event: {dblclick: tryEdit}">
-            <!-- ko if: isId() && !isEditing() --><a href="about:blank" data-bind="text: dataStringValue(), click: showRecordId" class="value-text"></a><!-- /ko -->
+            <!-- ko if: isId() && !isEditing() --><a data-bind="text: dataStringValue(), attr: {href: showRecordIdUrl()}" class="value-text"></a><!-- /ko -->
             <!-- ko if: !isId() && !isEditing() --><span data-bind="text: dataStringValue()" class="value-text"></span><!-- /ko -->
             <!-- ko if: !hasDataValue() && !isEditing() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
             <!-- ko if: hasBlankValue() && !isEditing() --><span class="value-blank">(Blank)</span><!-- /ko -->
@@ -68,7 +68,7 @@
           <td class="field-type" data-bind="visible: $parent.showFieldTypeColumn">
             <span data-bind="text: fieldTypeDesc(), visible: !referenceTypes()"></span>
             <!-- ko foreach: referenceTypes() -->
-              <a href="about:blank" data-bind="text: $data, click: $parent.showReference"></a>
+              <a data-bind="text: $data, attr: {href: $parent.showReferenceUrl($data)}"></a>
             <!-- /ko -->
           </td>
           <td class="field-actions">
@@ -90,12 +90,12 @@
       <tbody id="dataTableBody" data-bind="foreach: childRows, event: {click: tableClick, mousemove: tableMouseMove, mousedown: tableMouseDown}">
         <tr data-bind="visible: visible()">
           <td data-bind="text: childName" class="child-name"></td>
-          <td class="child-object"><a href="about:blank" data-bind="text: childObject(), click: showChildObject"></a></td>
+          <td class="child-object"><a data-bind="text: childObject(), attr: {href: showChildObjectUrl()}"></a></td>
           <td data-bind="text: childField()" class="child-field"></td>
           <td data-bind="text: childLabel()" class="child-label"></td>
           <td class="child-actions">
             <a href="about:blank" data-bind="click: openDetails">More</a>
-            <a href="about:blank" data-bind="click: queryList, visible: $parent.canView()" title="Export records in this related list">List</a>
+            <a data-bind="attr: {href: queryListUrl()}, visible: queryListUrl()" title="Export records in this related list">List</a>
             <a href="about:blank" data-bind="click: openSetup">Setup</a>
           </td>
         </tr>

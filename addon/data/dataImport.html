@@ -40,7 +40,7 @@
             <div class="conf-error" data-bind="visible: importTypeError(), text: importTypeError()"></div>
           </span>
         </label>
-        <a href="about:blank" class="char-btn" data-bind="click: showDescribe" title="Show field info for the selected object">i</a>
+        <a class="char-btn" data-bind="attr: {href: showDescribeUrl()}" title="Show field info for the selected object">i</a>
       </div>
       <div class="conf-line">
         <span class="conf-label">Format</span>

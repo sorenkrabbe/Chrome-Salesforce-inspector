@@ -117,7 +117,7 @@ function copyToClipboard(value) {
 }
 
 function renderCell(rt, cell, td) {
-  function popLink(showAll, getRecordId, label) {
+  function popLink(showAllUrl, getRecordId, label) {
     let a = document.createElement("a");
     a.href = "about:blank";
     a.title = "Show all data";
@@ -127,11 +127,7 @@ function renderCell(rt, cell, td) {
       pop.className = "pop-menu";
       td.appendChild(pop);
       let aShow = document.createElement("a");
-      aShow.href = "about:blank";
-      aShow.addEventListener("click", function(e) {
-        e.preventDefault();
-        showAll();
-      });
+      aShow.href = showAllUrl();
       aShow.textContent = "Show all data";
       pop.appendChild(aShow);
       let recordId = getRecordId();
@@ -139,7 +135,6 @@ function renderCell(rt, cell, td) {
       if (recordId && !recordId.endsWith("0000000000AAA")) {
         let aView = document.createElement("a");
         aView.href = "https://" + session.hostname + "/" + recordId;
-        aView.target = "_blank";
         aView.textContent = "View in Salesforce";
         pop.appendChild(aView);
       }
@@ -163,7 +158,7 @@ function renderCell(rt, cell, td) {
   }
   if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
     popLink(
-      () => showAllData({recordAttributes: cell.attributes, useToolingApi: rt.isTooling}),
+      () => showAllDataUrl({recordAttributes: cell.attributes, useToolingApi: rt.isTooling}),
       () => {
         if (!cell.attributes.url) {
           return false;
@@ -178,7 +173,7 @@ function renderCell(rt, cell, td) {
     );
   } else if (typeof cell == "string" && isRecordId(cell)) {
     popLink(
-      () => showAllData({recordId: cell}),
+      () => showAllDataUrl({recordId: cell}),
       () => cell,
       cell
     );

@@ -24,10 +24,10 @@
     </table>
   </div>
   <ul data-bind="foreach: apiGroupUrls">
-    <li><a href="about:blank" data-bind="text: jsonPath, click: $parent.openGroupUrl"></a> - <span data-bind="text: label"></span></li>
+    <li><a data-bind="text: jsonPath, attr: {href: $parent.openGroupUrl($data)}"></a> - <span data-bind="text: label"></span></li>
   </ul>
   <ul data-bind="foreach: apiSubUrls">
-    <li><a href="about:blank" data-bind="text: jsonPath, click: $parent.openSubUrl"></a> - <span data-bind="text: label"></span> <a href="about:blank" data-bind="click: $parent.editSubUrl">Edit</a></li>
+    <li><a data-bind="text: jsonPath, attr: {href: $parent.openSubUrl($data)}"></a> - <span data-bind="text: label"></span> <a href="about:blank" data-bind="click: $parent.editSubUrl">Edit</a></li>
   </ul>
   <a href="https://www.salesforce.com/us/developer/docs/api_rest/" target="_blank">REST API documentation</a>
   <script src="knockout-3.2.0.js"></script>

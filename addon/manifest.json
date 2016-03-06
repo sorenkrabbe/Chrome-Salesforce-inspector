@@ -31,7 +31,11 @@
     "scripts": ["main.js"]
   },
   "web_accessible_resources": [
-    "data/popup.html"
+    "data/popup.html",
+    "data/dataExport.html",
+    "data/dataImport.html",
+    "data/showAllData.html",
+    "data/apiExplore.html"
   ],
   "incognito": "split",
   "manifest_version": 2

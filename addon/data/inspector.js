@@ -141,18 +141,18 @@ function askSalesforceSoap(url, namespace, request) {
   });
 }
 
-function dataExport(options) {
-  chrome.runtime.sendMessage({message: "dataExport", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})))}, function(message) {});
+function dataExportUrl(options) {
+  return chrome.extension.getURL("data/dataExport.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})));
 }
 
-function dataImport() {
-  chrome.runtime.sendMessage({message: "dataImport", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId})))}, function(message) {});
+function dataImportUrl() {
+  return chrome.extension.getURL("data/dataImport.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId})));
 }
 
-function showAllData(recordDesc) {
-  chrome.runtime.sendMessage({message: "showAllData", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, recordDesc: recordDesc})))}, function(message) {});
+function showAllDataUrl(recordDesc) {
+  return chrome.extension.getURL("data/showAllData.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId, recordDesc: recordDesc})));
 }
 
-function apiExplore(options) {
-  chrome.runtime.sendMessage({message: "apiExplore", args: encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})))}, function(message) {});
+function apiExploreUrl(options) {
+  return chrome.extension.getURL("data/apiExplore.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})));
 }

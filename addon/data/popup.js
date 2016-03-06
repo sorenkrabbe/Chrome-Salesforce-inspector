@@ -22,7 +22,11 @@ function init(params) {
     if (e.source == parent && e.data.insextUpdateRecordId) {
       recordId = e.data.recordId;
       document.querySelector('#showStdPageDetailsBtn').disabled = inAura || detailsShown || !recordId;
-      document.querySelector('#showAllDataBtn').disabled = !recordId;
+      if (recordId) {
+        document.querySelector('#showAllDataBtn').href = showAllDataUrl({recordId: recordId});
+      } else {
+        document.querySelector('#showAllDataBtn').removeAttribute("href");
+      }
     }
   });
 
@@ -36,19 +40,19 @@ function init(params) {
     }
     if (e.charCode == "a".charCodeAt(0)) {
       e.preventDefault();
-      showAllDataClick();
+      document.querySelector('#showAllDataBtn').click();
     }
     if (e.charCode == "e".charCodeAt(0)) {
       e.preventDefault();
-      dataExportClick();
+      document.querySelector('#dataExportBtn').click();
     }
     if (e.charCode == "i".charCodeAt(0)) {
       e.preventDefault();
-      dataImportClick();
+      document.querySelector('#dataImportBtn').click();
     }
     if (e.charCode == "x".charCodeAt(0)) {
       e.preventDefault();
-      apiExploreClick();
+      document.querySelector('#apiExploreBtn').click();
     }
   }
   
@@ -74,32 +78,13 @@ function init(params) {
       }
     });
   }
-  function showAllDataClick() {
-    if (!recordId) {
-      return;
-    }
-    showAllData({recordId: recordId});
-    closePopup();
-  }
   function showAllDataKeypress(e) {
     if (e.keyCode != 13) {
       e.stopPropagation(); // Stop our keyboard shortcut handler
       return;
     }
     e.preventDefault();
-    showAllData({recordId: document.querySelector('#showAllDataInp').value});
-    closePopup();
-  }
-  function dataExportClick() {
-    dataExport();
-    closePopup();
-  }
-  function dataImportClick() {
-    dataImport();
-    closePopup();
-  }
-  function apiExploreClick() {
-    apiExplore();
+    open(showAllDataUrl({recordId: document.querySelector('#showAllDataInp').value}));
     closePopup();
   }
 
@@ -109,12 +94,16 @@ function init(params) {
   if (!isDevConsole) {
     document.querySelector('#apiExploreBtn').style.display = "none";
   }
+  if (isDevConsole) {
+    for (let a of Array.from(document.querySelectorAll("a[target=_top]"))) {
+      a.target = "_blank";
+    }
+  }
   document.querySelector('#showStdPageDetailsBtn').addEventListener('click', showStdPageDetailsClick);
-  document.querySelector('#showAllDataBtn').addEventListener('click', showAllDataClick);
   document.querySelector('#showAllDataInp').addEventListener('keypress', showAllDataKeypress);
-  document.querySelector('#dataExportBtn').addEventListener('click', dataExportClick);
-  document.querySelector('#dataImportBtn').addEventListener('click', dataImportClick);
-  document.querySelector('#apiExploreBtn').addEventListener('click', apiExploreClick);
+  document.querySelector('#dataExportBtn').href = dataExportUrl();
+  document.querySelector('#dataImportBtn').href = dataImportUrl();
+  document.querySelector('#apiExploreBtn').href = apiExploreUrl();
   document.querySelector('#aboutLnk').addEventListener('click', function(){ 
     open('https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'); 
   });

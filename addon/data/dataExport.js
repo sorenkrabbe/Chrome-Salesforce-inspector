@@ -110,8 +110,8 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     toggleExpand() {
       vm.expandAutocomplete(!vm.expandAutocomplete());
     },
-    showDescribe() {
-      showAllData({
+    showDescribeUrl() {
+      return showAllDataUrl({
         recordAttributes: {type: vm.autocompleteResults().sobjectName, url: null},
         useToolingApi: vm.queryTooling()
       });

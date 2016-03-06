@@ -27,16 +27,16 @@ function apiExploreVm(options, popupWin) {
     apiSubUrls: ko.observable([]),
     apiGroupUrls: ko.observable([]),
     openSubUrl: function(subUrl) {
-      apiExplore({apiUrl: subUrl.apiUrl});
+      return apiExploreUrl({apiUrl: subUrl.apiUrl});
     },
     editSubUrl: function(subUrl) {
       var url = popupWin.prompt("REST API url", subUrl.apiUrl);
       if (url) {
-        apiExplore({apiUrl: url});
+        location = apiExploreUrl({apiUrl: url});
       }
     },
     openGroupUrl: function(groupUrl) {
-      apiExplore({apiUrls: groupUrl.apiUrls});
+      return apiExploreUrl({apiUrls: groupUrl.apiUrls});
     }
   };
   function spinFor(promise) {
