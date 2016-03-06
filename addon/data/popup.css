@@ -43,6 +43,18 @@ body.loading {
     fill: white;
     vertical-align: middle;
 }
+a[href] {
+    color: #0070d2;
+    text-decoration: none;
+    transition: color .1s linear;
+}
+a[href]:focus, a[href]:hover {
+    text-decoration: underline;
+    color: #005fb2;
+}
+a[href]:active {
+    color: #00396b;
+}
 button,
 input {
     width: 100%;
@@ -69,14 +81,17 @@ button.button, a.button[href] {
 button.button:hover, a[href].button:hover, .button:focus {
     background-color: #f4f6f9;
     color: #005fb2;
+    text-decoration: none;
 }
 button.button:active, a[href]:active {
     background-color: #eef1f6;
     color: #00396b;
+    text-decoration: none;
 }
 .button:focus {
     outline: 0;
     box-shadow: 0 0 3px #0070D2;
+    text-decoration: none;
 }
 @keyframes spin {
   100% {
