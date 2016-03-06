@@ -108,8 +108,8 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     },
     tableClick(_, e) {
       if (!e.target.closest("a, textarea") && !isDragging) {
-        let td = e.target.closest("td");
-        getSelection().selectAllChildren(td);
+        let td = e.target.closest(".quick-select");
+        getSelection().selectAllChildren(td.firstElementChild || td);
       }
       return true;
     },

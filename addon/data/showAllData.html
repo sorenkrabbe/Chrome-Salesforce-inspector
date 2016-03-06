@@ -47,17 +47,17 @@
       </thead>
       <tbody id="dataTableBody" data-bind="foreach: fieldRows, event: {click: tableClick, mousemove: tableMouseMove, mousedown: tableMouseDown}">
         <tr data-bind="css: {fieldCalculated: fieldIsCalculated(), fieldHidden: fieldIsHidden()}, visible: visible(), attr: {title: summary()}">
-          <td data-bind="text: fieldName" class="field-name"></td>
-          <td data-bind="text: fieldLabel(), visible: $parent.showFieldLabelColumn" class="field-label"></td>
-          <td data-bind="visible: $parent.showFieldHelptextColumn" class="field-helptext">
+          <td data-bind="text: fieldName" class="field-name quick-select"></td>
+          <td data-bind="text: fieldLabel(), visible: $parent.showFieldLabelColumn" class="field-label quick-select"></td>
+          <td data-bind="visible: $parent.showFieldHelptextColumn" class="field-helptext quick-select">
             <span data-bind="text: fieldHelptext()"></span>
             <!-- ko if: !hasFieldHelptext() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
           </td>
-          <td data-bind="visible: $parent.showFieldDescriptionColumn" class="field-desc">
+          <td data-bind="visible: $parent.showFieldDescriptionColumn" class="field-desc quick-select">
             <span data-bind="text: fieldDesc()"></span>
             <!-- ko if: !hasFieldDesc() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
           </td>
-          <td class="field-value" data-bind="visible: $parent.showFieldValueColumn, event: {dblclick: tryEdit}">
+          <td class="field-value quick-select" data-bind="visible: $parent.showFieldValueColumn, event: {dblclick: tryEdit}">
             <!-- ko if: isId() && !isEditing() --><a data-bind="text: dataStringValue(), attr: {href: showRecordIdUrl()}" class="value-text"></a><!-- /ko -->
             <!-- ko if: !isId() && !isEditing() --><span data-bind="text: dataStringValue()" class="value-text"></span><!-- /ko -->
             <!-- ko if: !hasDataValue() && !isEditing() --><span class="value-unknown">(Unknown)</span><!-- /ko -->
@@ -65,7 +65,7 @@
             <textarea data-bind="visible: isEditing(), hasFocus: hasFocus, value: dataEditValue"></textarea>
             <a href="about:blank" data-bind="visible: isEditing(), click: cancelEdit" class="undo-button">&#x21B6;</a>
           </td>
-          <td class="field-type" data-bind="visible: $parent.showFieldTypeColumn">
+          <td class="field-type quick-select" data-bind="visible: $parent.showFieldTypeColumn">
             <span data-bind="text: fieldTypeDesc(), visible: !referenceTypes()"></span>
             <!-- ko foreach: referenceTypes() -->
               <a data-bind="text: $data, attr: {href: $parent.showReferenceUrl($data)}"></a>
@@ -89,10 +89,10 @@
       </thead>
       <tbody id="dataTableBody" data-bind="foreach: childRows, event: {click: tableClick, mousemove: tableMouseMove, mousedown: tableMouseDown}">
         <tr data-bind="visible: visible()">
-          <td data-bind="text: childName" class="child-name"></td>
-          <td class="child-object"><a data-bind="text: childObject(), attr: {href: showChildObjectUrl()}"></a></td>
-          <td data-bind="text: childField()" class="child-field"></td>
-          <td data-bind="text: childLabel()" class="child-label"></td>
+          <td data-bind="text: childName" class="child-name quick-select"></td>
+          <td class="child-object quick-select"><a data-bind="text: childObject(), attr: {href: showChildObjectUrl()}"></a></td>
+          <td data-bind="text: childField()" class="child-field quick-select"></td>
+          <td data-bind="text: childLabel()" class="child-label quick-select"></td>
           <td class="child-actions">
             <a href="about:blank" data-bind="click: openDetails">More</a>
             <a data-bind="attr: {href: queryListUrl()}, visible: queryListUrl()" title="Export records in this related list">List</a>
