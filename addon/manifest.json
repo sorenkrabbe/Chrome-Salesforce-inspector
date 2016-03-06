@@ -4,7 +4,8 @@
   "version": "0.10",
   "applications": {
     "gecko": {
-      "id": "jid1-DBcuAQpfLMcvOQ@jetpack"
+      "id": "jid1-DBcuAQpfLMcvOQ@jetpack",
+      "strict_min_version": "46.0"
     }
   },
   "permissions": [
