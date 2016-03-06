@@ -1,26 +1,82 @@
 * {
     box-sizing: border-box;
 }
-body {
-    padding: 11px;
+html, body {
     white-space: normal;
     font-size: 12px;
     font-family: Arial, Helvetica, sans-serif;
     margin: 0;
+    height: 100%;
+}
+body {
+    display: flex;
+    flex-direction: column;
 }
 body.loading {
     display: none;
 }
-h3 {
-    font-weight: bold;
-    font-size: 100%;
-    margin: 0;
-    display: inline;
-    font-family: inherit;
+.main {
+    padding: 12px 8px;
+    flex: 1;
+}
+.footer {
+    padding: 12px 8px;
+    background: #f4f6f9;
+    border-top: 1px solid #d8dde6;
+}
+.header {
+    background: #061c3f;
+    padding: 8px;
+    color: white;
+    display: flex;
+    align-items: center;
+}
+.header-icon {
+    margin-right: 12px;
+    background: #8199AF;
+    border-radius: 4px;
+}
+.header-icon>svg {
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    fill: white;
+    vertical-align: middle;
 }
 button,
 input {
     width: 100%;
+}
+.button, button.button.button[disabled] {
+    width: 100%;
+    padding: 0 1rem;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #d8dde6;
+    background-color: white;
+    display: inline-block;
+    border-radius: .25rem;
+    line-height: 2.125rem;
+    text-decoration: none;
+    transition: color 50ms linear,background-color 50ms linear;
+    color: #d8dde6;
+    cursor: default;
+}
+button.button, a.button[href] {
+    color: #0070d2;
+    cursor: pointer;
+}
+button.button:hover, a[href].button:hover, .button:focus {
+    background-color: #f4f6f9;
+    color: #005fb2;
+}
+button.button:active, a[href]:active {
+    background-color: #eef1f6;
+    color: #00396b;
+}
+.button:focus {
+    outline: 0;
+    box-shadow: 0 0 3px #0070D2;
 }
 @keyframes spin {
   100% {
@@ -43,10 +99,27 @@ input {
 }
 #showAllDataInp {
     font-size: .9em;
+    font: inherit;
+    margin: 0;
+    background-color: white;
+    color: #16325c;
+    border: 1px solid #d8dde6;
+    border-radius: .25rem;
+    width: 100%;
+    transition: border .1s linear,background-color .1s linear;
+    display: inline-block;
+    padding: 0 1rem 0 .75rem;
+    line-height: 2.125rem;
+    min-height: calc(2.125rem + 2px);
 }
-#showStdPageDetailsBtn[disabled],
-#showAllDataBtn[disabled] {
-    color: gray;
+#showAllDataInp:active, #showAllDataInp:focus {
+    outline: 0;
+    border-color: #1589ee;
+    background-color: #fff;
+    box-shadow: 0 0 3px #0070D2;
+}
+.button, #showAllDataInp {
+    margin-bottom: 4px;
 }
 .meta {
     font-size: 12px;

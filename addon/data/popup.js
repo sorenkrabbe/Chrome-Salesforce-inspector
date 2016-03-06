@@ -104,9 +104,6 @@ function init(params) {
   document.querySelector('#dataExportBtn').href = dataExportUrl();
   document.querySelector('#dataImportBtn').href = dataImportUrl();
   document.querySelector('#apiExploreBtn').href = apiExploreUrl();
-  document.querySelector('#aboutLnk').addEventListener('click', function(){ 
-    open('https://github.com/sorenkrabbe/Chrome-Salesforce-inspector'); 
-  });
   document.querySelector('#showAllDataInp').addEventListener("focus", function focusListener(e) {
     e.target.removeEventListener("focus", focusListener);
     if (sobjects == null) {
