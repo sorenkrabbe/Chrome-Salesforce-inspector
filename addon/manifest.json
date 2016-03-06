@@ -9,7 +9,8 @@
   },
   "permissions": [
     "https://*.salesforce.com/*",
-    "https://*.visual.force.com/*"
+    "https://*.force.com/*",
+    "cookies"
   ],
   "content_scripts": [
     {

@@ -4,20 +4,12 @@
 // auraLoadingBox = Lightning / Salesforce1
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
-
-  // When on a *.visual.force.com page, the session in the cookie does not have API access,
-  // so we read the session from a cache stored in memory.
-  // When visiting a *.salesforce.com page, we store the session cookie in the cache.
-  // The first part of the session cookie is the OrgID,
-  // which we use as key to support being logged in to multiple orgs at once.
-  // http://salesforce.stackexchange.com/questions/23277/different-session-ids-in-different-contexts
-  orgId = document.cookie.match(/(^|;\s*)sid=(.+?)!/)[2];
-  if (location.hostname.includes(".salesforce.com")) {
-    let session = {key: document.cookie.match(/(^|;\s*)sid=(.+?);/)[2], hostname: location.hostname};
-    chrome.runtime.sendMessage({message: "putSession", orgId: orgId, session: session});
-  }
-
-  initButton(false);
+  chrome.runtime.sendMessage({message: "getOrgId", url: location.href}, function(message) {
+    orgId = message;
+    if (orgId) {
+      initButton(false);
+    }
+  });
 }
 
 function initButton(inInspector) {
