@@ -33,7 +33,7 @@ body.loading {
 }
 .header-icon {
     margin-right: 12px;
-    background: #8199AF;
+    background-color: #d8be5f;
     border-radius: 4px;
 }
 .header-icon>svg {
