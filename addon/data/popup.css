@@ -93,22 +93,6 @@ button.button:active, a[href]:active {
     box-shadow: 0 0 3px #0070D2;
     text-decoration: none;
 }
-@keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
-}
-#spinner {
-    animation: spin 1s cubic-bezier(.5, .4, .5, .6) infinite;
-    font-weight: bold;
-    font-size: 30px;
-    width: 30px;
-    height: 30px;
-    line-height: 1;
-    position: absolute;
-    top: 2px;
-    right: 20px;
-}
 #thispage {
     margin-bottom: 10px;
 }
@@ -135,6 +119,16 @@ button.button:active, a[href]:active {
 }
 .button, #showAllDataInp {
     margin-bottom: 4px;
+}
+@keyframes bg-load {
+  50% {
+    background-color: #EEF6F1;
+    color: #006B2D;
+  }
+}
+#showAllDataInp.loading,
+#showStdPageDetailsBtn.loading {
+    animation: bg-load 1s cubic-bezier(.5, .4, .5, .6) infinite;
 }
 .meta {
     font-size: 12px;

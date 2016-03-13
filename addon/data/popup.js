@@ -63,12 +63,12 @@ function init(params) {
     }
     document.querySelector('#showStdPageDetailsBtn').disabled = true;
     detailsShown = true;
-    document.querySelector("#spinner").removeAttribute("hidden");
+    document.querySelector('#showStdPageDetailsBtn').classList.add("loading");
     parent.postMessage({insextShowStdPageDetails: true}, "*");
     addEventListener("message", function messageHandler(e) {
       if (e.source == parent && e.data.insextShowStdPageDetails) {
         removeEventListener("message", messageHandler);
-        document.querySelector("#spinner").setAttribute("hidden", "");
+        document.querySelector('#showStdPageDetailsBtn').classList.remove("loading");
         if (e.data.success) {
           closePopup();
         } else {
@@ -108,7 +108,7 @@ function init(params) {
     e.target.removeEventListener("focus", focusListener);
     if (sobjects == null) {
       sobjects = new Promise(function(resolve, reject) {
-        document.querySelector("#spinner").removeAttribute("hidden");
+        document.querySelector("#showAllDataInp").classList.add("loading");
         chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
           session = message;
           resolve();
@@ -118,11 +118,11 @@ function init(params) {
         return askSalesforce('/services/data/v' + apiVersion + '/sobjects/');
       })
       .then(function(res) {
-        document.querySelector("#spinner").setAttribute("hidden", "");
+        document.querySelector("#showAllDataInp").classList.remove("loading");
         return res.sobjects;
       })
       .catch(function() {
-        document.querySelector("#spinner").setAttribute("hidden", "");
+        document.querySelector("#showAllDataInp").classList.remove("loading");
       });
     }
     sobjects.then(function(sobjects) {
