@@ -32,7 +32,7 @@ function* dataExportTest() {
     clipboardValue = value;
   }
 
-  var vm = dataExportVm({}, queryInputVm, queryHistoryStorage, copyToClipboard);
+  var vm = dataExportVm(new URLSearchParams(), queryInputVm, queryHistoryStorage, copyToClipboard);
 
   function waitForSpinner() {
     return new Promise(function(resolve, reject) {
