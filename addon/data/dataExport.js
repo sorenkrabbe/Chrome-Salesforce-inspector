@@ -1,9 +1,8 @@
 "use strict";
 if (!this.isUnitTest) {
 
-let args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
-let options = args.options;
-orgId = args.orgId;
+let args = new URLSearchParams(location.search.slice(1));
+orgId = args.get("orgId");
 initButton(true);
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
@@ -27,7 +26,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
     clear() { localStorage.removeItem("insextQueryHistory"); }
   };
 
-  let vm = dataExportVm(options, queryInputVm, queryHistoryStorage, copyToClipboard);
+  let vm = dataExportVm(args, queryInputVm, queryHistoryStorage, copyToClipboard);
   ko.applyBindings(vm, document.documentElement);
 
   function queryAutocompleteEvent() {
@@ -85,8 +84,7 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
 
 }
 
-function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard) {
-  options = options || {};
+function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
 
   let vm = {
     spinnerCount: ko.observable(0),
@@ -158,7 +156,7 @@ function dataExportVm(options, queryInput, queryHistoryStorage, copyToClipboard)
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
-  queryInput.setValue(options.query || vm.queryHistory()[0] || "select Id from Account");
+  queryInput.setValue(args.get("query") || vm.queryHistory()[0] || "select Id from Account");
 
   /**
    * SOQL query autocomplete handling.

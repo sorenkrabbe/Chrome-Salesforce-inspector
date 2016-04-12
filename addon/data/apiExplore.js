@@ -1,26 +1,33 @@
 "use strict";
 if (!this.isUnitTest) {
 
-var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
-var options = args.options;
-orgId = args.orgId;
+let args = new URLSearchParams(location.search.slice(1));
+orgId = args.get("orgId");
 initButton(true);
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
   var popupWin = window;
 
-  var vm = apiExploreVm(options, popupWin);
+  var vm = apiExploreVm(args, popupWin);
   ko.applyBindings(vm, document.documentElement);
 });
 
 }
 
-function apiExploreVm(options, popupWin) {
-  options = options || {};
-  options.apiUrl = options.apiUrl || "/services/data/";
+function apiExploreVm(args, popupWin) {
+  let title, apiPromise;
+  if (args.has("apiUrls")) {
+    let apiUrls = args.getAll("apiUrls");
+    title = apiUrls.length + " API requests, e.g. " + apiUrls[0];
+    apiPromise = Promise.all(apiUrls.map(url => askSalesforce(url)));
+  } else {
+    let apiUrl = args.get("apiUrl") || "/services/data/";
+    title = apiUrl;
+    apiPromise = askSalesforce(apiUrl);
+  }
   var defaultView = {name: "Loading", value: ""};
   var vm = {
-    title: options.apiUrls ? options.apiUrls.length + " API requests, e.g. " + options.apiUrls[0] : options.apiUrl,
+    title: title,
     spinnerCount: ko.observable(0),
     selectedTextView: ko.observable(defaultView),
     textViews: ko.observable([defaultView]),
@@ -47,7 +54,6 @@ function apiExploreVm(options, popupWin) {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  var apiPromise = options.apiUrls ? Promise.all(options.apiUrls.map(function(url) { return askSalesforce(url); })): askSalesforce(options.apiUrl);
   spinFor(Promise.all([apiPromise, askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>")]).then(function(results) {
     var result = results[0];
     var userInfo = results[1];

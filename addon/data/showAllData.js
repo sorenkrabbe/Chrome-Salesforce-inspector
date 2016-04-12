@@ -1,9 +1,8 @@
 "use strict";
 if (!this.isUnitTest) {
 
-var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
-var recordDesc = args.recordDesc;
-orgId = args.orgId;
+let args = new URLSearchParams(location.search.slice(1));
+orgId = args.get("orgId");
 initButton(true);
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
@@ -638,42 +637,43 @@ chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(messa
   var sobjectInfoPromise;
   var sobjectDescribePromise;
   var recordDataPromise;
-  if ("recordId" in recordDesc) {
+  if (args.has("recordId")) {
+    let recordId = args.get("recordId");
     sobjectInfoPromise = Promise
       .all([
         askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
         askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/")
       ])
       .then(function(responses) {
-        var currentObjKeyPrefix = recordDesc.recordId.substring(0, 3);
+        var currentObjKeyPrefix = recordId.substring(0, 3);
         for (let generalMetadataResponse of responses) {
-          let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase());
+          let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordId.toLowerCase());
           if (sobject) {
             vm.sobjectName(sobject.name);
             sobjectDescribePromise = askSalesforce(sobject.urls.describe);
-            if (recordDesc.recordId.length < 15) {
+            if (recordId.length < 15) {
               recordDataPromise = null; // Just a prefix, don't attempt to load the record
-            } else if (sobject.name.toLowerCase() == recordDesc.recordId.toLowerCase()) {
+            } else if (sobject.name.toLowerCase() == recordId.toLowerCase()) {
               recordDataPromise = null; // Not a record ID, don't attempt to load the record
             } else if (!sobject.retrieveable) {
               recordDataPromise = null;
               vm.errorMessages.push("This object does not support showing all data");
             } else {
-              recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordDesc.recordId));
+              recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordId));
             }
             return;
           }
         }
-        throw 'Unknown salesforce object: ' + recordDesc.recordId;
+        throw 'Unknown salesforce object: ' + recordId;
       });
-  } else if ("recordAttributes" in recordDesc) {
+  } else if (args.has("objectType")) {
     sobjectInfoPromise = Promise.resolve().then(function() {
-      vm.sobjectName(recordDesc.recordAttributes.type);
-      sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (recordDesc.useToolingApi ? "tooling/" : "") + "sobjects/" + recordDesc.recordAttributes.type + "/describe/");
-      if (!recordDesc.recordAttributes.url) {
+      vm.sobjectName(args.get("objectType"));
+      sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (args.has("useToolingApi") ? "tooling/" : "") + "sobjects/" + args.get("objectType") + "/describe/");
+      if (!args.get("recordUrl")) {
         recordDataPromise = null; // No record url
       } else {
-        recordDataPromise = askSalesforce(recordDesc.recordAttributes.url);
+        recordDataPromise = askSalesforce(args.get("recordUrl"));
       }
     });
   } else {

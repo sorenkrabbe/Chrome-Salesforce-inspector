@@ -142,17 +142,47 @@ function askSalesforceSoap(url, namespace, request) {
 }
 
 function dataExportUrl(options) {
-  return chrome.extension.getURL("data/dataExport.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})));
+  let args = new URLSearchParams();
+  args.set("orgId", orgId);
+  options = options || {};
+  if (options.query) {
+    args.set("query", options.query);
+  }
+  return chrome.extension.getURL("data/dataExport.html") + "?" + args;
 }
 
 function dataImportUrl() {
-  return chrome.extension.getURL("data/dataImport.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId})));
+  let args = new URLSearchParams();
+  args.set("orgId", orgId);
+  return chrome.extension.getURL("data/dataImport.html") + "?" + args;
 }
 
 function showAllDataUrl(recordDesc) {
-  return chrome.extension.getURL("data/showAllData.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId, recordDesc: recordDesc})));
+  let args = new URLSearchParams();
+  args.set("orgId", orgId);
+  if ("recordId" in recordDesc) {
+    args.set("recordId", recordDesc.recordId);
+  } else if ("recordAttributes" in recordDesc) {
+    args.set("objectType", recordDesc.recordAttributes.type);
+    if (recordDesc.useToolingApi) {
+      args.set("useToolingApi", "1");
+    }
+    args.set("recordUrl", recordDesc.recordAttributes.url);
+  }
+  return chrome.extension.getURL("data/showAllData.html") + "?" + args;
 }
 
 function apiExploreUrl(options) {
-  return chrome.extension.getURL("data/apiExplore.html") + "?" + encodeURIComponent(btoa(JSON.stringify({orgId: orgId, options: options})));
+  let args = new URLSearchParams();
+  args.set("orgId", orgId);
+  options = options || {};
+  if (options.apiUrls) {
+    for (let url of options.apiUrls) {
+      args.append("apiUrls", url);
+    }
+  }
+  if (options.apiUrl) {
+    args.set("apiUrl", options.apiUrl);
+  }
+  return chrome.extension.getURL("data/apiExplore.html") + "?" + args;
 }

@@ -1,8 +1,8 @@
 "use strict";
 if (!this.isUnitTest) {
 
-var args = JSON.parse(atob(decodeURIComponent(location.search.substring(1))));
-orgId = args.orgId;
+let args = new URLSearchParams(location.search.slice(1));
+orgId = args.get("orgId");
 initButton(true);
 chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
   session = message;
