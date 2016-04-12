@@ -21,7 +21,7 @@
       <label><input type="checkbox" data-bind="checked: showFieldTypeColumn"> Type</label>
     </span>
     <span class="object-actions">
-      <a href="about:blank" data-bind="visible: canView(), attr: {href: viewLink()}" target="_blank" title="View this record in Salesforce">View</a>
+      <a data-bind="visible: canView(), attr: {href: viewLink()}" title="View this record in Salesforce">View</a>
       <a href="about:blank" data-bind="visible: objectName(), click: showObjectMetadata">More</a>
       <a data-bind="visible: objectName(), attr: {href: openSetup()}">Setup</a>
     </span>

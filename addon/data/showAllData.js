@@ -148,7 +148,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       return recordData() && recordData().Id;
     },
     viewLink() {
-      return recordData() && recordData().Id && "https://" + session.hostname + "/" + recordData().Id;
+      return recordData() && recordData().Id && "https://" + sfHost + "/" + recordData().Id;
     },
     openSetup() {
       let args = new URLSearchParams();

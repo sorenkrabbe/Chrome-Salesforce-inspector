@@ -134,7 +134,7 @@ function renderCell(rt, cell, td) {
       // If the recordId ends with 0000000000AAA it is a dummy ID such as the ID for the master record type 012000000000000AAA
       if (recordId && !recordId.endsWith("0000000000AAA")) {
         let aView = document.createElement("a");
-        aView.href = "https://" + session.hostname + "/" + recordId;
+        aView.href = "https://" + sfHost + "/" + recordId;
         aView.textContent = "View in Salesforce";
         pop.appendChild(aView);
       }
