@@ -4,9 +4,9 @@
 // auraLoadingBox = Lightning / Salesforce1
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
-  chrome.runtime.sendMessage({message: "getOrgId", url: location.href}, function(message) {
-    orgId = message;
-    if (orgId) {
+  chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, function(message) {
+    sfHost = message;
+    if (sfHost) {
       initButton(false);
     }
   });
@@ -47,7 +47,7 @@ function initButton(inInspector) {
       if (e.source == popupEl.contentWindow && e.data.insextInitRequest) {
         popupEl.contentWindow.postMessage({
           insextInitResponse: true,
-          orgId: orgId,
+          sfHost: sfHost,
           isDevConsole: !!document.querySelector("body.ApexCSIPage"),
           inAura: !!document.querySelector("#auraLoadingBox"),
           inInspector: inInspector

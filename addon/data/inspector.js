@@ -1,6 +1,6 @@
 "use strict";
 
-var session, orgId;
+var session, sfHost;
 
 var apiVersion = "36.0";
 
@@ -143,7 +143,7 @@ function askSalesforceSoap(url, namespace, request) {
 
 function dataExportUrl(options) {
   let args = new URLSearchParams();
-  args.set("orgId", orgId);
+  args.set("host", sfHost);
   options = options || {};
   if (options.query) {
     args.set("query", options.query);
@@ -153,13 +153,13 @@ function dataExportUrl(options) {
 
 function dataImportUrl() {
   let args = new URLSearchParams();
-  args.set("orgId", orgId);
+  args.set("host", sfHost);
   return chrome.extension.getURL("data/dataImport.html") + "?" + args;
 }
 
 function showAllDataUrl(recordDesc) {
   let args = new URLSearchParams();
-  args.set("orgId", orgId);
+  args.set("host", sfHost);
   if ("recordId" in recordDesc) {
     args.set("recordId", recordDesc.recordId);
   } else if ("recordAttributes" in recordDesc) {
@@ -174,7 +174,7 @@ function showAllDataUrl(recordDesc) {
 
 function apiExploreUrl(options) {
   let args = new URLSearchParams();
-  args.set("orgId", orgId);
+  args.set("host", sfHost);
   options = options || {};
   if (options.apiUrls) {
     for (let url of options.apiUrls) {

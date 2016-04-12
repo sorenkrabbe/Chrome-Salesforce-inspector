@@ -3,7 +3,7 @@ function showStdPageDetails(recordId) {
   var fieldDetailsByLabel = {};
   var metadataResponse = {};
   return new Promise(function(resolve, reject) {
-    chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+    chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       if (message) {
         session = {key: message.key, hostname: location.hostname};
       }

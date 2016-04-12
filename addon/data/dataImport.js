@@ -2,9 +2,9 @@
 if (!this.isUnitTest) {
 
 let args = new URLSearchParams(location.search.slice(1));
-orgId = args.get("orgId");
+sfHost = args.get("host");
 initButton(true);
-chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
   session = message;
 
   var vm = dataImportVm(copyToClipboard);

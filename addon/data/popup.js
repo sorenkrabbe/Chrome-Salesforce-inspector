@@ -3,7 +3,7 @@ parent.postMessage({insextInitRequest: true}, "*");
 addEventListener("message", function initResponseHandler(e) {
   if (e.source == parent && e.data.insextInitResponse) {
     removeEventListener("message", initResponseHandler);
-    orgId = e.data.orgId;
+    sfHost = e.data.sfHost;
     init(e.data);
   }
 });
@@ -109,7 +109,7 @@ function init(params) {
     if (sobjects == null) {
       sobjects = new Promise(function(resolve, reject) {
         document.querySelector("#showAllDataInp").classList.add("loading");
-        chrome.runtime.sendMessage({message: "getSession", orgId: orgId}, function(message) {
+        chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
           session = message;
           resolve();
         });
