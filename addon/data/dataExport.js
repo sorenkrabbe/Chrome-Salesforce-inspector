@@ -109,10 +109,14 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
       vm.expandAutocomplete(!vm.expandAutocomplete());
     },
     showDescribeUrl() {
-      return showAllDataUrl({
-        recordAttributes: {type: vm.autocompleteResults().sobjectName, url: null},
-        useToolingApi: vm.queryTooling()
-      });
+      let args = new URLSearchParams();
+      args.set("host", sfHost);
+      args.set("objectType", vm.autocompleteResults().sobjectName);
+      if (vm.queryTooling()) {
+        args.set("useToolingApi", "1");
+      }
+      args.set("recordUrl", "");
+      return "showAllData.html?" + args;
     },
     selectHistoryEntry() {
       if (vm.selectedHistoryEntry() != undefined) {

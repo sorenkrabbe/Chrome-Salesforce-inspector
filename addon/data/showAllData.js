@@ -363,10 +363,16 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         showAllFieldMetadata(fieldName, fieldProperties(), true);
       },
       showRecordIdUrl() {
-        return showAllDataUrl({recordId: fieldVm.dataTypedValue()});
+        let args = new URLSearchParams();
+        args.set("host", sfHost);
+        args.set("recordId", fieldVm.dataTypedValue());
+        return "showAllData.html?" + args;
       },
       showReferenceUrl(type) {
-        return showAllDataUrl({recordId: type});
+        let args = new URLSearchParams();
+        args.set("host", sfHost);
+        args.set("recordId", type);
+        return "showAllData.html?" + args;
       },
       sortKeys: {
         name: () => fieldVm.fieldName.trim(),
@@ -482,7 +488,10 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       showChildObjectUrl() {
         let childDescribe = childVm.childDescribe();
         if (childDescribe) {
-          return showAllDataUrl({recordId: childDescribe.childSObject});
+          let args = new URLSearchParams();
+          args.set("host", sfHost);
+          args.set("recordId", childDescribe.childSObject);
+          return "showAllData.html?" + args;
         }
         return "";
       },
@@ -502,13 +511,19 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         if (!recordData() || !recordData().Id) {
           return "";
         }
+        function dataExportUrl(query) {
+          let args = new URLSearchParams();
+          args.set("host", sfHost);
+          args.set("query", query);
+          return "dataExport.html?" + args;
+        }
         let relatedListInfo = childVm.relatedListInfo();
         if (relatedListInfo) {
-          return dataExportUrl({query: "select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + recordData().Id + "'"});
+          return dataExportUrl("select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + recordData().Id + "'");
         }
         let childDescribe = childVm.childDescribe();
         if (childDescribe) {
-          return dataExportUrl({query: "select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'"});
+          return dataExportUrl("select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'");
         }
         return "";
       }

@@ -23,7 +23,10 @@ function init(params) {
       recordId = e.data.recordId;
       document.querySelector('#showStdPageDetailsBtn').disabled = inAura || detailsShown || !recordId;
       if (recordId) {
-        document.querySelector('#showAllDataBtn').href = showAllDataUrl({recordId: recordId});
+        let args = new URLSearchParams();
+        args.set("host", sfHost);
+        args.set("recordId", recordId);
+        document.querySelector('#showAllDataBtn').href = "showAllData.html?" + args;
       } else {
         document.querySelector('#showAllDataBtn').removeAttribute("href");
       }
@@ -84,7 +87,10 @@ function init(params) {
       return;
     }
     e.preventDefault();
-    open(showAllDataUrl({recordId: document.querySelector('#showAllDataInp').value}));
+    let args = new URLSearchParams();
+    args.set("host", sfHost);
+    args.set("recordId", document.querySelector('#showAllDataInp').value);
+    open("showAllData.html?" + args);
     closePopup();
   }
 
@@ -101,9 +107,11 @@ function init(params) {
   }
   document.querySelector('#showStdPageDetailsBtn').addEventListener('click', showStdPageDetailsClick);
   document.querySelector('#showAllDataInp').addEventListener('keypress', showAllDataKeypress);
-  document.querySelector('#dataExportBtn').href = dataExportUrl();
-  document.querySelector('#dataImportBtn').href = dataImportUrl();
-  document.querySelector('#apiExploreBtn').href = apiExploreUrl();
+  let hostArg = new URLSearchParams();
+  hostArg.set("host", sfHost);
+  document.querySelector('#dataExportBtn').href = "dataExport.html?" + hostArg;
+  document.querySelector('#dataImportBtn').href = "dataImport.html?" + hostArg;
+  document.querySelector('#apiExploreBtn').href = "apiExplore.html?" + hostArg;
   document.querySelector('#showAllDataInp').addEventListener("focus", function focusListener(e) {
     e.target.removeEventListener("focus", focusListener);
     if (sobjects == null) {

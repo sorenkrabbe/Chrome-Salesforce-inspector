@@ -158,7 +158,16 @@ function renderCell(rt, cell, td) {
   }
   if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
     popLink(
-      () => showAllDataUrl({recordAttributes: cell.attributes, useToolingApi: rt.isTooling}),
+      () => {
+        let args = new URLSearchParams();
+        args.set("host", sfHost);
+        args.set("objectType", cell.attributes.type);
+        if (rt.isTooling) {
+          args.set("useToolingApi", "1");
+        }
+        args.set("recordUrl", cell.attributes.url);
+        return "showAllData.html?" + args;
+      },
       () => {
         if (!cell.attributes.url) {
           return false;
@@ -173,7 +182,12 @@ function renderCell(rt, cell, td) {
     );
   } else if (typeof cell == "string" && isRecordId(cell)) {
     popLink(
-      () => showAllDataUrl({recordId: cell}),
+      () => {
+        let args = new URLSearchParams();
+        args.set("host", sfHost);
+        args.set("recordId", cell);
+        return "showAllData.html?" + args;
+      },
       () => cell,
       cell
     );

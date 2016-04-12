@@ -290,10 +290,14 @@ function dataImportVm(copyToClipboard) {
       vm.showHelp(!vm.showHelp());
     },
     showDescribeUrl: function() {
-      return showAllDataUrl({
-        recordAttributes: {type: vm.importType(), url: null},
-        useToolingApi: vm.useToolingApi()
-      });
+      let args = new URLSearchParams();
+      args.set("host", sfHost);
+      args.set("objectType", vm.importType());
+      if (vm.useToolingApi()) {
+        args.set("useToolingApi", "1");
+      }
+      args.set("recordUrl", "");
+      return "showAllData.html?" + args;
     },
     doImport: function() {
       var importedRecords = importData().counts.Queued + importData().counts.Processing;
