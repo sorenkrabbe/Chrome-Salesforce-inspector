@@ -37,7 +37,9 @@
     "data/dataExport.html",
     "data/dataImport.html",
     "data/showAllData.html",
-    "data/apiExplore.html"
+    "data/apiExplore.html",
+    "data/openFieldSetup.html",
+    "data/openObjectSetup.html"
   ],
   "incognito": "split",
   "manifest_version": 2

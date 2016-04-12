@@ -137,13 +137,11 @@ function showFieldDetails(labelElement){
             if (fieldDetail.calculatedFormula) {
                 output.appendChild(Ea('div', {'class': 'insext-formula'}, [T(fieldDetail.calculatedFormula)]));
             }
-            var fieldSetupLink = Ea('a', {'href': 'about:blank'}, [T('Setup')]);
-            (function(sobjectName, fieldName) {
-                fieldSetupLink.addEventListener("click", function(e) {
-                    e.preventDefault();
-                    openFieldSetup(sobjectName, fieldName);
-                });
-            })(metadataResponse.name, fieldDetail.name);
+            let args = new URLSearchParams();
+            args.set("host", sfHost);
+            args.set("object", metadataResponse.name);
+            args.set("field", fieldDetail.name);
+            var fieldSetupLink = Ea('a', {'href': chrome.extension.getURL("data/openFieldSetup.html") + "?" + args}, [T('Setup')]);
             output.appendChild(fieldSetupLink);
         }
     }

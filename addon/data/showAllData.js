@@ -151,7 +151,10 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       return recordData() && recordData().Id && "https://" + session.hostname + "/" + recordData().Id;
     },
     openSetup() {
-      return openObjectSetup(vm.objectName());
+      let args = new URLSearchParams();
+      args.set("host", sfHost);
+      args.set("object", vm.objectName());
+      return "openObjectSetup.html?" + args;
     },
   };
 
@@ -315,7 +318,11 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         return fieldVm.dataTypedValue() === null;
       },
       openSetup() {
-        openFieldSetup(vm.objectName(), fieldName);
+        let args = new URLSearchParams();
+        args.set("host", sfHost);
+        args.set("object", vm.objectName());
+        args.set("field", fieldName);
+        return "openFieldSetup.html?" + args;
       },
       summary() {
         var fieldDescribe = fieldVm.fieldDescribe();
@@ -498,14 +505,21 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       openSetup() {
         let childDescribe = childVm.childDescribe();
         if (childDescribe) {
-          openFieldSetup(childDescribe.childSObject, childDescribe.field);
-          return;
+          let args = new URLSearchParams();
+          args.set("host", sfHost);
+          args.set("object", childDescribe.childSObject);
+          args.set("field", childDescribe.field);
+          return "openFieldSetup.html?" + args;
         }
         let relatedListInfo = childVm.relatedListInfo();
         if (relatedListInfo) {
-          openFieldSetup(relatedListInfo.relatedList.sobject, relatedListInfo.relatedList.field);
-          return;
+          let args = new URLSearchParams();
+          args.set("host", sfHost);
+          args.set("object", relatedListInfo.relatedList.sobject);
+          args.set("field", relatedListInfo.relatedList.field);
+          return "openFieldSetup.html?" + args;
         }
+        return "openFieldSetup.html";
       },
       queryListUrl() {
         if (!recordData() || !recordData().Id) {

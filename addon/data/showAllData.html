@@ -23,7 +23,7 @@
     <span class="object-actions">
       <a href="about:blank" data-bind="visible: canView(), attr: {href: viewLink()}" target="_blank" title="View this record in Salesforce">View</a>
       <a href="about:blank" data-bind="visible: objectName(), click: showObjectMetadata">More</a>
-      <a href="about:blank" data-bind="visible: objectName(), click: openSetup">Setup</a>
+      <a data-bind="visible: objectName(), attr: {href: openSetup()}">Setup</a>
     </span>
   </div>
   <div data-bind="css: {body: true, empty: !showFieldLabelColumn() && !showFieldHelptextColumn() && !showFieldDescriptionColumn() && !showFieldValueColumn() && !showFieldTypeColumn()}">
@@ -73,7 +73,7 @@
           </td>
           <td class="field-actions">
             <a href="about:blank" data-bind="click: openDetails">More</a>
-            <a href="about:blank" data-bind="click: openSetup">Setup</a>
+            <a data-bind="attr: {href: openSetup()}">Setup</a>
           </td>
         </tr>
       </tbody>
@@ -96,7 +96,7 @@
           <td class="child-actions">
             <a href="about:blank" data-bind="click: openDetails">More</a>
             <a data-bind="attr: {href: queryListUrl()}, visible: queryListUrl()" title="Export records in this related list">List</a>
-            <a href="about:blank" data-bind="click: openSetup">Setup</a>
+            <a data-bind="attr: {href: openSetup()}">Setup</a>
           </td>
         </tr>
       </tbody>

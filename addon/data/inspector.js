@@ -4,69 +4,6 @@ var session, sfHost;
 
 var apiVersion = "36.0";
 
-function openFieldSetup(sobjectName, fieldName) {
-  let w = open(""); // Open the new tab synchronously, to avoid the pop-up blocker, then later redirect it when we have the URL
-  if (!fieldName.endsWith("__c") && !fieldName.endsWith("__pc")) {
-    if (fieldName.substr(-2) == "Id" && fieldName != "Id") {
-      fieldName = fieldName.slice(0, -2);
-    }
-    if (!sobjectName.endsWith("__c")) {
-      w.location = "https://" + session.hostname + "/p/setup/field/StandardFieldAttributes/d?id=" + fieldName + "&type=" + sobjectName;
-    } else {
-      let parts = sobjectName.split("__");
-      let namespacePrefix, developerName;
-      if (parts.length == 2) {
-        namespacePrefix = "";
-        developerName = parts[0];
-      } else { // parts.length == 3
-        namespacePrefix = parts[0];
-        developerName = parts[1];
-      }
-      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
-        .then(res => w.location = "https://" + session.hostname + "/p/setup/field/StandardFieldAttributes/d?id=" + fieldName + "&type=" + res.records[0].Id.slice(0, -3))
-        .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
-    }
-  } else {
-    let parts = fieldName.split("__");
-    let namespacePrefix, developerName, suffix;
-    if (parts.length == 2) {
-      namespacePrefix = "";
-      developerName = parts[0];
-      suffix = parts[1];
-    } else { // parts.length == 3
-      namespacePrefix = parts[0];
-      developerName = parts[1];
-      suffix = parts[2];
-    }
-    if (suffix == "pc" && sobjectName == "Account") {
-      sobjectName = "Contact";
-    }
-    askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Id from CustomField where EntityDefinition.QualifiedApiName = '" + sobjectName + "' and NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
-      .then(res => w.location = "https://" + session.hostname + "/" + res.records[0].Id.slice(0, -3))
-      .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
-  }
-}
-
-function openObjectSetup(sobjectName) {
-  let w = open(""); // Open the new tab synchronously, to avoid the pop-up blocker, then later redirect it when we have the URL
-  if (!sobjectName.endsWith("__c")) {
-    w.location = "https://" + session.hostname + "/p/setup/layout/LayoutFieldList?type=" + sobjectName + "&setupid=" + sobjectName + "Fields";
-  } else {
-    let parts = sobjectName.split("__");
-    let namespacePrefix, developerName;
-    if (parts.length == 2) {
-      namespacePrefix = "";
-      developerName = parts[0];
-    } else { // parts.length == 3
-      namespacePrefix = parts[0];
-      developerName = parts[1];
-    }
-    askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
-      .then(res => w.location = "https://" + session.hostname + "/" + res.records[0].Id.slice(0, -3))
-      .catch(function(err) { console.log("Error showing field setup", err); w.location = "data:text/plain,Error showing field setup"; });
-  }
-}
-
 function askSalesforce(url, progressHandler, options) {
   return new Promise(function(resolve, reject) {
     options = options || {};
