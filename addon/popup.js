@@ -26,7 +26,7 @@ function init(params) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
         args.set("recordId", recordId);
-        document.querySelector('#showAllDataBtn').href = "showAllData.html?" + args;
+        document.querySelector('#showAllDataBtn').href = "inspect.html?" + args;
       } else {
         document.querySelector('#showAllDataBtn').removeAttribute("href");
       }
@@ -109,7 +109,7 @@ function init(params) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
       args.set("recordId", val);
-      let href = "showAllData.html?" + args;
+      let href = "inspect.html?" + args;
       document.querySelector('#showAllDataForBtn').href = href;
     } else {
       document.querySelector('#showAllDataForBtn').removeAttribute("href");
@@ -117,9 +117,9 @@ function init(params) {
   });
   let hostArg = new URLSearchParams();
   hostArg.set("host", sfHost);
-  document.querySelector('#dataExportBtn').href = "dataExport.html?" + hostArg;
-  document.querySelector('#dataImportBtn').href = "dataImport.html?" + hostArg;
-  document.querySelector('#apiExploreBtn').href = "apiExplore.html?" + hostArg;
+  document.querySelector('#dataExportBtn').href = "data-export.html?" + hostArg;
+  document.querySelector('#dataImportBtn').href = "data-import.html?" + hostArg;
+  document.querySelector('#apiExploreBtn').href = "explore-api.html?" + hostArg;
   document.querySelector('#showAllDataInp').addEventListener("focus", function focusListener(e) {
     e.target.removeEventListener("focus", focusListener);
     if (sobjects == null) {

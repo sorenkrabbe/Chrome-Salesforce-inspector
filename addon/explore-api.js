@@ -38,7 +38,7 @@ function apiExploreVm(args, popupWin) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
       args.set("apiUrl", subUrl.apiUrl);
-      return "apiExplore.html?" + args;
+      return "explore-api.html?" + args;
     },
     editSubUrl: function(subUrl) {
       var url = popupWin.prompt("REST API url", subUrl.apiUrl);
@@ -46,7 +46,7 @@ function apiExploreVm(args, popupWin) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
         args.set("apiUrl", url);
-        location = "apiExplore.html?" + args;
+        location = "explore-api.html?" + args;
       }
     },
     openGroupUrl: function(groupUrl) {
@@ -55,7 +55,7 @@ function apiExploreVm(args, popupWin) {
       for (let url of groupUrl.apiUrls) {
         args.append("apiUrls", url);
       }
-      return "apiExplore.html?" + args;
+      return "explore-api.html?" + args;
     }
   };
   function spinFor(promise) {

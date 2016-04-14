@@ -141,7 +141,7 @@ function showFieldDetails(labelElement){
             args.set("host", sfHost);
             args.set("object", metadataResponse.name);
             args.set("field", fieldDetail.name);
-            var fieldSetupLink = Ea('a', {'href': chrome.extension.getURL("data/openFieldSetup.html") + "?" + args}, [T('Setup')]);
+            var fieldSetupLink = Ea('a', {'href': chrome.extension.getURL("open-field-setup.html") + "?" + args}, [T('Setup')]);
             output.appendChild(fieldSetupLink);
         }
     }

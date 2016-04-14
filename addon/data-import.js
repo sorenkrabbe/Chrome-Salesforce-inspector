@@ -298,7 +298,7 @@ function dataImportVm(copyToClipboard) {
         args.set("useToolingApi", "1");
       }
       args.set("recordUrl", "");
-      return "showAllData.html?" + args;
+      return "inspect.html?" + args;
     },
     doImport: function() {
       var importedRecords = importData().counts.Queued + importData().counts.Processing;

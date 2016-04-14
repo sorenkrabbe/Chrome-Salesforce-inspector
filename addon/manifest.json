@@ -18,28 +18,28 @@
       "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*", "https://*.lightning.force.com/*"],
       "all_frames": true,
       "css": [
-        "data/button.css",
-        "data/showStdPageDetails.css"
+        "button.css",
+        "inspect-inline.css"
       ],
       "js": [
-        "data/inspector.js",
-        "data/button.js",
-        "data/showStdPageDetails.js"
+        "inspector.js",
+        "button.js",
+        "inspect-inline.js"
       ]
     }
   ],
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'none'",
   "background": {
-    "scripts": ["main.js"]
+    "scripts": ["background.js"]
   },
   "web_accessible_resources": [
-    "data/popup.html",
-    "data/dataExport.html",
-    "data/dataImport.html",
-    "data/showAllData.html",
-    "data/apiExplore.html",
-    "data/openFieldSetup.html",
-    "data/openObjectSetup.html"
+    "popup.html",
+    "data-export.html",
+    "data-import.html",
+    "inspect.html",
+    "explore-api.html",
+    "open-field-setup.html",
+    "open-object-setup.html"
   ],
   "incognito": "split",
   "manifest_version": 2

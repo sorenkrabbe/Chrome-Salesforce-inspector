@@ -155,7 +155,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
       args.set("object", vm.objectName());
-      return "openObjectSetup.html?" + args;
+      return "open-object-setup.html?" + args;
     },
   };
 
@@ -323,7 +323,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         args.set("host", sfHost);
         args.set("object", vm.objectName());
         args.set("field", fieldName);
-        return "openFieldSetup.html?" + args;
+        return "open-field-setup.html?" + args;
       },
       summary() {
         var fieldDescribe = fieldVm.fieldDescribe();
@@ -374,13 +374,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
         args.set("recordId", fieldVm.dataTypedValue());
-        return "showAllData.html?" + args;
+        return "inspect.html?" + args;
       },
       showReferenceUrl(type) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
         args.set("recordId", type);
-        return "showAllData.html?" + args;
+        return "inspect.html?" + args;
       },
       sortKeys: {
         name: () => fieldVm.fieldName.trim(),
@@ -499,7 +499,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
           let args = new URLSearchParams();
           args.set("host", sfHost);
           args.set("recordId", childDescribe.childSObject);
-          return "showAllData.html?" + args;
+          return "inspect.html?" + args;
         }
         return "";
       },
@@ -510,7 +510,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
           args.set("host", sfHost);
           args.set("object", childDescribe.childSObject);
           args.set("field", childDescribe.field);
-          return "openFieldSetup.html?" + args;
+          return "open-field-setup.html?" + args;
         }
         let relatedListInfo = childVm.relatedListInfo();
         if (relatedListInfo) {
@@ -518,9 +518,9 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
           args.set("host", sfHost);
           args.set("object", relatedListInfo.relatedList.sobject);
           args.set("field", relatedListInfo.relatedList.field);
-          return "openFieldSetup.html?" + args;
+          return "open-field-setup.html?" + args;
         }
-        return "openFieldSetup.html";
+        return "open-field-setup.html";
       },
       queryListUrl() {
         if (!recordData() || !recordData().Id) {
@@ -530,7 +530,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
           let args = new URLSearchParams();
           args.set("host", sfHost);
           args.set("query", query);
-          return "dataExport.html?" + args;
+          return "data-export.html?" + args;
         }
         let relatedListInfo = childVm.relatedListInfo();
         if (relatedListInfo) {

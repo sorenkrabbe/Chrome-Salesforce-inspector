@@ -117,7 +117,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
         args.set("useToolingApi", "1");
       }
       args.set("recordUrl", "");
-      return "showAllData.html?" + args;
+      return "inspect.html?" + args;
     },
     selectHistoryEntry() {
       if (vm.selectedHistoryEntry() != undefined) {

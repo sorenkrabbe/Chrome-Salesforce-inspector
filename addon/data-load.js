@@ -166,7 +166,7 @@ function renderCell(rt, cell, td) {
           args.set("useToolingApi", "1");
         }
         args.set("recordUrl", cell.attributes.url);
-        return "showAllData.html?" + args;
+        return "inspect.html?" + args;
       },
       () => {
         if (!cell.attributes.url) {
@@ -186,7 +186,7 @@ function renderCell(rt, cell, td) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
         args.set("recordId", cell);
-        return "showAllData.html?" + args;
+        return "inspect.html?" + args;
       },
       () => cell,
       cell
