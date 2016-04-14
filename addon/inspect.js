@@ -373,13 +373,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       showRecordIdUrl() {
         let args = new URLSearchParams();
         args.set("host", sfHost);
-        args.set("recordId", fieldVm.dataTypedValue());
+        args.set("q", fieldVm.dataTypedValue());
         return "inspect.html?" + args;
       },
       showReferenceUrl(type) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
-        args.set("recordId", type);
+        args.set("q", type);
         return "inspect.html?" + args;
       },
       sortKeys: {
@@ -498,7 +498,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         if (childDescribe) {
           let args = new URLSearchParams();
           args.set("host", sfHost);
-          args.set("recordId", childDescribe.childSObject);
+          args.set("q", childDescribe.childSObject);
           return "inspect.html?" + args;
         }
         return "";
@@ -667,8 +667,8 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
   var sobjectInfoPromise;
   var sobjectDescribePromise;
   var recordDataPromise;
-  if (args.has("recordId")) {
-    let recordId = args.get("recordId");
+  if (args.has("q")) {
+    let recordId = args.get("q");
     sobjectInfoPromise = Promise
       .all([
         askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),

@@ -185,7 +185,7 @@ function renderCell(rt, cell, td) {
       () => {
         let args = new URLSearchParams();
         args.set("host", sfHost);
-        args.set("recordId", cell);
+        args.set("q", cell);
         return "inspect.html?" + args;
       },
       () => cell,

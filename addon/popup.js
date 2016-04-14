@@ -25,7 +25,7 @@ function init(params) {
       if (recordId) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
-        args.set("recordId", recordId);
+        args.set("q", recordId);
         document.querySelector('#showAllDataBtn').href = "inspect.html?" + args;
       } else {
         document.querySelector('#showAllDataBtn').removeAttribute("href");
@@ -108,7 +108,7 @@ function init(params) {
     if (val) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
-      args.set("recordId", val);
+      args.set("q", val);
       let href = "inspect.html?" + args;
       document.querySelector('#showAllDataForBtn').href = href;
     } else {
