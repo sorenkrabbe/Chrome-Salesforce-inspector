@@ -87,11 +87,7 @@ function init(params) {
       return;
     }
     e.preventDefault();
-    let args = new URLSearchParams();
-    args.set("host", sfHost);
-    args.set("recordId", document.querySelector('#showAllDataInp').value);
-    open("showAllData.html?" + args);
-    closePopup();
+    document.querySelector('#showAllDataForBtn').click();
   }
 
   if (isDevConsole || inInspector) {
@@ -107,6 +103,18 @@ function init(params) {
   }
   document.querySelector('#showStdPageDetailsBtn').addEventListener('click', showStdPageDetailsClick);
   document.querySelector('#showAllDataInp').addEventListener('keypress', showAllDataKeypress);
+  document.querySelector('#showAllDataInp').addEventListener('input', e => {
+    let val = e.target.value;
+    if (val) {
+      let args = new URLSearchParams();
+      args.set("host", sfHost);
+      args.set("recordId", val);
+      let href = "showAllData.html?" + args;
+      document.querySelector('#showAllDataForBtn').href = href;
+    } else {
+      document.querySelector('#showAllDataForBtn').removeAttribute("href");
+    }
+  });
   let hostArg = new URLSearchParams();
   hostArg.set("host", sfHost);
   document.querySelector('#dataExportBtn').href = "dataExport.html?" + hostArg;

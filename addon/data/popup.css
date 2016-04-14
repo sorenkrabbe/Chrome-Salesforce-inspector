@@ -104,18 +104,31 @@ button.button:active, a[href]:active {
     color: #16325c;
     border: 1px solid #d8dde6;
     border-radius: .25rem;
-    width: 100%;
     transition: border .1s linear,background-color .1s linear;
     display: inline-block;
     padding: 0 1rem 0 .75rem;
     line-height: 2.125rem;
     min-height: calc(2.125rem + 2px);
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    vertical-align: middle;
+    flex-grow: 1;
 }
 #showAllDataInp:active, #showAllDataInp:focus {
     outline: 0;
     border-color: #1589ee;
     background-color: #fff;
     box-shadow: 0 0 3px #0070D2;
+}
+#showAllDataForBtn {
+    width: auto;
+    border-left: none;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: 0 .6rem;
+}
+.input-with-button {
+    display: flex;
 }
 .button, #showAllDataInp {
     margin-bottom: 4px;
