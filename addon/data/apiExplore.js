@@ -28,6 +28,7 @@ function apiExploreVm(args, popupWin) {
   var defaultView = {name: "Loading", value: ""};
   var vm = {
     title: title,
+    sfLink: "https://" + sfHost,
     spinnerCount: ko.observable(0),
     selectedTextView: ko.observable(defaultView),
     textViews: ko.observable([defaultView]),

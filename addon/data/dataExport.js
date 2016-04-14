@@ -87,6 +87,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
 function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
 
   let vm = {
+    sfLink: "https://" + sfHost,
     spinnerCount: ko.observable(0),
     showHelp: ko.observable(false),
     userInfo: ko.observable("..."),

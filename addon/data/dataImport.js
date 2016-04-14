@@ -30,6 +30,7 @@ function dataImportVm(copyToClipboard) {
   var importData = ko.observable();
 
   var vm = {
+    sfLink: "https://" + sfHost,
     spinnerCount: ko.observable(0),
     showHelp: ko.observable(false),
     userInfo: ko.observable("..."),

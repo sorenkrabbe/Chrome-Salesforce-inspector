@@ -14,6 +14,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
   var isDragging = false;
 
   var vm = {
+    sfLink: "https://" + sfHost,
     spinnerCount: ko.observable(0),
     recordHeading() {
       if (recordData()) {

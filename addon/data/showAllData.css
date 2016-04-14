@@ -6,6 +6,9 @@ body {
   font-size: 11px;
   margin: 0;
 }
+.sf-link {
+  margin-right: 1em;
+}
 table {
   width: 100%;
   border-spacing: 0px;
@@ -160,6 +163,7 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   z-index: 1;
+  align-items: center;
 }
 .column-toggles {
   flex-grow: 1;
@@ -167,9 +171,6 @@ h1 {
 }
 .column-toggles label {
   margin: 0 5px;
-}
-.object-actions {
-  line-height: 2;
 }
 .body {
   padding: 3.8em 8px 8px;
