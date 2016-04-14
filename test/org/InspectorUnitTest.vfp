@@ -1,17 +1,17 @@
 <apex:page showHeader="false" standardStylesheets="false" controller="InspectorUnitTest">
     <h1>Salesforce Inspector Unit Test</h1>
     <script>var session = {key: "{!$API.Session_ID}", hostname: location.hostname};var isUnitTest = true;</script>
-    <script src="https://localhost:8080/addon/data/knockout-3.2.0.js"></script>
-    <script src="https://localhost:8080/addon/data/inspector.js"></script>
-    <script src="https://localhost:8080/addon/data/button.js"></script>
-    <script src="https://localhost:8080/addon/data/showAllData.js"></script>
-    <script src="https://localhost:8080/addon/data/dataLoad.js"></script>
-    <script src="https://localhost:8080/addon/data/dataExport.js"></script>
-    <script src="https://localhost:8080/addon/data/dataImport.js"></script>
-    <script src="https://localhost:8080/addon/data/apiExplore.js"></script>
-    <script src="https://localhost:8080/addon/data/showStdPageDetails.js"></script>
+    <script src="https://localhost:8080/addon/knockout-3.2.0.js"></script>
+    <script src="https://localhost:8080/addon/inspector.js"></script>
+    <script src="https://localhost:8080/addon/button.js"></script>
+    <script src="https://localhost:8080/addon/inspect.js"></script>
+    <script src="https://localhost:8080/addon/data-load.js"></script>
+    <script src="https://localhost:8080/addon/data-export.js"></script>
+    <script src="https://localhost:8080/addon/data-import.js"></script>
+    <script src="https://localhost:8080/addon/explore-api.js"></script>
+    <script src="https://localhost:8080/addon/inspect-inline.js"></script>
     
-    <script src="https://localhost:8080/test/dataExportTest.js"></script>
-    <script src="https://localhost:8080/test/dataImportTest.js"></script>
-    <script src="https://localhost:8080/test/testFramework.js"></script>
+    <script src="https://localhost:8080/test/data-export-test.js"></script>
+    <script src="https://localhost:8080/test/data-import-test.js"></script>
+    <script src="https://localhost:8080/test/test-framework.js"></script>
 </apex:page>
