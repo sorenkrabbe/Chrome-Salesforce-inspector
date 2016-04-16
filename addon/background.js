@@ -12,7 +12,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         sendResponse(null);
         return;
       }
-      let orgId = cookie.value.split("!")[0];
+      let [orgId] = cookie.value.split("!");
       chrome.cookies.getAll({name: "sid", domain: "salesforce.com", secure: true}, cookies => {
         let sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
         if (!sessionCookie) {

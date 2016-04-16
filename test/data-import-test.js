@@ -2,20 +2,20 @@
 function* dataImportTest() {
   console.log("TEST dataImportVm");
 
-  var clipboardValue;
+  let clipboardValue;
   function copyToClipboard(value) {
     clipboardValue = value;
   }
 
-  var vm = dataImportVm(copyToClipboard);
+  let vm = dataImportVm(copyToClipboard);
 
   // Simulate what applyBindings does
   ko.computed(vm.idLookupList);
   ko.computed(vm.columnList);
 
   function waitForSpinner() {
-    return new Promise(function(resolve, reject) {
-      var subs = vm.spinnerCount.subscribe(function(count) {
+    return new Promise((resolve, reject) => {
+      let subs = vm.spinnerCount.subscribe(count => {
         if (count == 0) {
           subs.dispose();
           resolve();
@@ -25,7 +25,7 @@ function* dataImportTest() {
   }
 
   function getRecords(result) {
-    for (var record of result.records) {
+    for (let record of result.records) {
       record.attributes = undefined
       if (record.Lookup__r) {
         record.Lookup__r.attributes = undefined;
@@ -52,7 +52,7 @@ function* dataImportTest() {
     {Name: "test1", Checkbox__c: false, Number__c: 100.01},
     {Name: "test2", Checkbox__c: true, Number__c: 200.02}
   ]);
-  var records;
+  let records;
 
   // Create csv
   vm.dataFormat("csv");

@@ -2,41 +2,41 @@
 function* dataExportTest() {
   console.log("TEST dataExportVm");
 
-  var queryInput = {value: "", selectionStart: 0, selectionEnd: 0};
+  let queryInput = {value: "", selectionStart: 0, selectionEnd: 0};
   function setQuery(a, b, c) {
     queryInput.value = a + b + c;
     queryInput.selectionStart = a.length;
     queryInput.selectionEnd = a.length + b.length;
     vm.queryAutocompleteHandler();
   }
-  var queryInputVm = {
-    setValue: function(v) { queryInput.value = v; },
-    getValue: function() { return queryInput.value; },
-    getSelStart: function() { return queryInput.selectionStart; },
-    getSelEnd: function() { return queryInput.selectionEnd; },
-    insertText: function(text, selStart, selEnd) {
+  let queryInputVm = {
+    setValue(v) { queryInput.value = v; },
+    getValue() { return queryInput.value; },
+    getSelStart() { return queryInput.selectionStart; },
+    getSelEnd() { return queryInput.selectionEnd; },
+    insertText(text, selStart, selEnd) {
       queryInput.value = queryInput.value.substring(0, selStart) + text + queryInput.value.substring(selEnd);
       queryInput.selectionStart = queryInput.selectionEnd = selStart + text.length;
     }
   };
 
-  var queryHistory;
-  var queryHistoryStorage = {
-    get: function() { return queryHistory; },
-    set: function(v) { queryHistory = v; },
-    clear: function() { queryHistory = undefined; }
+  let queryHistory;
+  let queryHistoryStorage = {
+    get() { return queryHistory; },
+    set(v) { queryHistory = v; },
+    clear() { queryHistory = undefined; }
   };
 
-  var clipboardValue;
+  let clipboardValue;
   function copyToClipboard(value) {
     clipboardValue = value;
   }
 
-  var vm = dataExportVm(new URLSearchParams(), queryInputVm, queryHistoryStorage, copyToClipboard);
+  let vm = dataExportVm({args: new URLSearchParams(), queryInput: queryInputVm, queryHistoryStorage, copyToClipboard});
 
   function waitForSpinner() {
-    return new Promise(function(resolve, reject) {
-      var subs = vm.spinnerCount.subscribe(function(count) {
+    return new Promise((resolve, reject) => {
+      let subs = vm.spinnerCount.subscribe(count => {
         if (count == 0) {
           subs.dispose();
           resolve();
@@ -46,7 +46,7 @@ function* dataExportTest() {
   }
 
   function getValues(list) {
-    return list.map(function(el) { return el.value; });
+    return list.map(el => el.value);
   }
 
   assertEquals("select Id from Account", queryInput.value);

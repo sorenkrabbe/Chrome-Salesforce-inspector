@@ -4,11 +4,10 @@ if (!this.isUnitTest) {
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
 initButton(true);
-chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
+chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   session = message;
-  var popupWin = window;
 
-  var vm = apiExploreVm(args, popupWin);
+  var vm = apiExploreVm(args, window);
   ko.applyBindings(vm, document.documentElement);
 });
 

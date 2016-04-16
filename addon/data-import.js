@@ -4,21 +4,19 @@ if (!this.isUnitTest) {
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
 initButton(true);
-chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
+chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   session = message;
 
-  var vm = dataImportVm(copyToClipboard);
+  let vm = dataImportVm(copyToClipboard);
   ko.applyBindings(vm, document.documentElement);
 
-  var resize = ko.observable({});
-  window.addEventListener("resize", function() {
-    resize({});
-  });
+  let resize = ko.observable({});
+  addEventListener("resize", () => { resize({}); });
 
   initScrollTable(
     document.querySelector("#result-box"),
     ko.computed(vm.importTableResult),
-    ko.computed(function() { resize(); vm.showHelp(); return {}; })
+    ko.computed(() => { resize(); vm.showHelp(); return {}; })
   );
 
 });
@@ -27,25 +25,25 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
 
 function dataImportVm(copyToClipboard) {
 
-  var importData = ko.observable();
+  let importData = ko.observable();
 
-  var vm = {
+  let vm = {
     sfLink: "https://" + sfHost,
     spinnerCount: ko.observable(0),
     showHelp: ko.observable(false),
     userInfo: ko.observable("..."),
     dataError: ko.observable(""),
-    message: function() { return vm.dataFormat() == "excel" ? "Paste Excel data here" : "Paste CSV data here"; },
-    dataPaste: function(_, e) {
-      var text = e.clipboardData.getData("text/plain");
+    message() { return vm.dataFormat() == "excel" ? "Paste Excel data here" : "Paste CSV data here"; },
+    dataPaste(_, e) {
+      let text = e.clipboardData.getData("text/plain");
       vm.setData(text);
     },
-    setData: function(text) {
+    setData(text) {
       if (vm.isWorking()) {
         return false;
       }
-      var separator = vm.dataFormat() == "excel" ? "\t" : ",";
-      var data;
+      let separator = vm.dataFormat() == "excel" ? "\t" : ",";
+      let data;
       try {
         data = csvParse(text, separator);
       } catch (e) {
@@ -61,113 +59,113 @@ function dataImportVm(copyToClipboard) {
         return;
       }
       vm.dataError("");
-      var header = data.shift().map(makeColumn);
+      let header = data.shift().map(makeColumn);
       updateResult(null); // Two updates, the first clears state from the scrolltable
       updateResult({header: header, data: data});
     },
-    invalidInput: function() {
+    invalidInput() {
       // We should try to allow imports to succeed even if our validation logic does not exactly match the one in Salesforce.
       // We only hard-fail on errors that prevent us from building the API request.
       // When possible, we submit the request with errors and let Salesforce give a descriptive message in the response.
-      return !vm.importIdColumnValid() || !importData().importTable || !importData().importTable.header.every(function(col) { return col.columnIgnore() || col.columnValid(); });
+      return !vm.importIdColumnValid() || !importData().importTable || !importData().importTable.header.every(col => col.columnIgnore() || col.columnValid());
     },
-    isWorking: function() {
+    isWorking() {
       return vm.activeBatches() != 0 || vm.isProcessingQueue();
     },
-    columns: function() {
+    columns() {
       return importData().importTable && importData().importTable.header;
     },
 
-    sobjectList: function() {
-      return describeInfo.describeGlobal(vm.useToolingApi()).filter(function(sobjectDescribe) { return sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable; }).map(function(sobjectDescribe) { return sobjectDescribe.name; });
+    sobjectList() {
+      return describeInfo.describeGlobal(vm.useToolingApi()).filter(sobjectDescribe => sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable).map(sobjectDescribe => sobjectDescribe.name);
     },
-    idLookupList: function() {
-      var sobjectName = vm.importType();
-      var sobjectDescribe = describeInfo.describeSobject(vm.useToolingApi(), sobjectName).sobjectDescribe;
+    idLookupList() {
+      let sobjectName = vm.importType();
+      let sobjectDescribe = describeInfo.describeSobject(vm.useToolingApi(), sobjectName).sobjectDescribe;
 
       if (!sobjectDescribe) {
         return [];
       }
-      return sobjectDescribe.fields.filter(function(field) { return field.idLookup; }).map(function(field) { return field.name; });
+      return sobjectDescribe.fields.filter(field => field.idLookup).map(field => field.name);
     },
-    columnList: function() {
-      var importAction = vm.importAction();
+    columnList() {
+      return Array.from(function*() {
+        let importAction = vm.importAction();
 
-      var res = [];
-      if (importAction == "delete") {
-        res.push("Id");
-      } else {
-        var sobjectName = vm.importType();
-        var useToolingApi = vm.useToolingApi();
-        var sobjectDescribe = describeInfo.describeSobject(useToolingApi, sobjectName).sobjectDescribe;
-        if (sobjectDescribe) {
-          var idFieldName = vm.idFieldName();
-          sobjectDescribe.fields.forEach(function(field) {
-            if (field.createable || field.updateable) {
-              res.push(field.name);
-              field.referenceTo.forEach(function(referenceSobjectName) {
-                var referenceSobjectDescribe = describeInfo.describeSobject(useToolingApi, referenceSobjectName).sobjectDescribe;
-                if (referenceSobjectDescribe) {
-                  referenceSobjectDescribe.fields.forEach(function(referenceField) {
-                    if (referenceField.idLookup) {
-                      res.push(field.relationshipName + ":" + referenceSobjectDescribe.name + ":" + referenceField.name);
+        if (importAction == "delete") {
+          yield "Id";
+        } else {
+          let sobjectName = vm.importType();
+          let useToolingApi = vm.useToolingApi();
+          let sobjectDescribe = describeInfo.describeSobject(useToolingApi, sobjectName).sobjectDescribe;
+          if (sobjectDescribe) {
+            let idFieldName = vm.idFieldName();
+            for (let field of sobjectDescribe.fields) {
+              if (field.createable || field.updateable) {
+                yield field.name;
+                for (let referenceSobjectName of field.referenceTo) {
+                  let referenceSobjectDescribe = describeInfo.describeSobject(useToolingApi, referenceSobjectName).sobjectDescribe;
+                  if (referenceSobjectDescribe) {
+                    for (let referenceField of referenceSobjectDescribe.fields) {
+                      if (referenceField.idLookup) {
+                        yield field.relationshipName + ":" + referenceSobjectDescribe.name + ":" + referenceField.name;
+                      }
                     }
-                  });
+                  }
                 }
-              });
-            } else if (field.idLookup && field.name.toLowerCase() == idFieldName.toLowerCase()) {
-              res.push(field.name);
+              } else if (field.idLookup && field.name.toLowerCase() == idFieldName.toLowerCase()) {
+                yield field.name;
+              }
             }
-          });
+          }
         }
-      }
-      res.push("__Status");
-      res.push("__Id");
-      res.push("__Action");
-      res.push("__Errors");
-      return res;
+        yield "__Status";
+        yield "__Id";
+        yield "__Action";
+        yield "__Errors";
+      }());
     },
     useToolingApi: ko.observable(false),
     dataFormat: ko.observable("excel"),
     importAction: ko.observable("create"),
-    importIdColumnValid: function() {
+    importIdColumnValid() {
       return vm.importAction() == "create" || vm.inputIdColumnIndex() > -1;
     },
-    importIdColumnError: function() {
+    importIdColumnError() {
       if (!vm.importIdColumnValid()) {
         return "Error: The field mapping has no '" + vm.idFieldName() + "' column";
       }
       return "";
     },
     importType: ko.observable("Account"),
-    importTypeError: function() {
-      var importType = vm.importType();
-      if (!vm.sobjectList().some(function(s) { return s.toLowerCase() == importType.toLowerCase(); })) {
+    importTypeError() {
+      let importType = vm.importType();
+      if (!vm.sobjectList().some(s => s.toLowerCase() == importType.toLowerCase())) {
         return "Error: Unknown object";
       }
       return "";
     },
     externalId: ko.observable("Id"),
-    externalIdError: function() {
-      var externalId = vm.externalId();
-      if (!vm.idLookupList().some(function(s) { return s.toLowerCase() == externalId.toLowerCase(); })) {
+    externalIdError() {
+      let externalId = vm.externalId();
+      if (!vm.idLookupList().some(s => s.toLowerCase() == externalId.toLowerCase())) {
         return "Error: Unknown field or not an external ID";
       }
       return "";
     },
-    idFieldName: function() {
+    idFieldName() {
       return vm.importAction() == "create" ? "" : vm.importAction() == "upsert" ? vm.externalId() : "Id";
     },
-    inputIdColumnIndex: function() {
-      var importTable = importData().importTable;
+    inputIdColumnIndex() {
+      let importTable = importData().importTable;
       if (!importTable) {
         return -1;
       }
-      var idFieldName = vm.idFieldName();
-      return importTable.header.findIndex(function(c) { return c.columnValue().toLowerCase() == idFieldName.toLowerCase(); });
+      let idFieldName = vm.idFieldName();
+      return importTable.header.findIndex(c => c.columnValue().toLowerCase() == idFieldName.toLowerCase());
     },
     batchSize: ko.observable("200"),
-    batchSizeError: function() {
+    batchSizeError() {
       if (!(+vm.batchSize() > 0)) { // This also handles NaN
         return "Error: Must be a positive number";
       }
@@ -178,7 +176,7 @@ function dataImportVm(copyToClipboard) {
     // Record level failures don't count
     batchMaxConcurrency: ko.observable(0),
     batchConcurrency: ko.observable("10"),
-    batchConcurrencyError: function() {
+    batchConcurrencyError() {
       if (!(+vm.batchConcurrency() > 0)) { // This also handles NaN
         return "Error: Must be a positive number";
       }
@@ -194,85 +192,84 @@ function dataImportVm(copyToClipboard) {
       Succeeded: ko.observable(true),
       Failed: ko.observable(true)
     },
-    canCopy: function() {
+    canCopy() {
       return importData().taggedRows != null;
     },
-    copyAsExcel: function() {
+    copyAsExcel() {
       vm.copyResult("\t");
     },
-    copyAsCsv: function() {
+    copyAsCsv() {
       vm.copyResult(",");
     },
-    copyResult: function(separator) {
-      var header = importData().importTable.header.map(c => c.columnValue());
-      var data = importData().taggedRows.filter(row => vm.showStatus[row.status]()).map(row => row.cells);
-      copyToClipboard(csvSerialize([header].concat(data), separator));
+    copyResult(separator) {
+      let header = importData().importTable.header.map(c => c.columnValue());
+      let data = importData().taggedRows.filter(row => vm.showStatus[row.status]()).map(row => row.cells);
+      copyToClipboard(csvSerialize([header, ...data], separator));
     },
-    importCounts: function() {
+    importCounts() {
       return importData().counts;
     },
-    importTableResult: function() {
+    importTableResult() {
       if (importData().taggedRows == null) {
         return null;
       }
-      var header = importData().importTable.header.map(c => c.columnValue());
-      var data = importData().taggedRows.map(row => row.cells);
+      let header = importData().importTable.header.map(c => c.columnValue());
+      let data = importData().taggedRows.map(row => row.cells);
       return {
-        table: [header].concat(data),
+        table: [header, ...data],
         isTooling: undefined, // Only used in data export
-        rowVisibilities: [true].concat(importData().taggedRows.map(row => vm.showStatus[row.status]())),
+        rowVisibilities: [true, ...importData().taggedRows.map(row => vm.showStatus[row.status]())],
         colVisibilities: header.map(c => true)
       };
     },
-    confirmPopupYes: function() {
+    confirmPopupYes() {
       vm.confirmPopup(null);
 
-      var header = importData().importTable.header;
-      var data = importData().importTable.data;
+      let {header, data} = importData().importTable;
 
-      var statusColumnIndex = header.findIndex(function(c) { return c.columnValue().toLowerCase() == "__status"; });
+      let statusColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__status");
       if (statusColumnIndex == -1) {
         statusColumnIndex = header.length;
         header.push(makeColumn("__Status"));
-        data.forEach(function(row) {
+        for (let row of data) {
           row.push("");
-        });
+        }
       }
-      var resultIdColumnIndex = header.findIndex(function(c) { return c.columnValue().toLowerCase() == "__id"; });
+      let resultIdColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__id");
       if (resultIdColumnIndex == -1) {
         resultIdColumnIndex = header.length;
         header.push(makeColumn("__Id"));
-        data.forEach(function(row) {
+        for (let row of data) {
           row.push("");
-        });
+        }
       }
-      var actionColumnIndex = header.findIndex(function(c) { return c.columnValue().toLowerCase() == "__action"; });
+      let actionColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__action");
       if (actionColumnIndex == -1) {
         actionColumnIndex = header.length;
         header.push(makeColumn("__Action"));
-        data.forEach(function(row) {
+        for (let row of data) {
           row.push("");
-        });
+        }
       }
-      var errorColumnIndex = header.findIndex(function(c) { return c.columnValue().toLowerCase() == "__errors"; });
+      let errorColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__errors");
       if (errorColumnIndex == -1) {
         errorColumnIndex = header.length;
         header.push(makeColumn("__Errors"));
-        data.forEach(function(row) {
+        for (let row of data) {
           row.push("");
-        });
+        }
       }
-      data.forEach(function(row) {
-        if (["queued", "processing", ""].indexOf(row[statusColumnIndex].toLowerCase()) > -1) {
+      for (let row of data) {
+        if (["queued", "processing", ""].includes(row[statusColumnIndex].toLowerCase())) {
           row[statusColumnIndex] = "Queued";
         }
-      });
+      }
       updateResult(importData().importTable);
       vm.importState({
-        statusColumnIndex: statusColumnIndex,
-        resultIdColumnIndex: resultIdColumnIndex,
-        actionColumnIndex: actionColumnIndex,
-        errorColumnIndex: errorColumnIndex,
+        statusColumnIndex,
+        resultIdColumnIndex,
+        actionColumnIndex,
+        errorColumnIndex,
         importAction: vm.importAction(),
         useToolingApi: vm.useToolingApi(),
         sobjectType: vm.importType(),
@@ -284,13 +281,13 @@ function dataImportVm(copyToClipboard) {
       vm.batchMaxConcurrency(1);
       executeBatch();
     },
-    confirmPopupNo: function() {
+    confirmPopupNo() {
       vm.confirmPopup(null);
     },
-    toggleHelp: function() {
+    toggleHelp() {
       vm.showHelp(!vm.showHelp());
     },
-    showDescribeUrl: function() {
+    showDescribeUrl() {
       let args = new URLSearchParams();
       args.set("host", sfHost);
       args.set("objectType", vm.importType());
@@ -300,37 +297,37 @@ function dataImportVm(copyToClipboard) {
       args.set("recordUrl", "");
       return "inspect.html?" + args;
     },
-    doImport: function() {
-      var importedRecords = importData().counts.Queued + importData().counts.Processing;
-      var skippedRecords = importData().counts.Succeeded + importData().counts.Failed;
+    doImport() {
+      let importedRecords = importData().counts.Queued + importData().counts.Processing;
+      let skippedRecords = importData().counts.Succeeded + importData().counts.Failed;
       vm.confirmPopup({
         text: importedRecords + " records will be imported."
           + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded or Failed." : "")
       });
     },
-    toggleProcessing: function() {
+    toggleProcessing() {
       vm.isProcessingQueue(!vm.isProcessingQueue());
     },
-    retryFailed: function() {
+    retryFailed() {
       if (!importData().importTable) {
         return;
       }
-      var statusColumnIndex = importData().importTable.header.findIndex(function(c) { return c.columnValue().toLowerCase() == "__status"; });
+      let statusColumnIndex = importData().importTable.header.findIndex(c => c.columnValue().toLowerCase() == "__status");
       if (statusColumnIndex < 0) {
         return;
       }
-      importData().taggedRows.forEach(function(row) {
+      for (let row of importData().taggedRows) {
         if (row.status == "Failed") {
           row.cells[statusColumnIndex] = "Queued";
         }
-      });
+      }
       updateResult(importData().importTable);
       executeBatch();
     }
   };
   updateResult(null);
   function updateResult(importTable) {
-    var counts = {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0};
+    let counts = {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0};
     if (!importTable) {
       importData({
         importTable: null,
@@ -339,10 +336,10 @@ function dataImportVm(copyToClipboard) {
       });
       return;
     }
-    var statusColumnIndex = importTable.header.findIndex(function(c) { return c.columnValue().toLowerCase() == "__status"; });
-    var taggedRows = [];
-    importTable.data.forEach(function(cells) {
-      var status = statusColumnIndex < 0 ? "Queued"
+    let statusColumnIndex = importTable.header.findIndex(c => c.columnValue().toLowerCase() == "__status");
+    let taggedRows = [];
+    for (let cells of importTable.data) {
+      let status = statusColumnIndex < 0 ? "Queued"
         : cells[statusColumnIndex].toLowerCase() == "queued" ? "Queued"
         : cells[statusColumnIndex].toLowerCase() == "" ? "Queued"
         : cells[statusColumnIndex].toLowerCase() == "processing" && !vm.isWorking() ? "Queued"
@@ -350,38 +347,34 @@ function dataImportVm(copyToClipboard) {
         : cells[statusColumnIndex].toLowerCase() == "succeeded" ? "Succeeded"
         : "Failed";
       counts[status]++;
-      taggedRows.push({status: status, cells: cells});
-    });
-    importData({
-      importTable: importTable,
-      counts: counts,
-      taggedRows: taggedRows
-    });
+      taggedRows.push({status, cells});
+    }
+    importData({importTable, counts, taggedRows});
   }
 
   function spinFor(promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
-    promise.catch(function (e) { console.error("spinFor", e); }).then(stopSpinner, stopSpinner);
+    promise.catch(e => { console.error("spinFor", e); }).then(stopSpinner, stopSpinner);
   }
   function stopSpinner() {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  var describeInfo = new DescribeInfo(spinFor);
-  spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(function(res) {
+  let describeInfo = new DescribeInfo(spinFor);
+  spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(res => {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
-  var xmlName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // A (subset of a) valid XML name
+  let xmlName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // A (subset of a) valid XML name
   function makeColumn(column) {
-    var columnVm = {
+    let columnVm = {
       columnValue: ko.observable(column),
-      columnIgnore: function() { return columnVm.columnValue().startsWith("_"); },
-      columnSkip: function() {
+      columnIgnore() { return columnVm.columnValue().startsWith("_"); },
+      columnSkip() {
         columnVm.columnValue("_" + columnVm.columnValue());
       },
-      columnValid: function() {
-        var columnName = columnVm.columnValue().split(":");
+      columnValid() {
+        let columnName = columnVm.columnValue().split(":");
         // Ensure there are 1 or 3 elements, so we know if we should treat it as a normal field or an external ID
         if (columnName.length != 1 && columnName.length != 3) {
           return false;
@@ -396,15 +389,15 @@ function dataImportVm(copyToClipboard) {
         }
         return true;
       },
-      columnError: function() {
+      columnError() {
         if (columnVm.columnIgnore()) {
           return "";
         }
         if (!columnVm.columnValid()) {
           return "Error: Invalid field name";
         }
-        var value = columnVm.columnValue();
-        if (!vm.columnList().some(function(s) { return s.toLowerCase() == value.toLowerCase(); })) {
+        let value = columnVm.columnValue();
+        if (!vm.columnList().some(s => s.toLowerCase() == value.toLowerCase())) {
           return "Error: Unknown field";
         }
         return "";
@@ -422,12 +415,12 @@ function dataImportVm(copyToClipboard) {
       return;
     }
 
-    var batchSize = +vm.batchSize();
+    let batchSize = +vm.batchSize();
     if (!(batchSize > 0)) { // This also handles NaN
       return;
     }
 
-    var batchConcurrency = +vm.batchConcurrency();
+    let batchConcurrency = +vm.batchConcurrency();
     if (!(batchConcurrency > 0)) { // This also handles NaN
       return;
     }
@@ -445,59 +438,62 @@ function dataImportVm(copyToClipboard) {
       return;
     }
 
-    var importState = vm.importState();
-    var data = importData().importTable.data;
-    var header = importData().importTable.header.map(function(c) { return c.columnValue(); });
-    var batchRows = [];
-    var doc = window.document.implementation.createDocument(null, importState.importAction);
-    if (importState.importAction == "upsert") {
-      var extId = doc.createElement("externalIDFieldName");
-      extId.textContent = importState.idFieldName;
+    let {statusColumnIndex, resultIdColumnIndex, actionColumnIndex, errorColumnIndex, importAction, useToolingApi, sobjectType, idFieldName, inputIdColumnIndex} = vm.importState();
+    let data = importData().importTable.data;
+    let header = importData().importTable.header.map(c => c.columnValue());
+    let batchRows = [];
+    let doc = window.document.implementation.createDocument(null, importAction);
+    if (importAction == "upsert") {
+      let extId = doc.createElement("externalIDFieldName");
+      extId.textContent = idFieldName;
       doc.documentElement.appendChild(extId);
     }
 
-    for (var r = 0; r < data.length; r++) {
+    for (let row of data) {
       if (batchRows.length == batchSize) {
         break;
       }
-      var row = data[r];
-      if (row[importState.statusColumnIndex] != "Queued") {
+      if (row[statusColumnIndex] != "Queued") {
         continue;
       }
       batchRows.push(row);
-      row[importState.statusColumnIndex] = "Processing";
-      if (importState.importAction == "delete") {
-        var deleteId = doc.createElement("ID");
-        deleteId.textContent = row[importState.inputIdColumnIndex];
+      row[statusColumnIndex] = "Processing";
+      if (importAction == "delete") {
+        let deleteId = doc.createElement("ID");
+        deleteId.textContent = row[inputIdColumnIndex];
         doc.documentElement.appendChild(deleteId);
       } else {
-        var sobjects = doc.createElement("sObjects");
-        sobjects.setAttribute("xsi:type", importState.sobjectType);
-        for (var c = 0; c < row.length; c++) {
+        let sobjects = doc.createElement("sObjects");
+        sobjects.setAttribute("xsi:type", sobjectType);
+        for (let c = 0; c < row.length; c++) {
           if (header[c][0] != "_") {
-            var columnName = header[c].split(":");
+            let columnName = header[c].split(":");
             if (row[c].trim() == "") {
-              if (c != importState.inputIdColumnIndex) {
-                var field = doc.createElement("fieldsToNull");
+              if (c != inputIdColumnIndex) {
+                let field = doc.createElement("fieldsToNull");
+                let [fieldName] = columnName;
                 if (columnName.length == 1) { // Our validation ensures there are always one or three elements in the array
-                  field.textContent = columnName[0];
+                  field.textContent = fieldName;
                 } else {
-                  field.textContent = /__r$/.test(columnName[0]) ? columnName[0].replace(/__r$/, "__c") : columnName[0] + "Id";
+                  field.textContent = /__r$/.test(fieldName) ? fieldName.replace(/__r$/, "__c") : fieldName + "Id";
                 }
                 sobjects.appendChild(field);
               }
             } else {
+              let field;
               if (columnName.length == 1) { // Our validation ensures there are always one or three elements in the array
+                let [fieldName] = columnName;
                 // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
-                var field = doc.createElement(columnName[0]);
+                field = doc.createElement(fieldName);
                 field.textContent = row[c];
               } else {
+                let [fieldName, typeName, subFieldName] = columnName;
                 // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
-                var subField = doc.createElement(columnName[2]);
+                let subField = doc.createElement(subFieldName);
                 subField.textContent = row[c];
                 // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
-                var field = doc.createElement(columnName[0]);
-                field.setAttribute("xsi:type", columnName[1]);
+                field = doc.createElement(fieldName);
+                field.setAttribute("xsi:type", typeName);
                 field.appendChild(subField);
               }
               sobjects.appendChild(field);
@@ -511,88 +507,74 @@ function dataImportVm(copyToClipboard) {
       vm.isProcessingQueue(false);
       return;
     }
-    var batchXml = new XMLSerializer().serializeToString(doc);
+    let batchXml = new XMLSerializer().serializeToString(doc);
     vm.activeBatches(vm.activeBatches() + 1);
     updateResult(importData().importTable);
     executeBatch();
 
-    spinFor(askSalesforceSoap(importState.useToolingApi ? "/services/Soap/T/" + apiVersion : "/services/Soap/c/" + apiVersion, importState.useToolingApi ? "urn:tooling.soap.sforce.com" : "urn:enterprise.soap.sforce.com", batchXml).then(function(res) {
-      var results = res.querySelectorAll("Body result");
-      for (var i = 0; i < results.length; i++) {
-        var result = results[i];
-        var row = batchRows[i];
+    spinFor(askSalesforceSoap(useToolingApi ? "/services/Soap/T/" + apiVersion : "/services/Soap/c/" + apiVersion, useToolingApi ? "urn:tooling.soap.sforce.com" : "urn:enterprise.soap.sforce.com", batchXml).then(res => {
+      let results = res.querySelectorAll("Body result");
+      for (let i = 0; i < results.length; i++) {
+        let result = results[i];
+        let row = batchRows[i];
         if (result.querySelector("success").textContent == "true") {
-          row[importState.statusColumnIndex] = "Succeeded";
-          row[importState.actionColumnIndex] =
-            importState.importAction == "create" ? "Inserted"
-            : importState.importAction == "update" ? "Updated"
-            : importState.importAction == "upsert" ? (result.querySelector("created").textContent == "true" ? "Inserted" : "Updated")
-            : importState.importAction == "delete" ? "Deleted"
+          row[statusColumnIndex] = "Succeeded";
+          row[actionColumnIndex] =
+            importAction == "create" ? "Inserted"
+            : importAction == "update" ? "Updated"
+            : importAction == "upsert" ? (result.querySelector("created").textContent == "true" ? "Inserted" : "Updated")
+            : importAction == "delete" ? "Deleted"
             : "Unknown";
         } else {
-          row[importState.statusColumnIndex] = "Failed";
-          row[importState.actionColumnIndex] = "";
+          row[statusColumnIndex] = "Failed";
+          row[actionColumnIndex] = "";
         }
-        row[importState.resultIdColumnIndex] = result.querySelector("id").textContent;
-        var errorNodes = result.querySelectorAll("errors");
-        var errors = [];
-        for (var e = 0; e < errorNodes.length; e++) {
-          var errorNode = errorNodes[e];
-          var fieldNodes = errorNode.querySelectorAll("fields");
-          var fields = [];
-          for (var f = 0; f < fieldNodes.length; f++) {
-            var fieldNode = fieldNodes[f];
-            fields.push(fieldNode.textContent);
-          }
-          var error = errorNode.querySelector("statusCode").textContent + ": " + errorNode.querySelector("message").textContent + " [" + fields.join(", ") + "]";
-          errors.push(error);
-        }
-        row[importState.errorColumnIndex] = errors.join(", ");
+        row[resultIdColumnIndex] = result.querySelector("id").textContent;
+        row[errorColumnIndex] = Array.from(result.querySelectorAll("errors")).map(errorNode =>
+          errorNode.querySelector("statusCode").textContent
+            + ": " + errorNode.querySelector("message").textContent
+            + " [" + Array.from(errorNode.querySelectorAll("fields")).map(f => f.textContent).join(", ") + "]"
+        ).join(", ");
       }
       vm.batchMaxConcurrency(Math.max(vm.batchMaxConcurrency(), 0) + 1);
-    }, function(xhr) {
+    }, xhr => {
       if (!xhr || xhr.readyState != 4) {
         throw xhr; // Not an HTTP error response
       }
-      var errorText;
+      let errorText;
       if (xhr.responseXML != null) {
-        var soapFaults = xhr.responseXML.querySelectorAll("faultstring");
-        var errors = [];
-        for (var i = 0; i < soapFaults.length; i++) {
-          errors.push(soapFaults[i].textContent);
-        }
-        errorText = errors.join(", ");
+        errorText = Array.from(xhr.responseXML.querySelectorAll("faultstring")).map(e => e.textContent).join(", ");
       } else {
         console.error(xhr);
         errorText = "Connection to Salesforce failed" + (xhr.status != 0 ? " (HTTP " + xhr.status + ")" : "");
       }
-      batchRows.forEach(function(row) {
-        row[importState.statusColumnIndex] = "Failed";
-        row[importState.resultIdColumnIndex] = "";
-        row[importState.actionColumnIndex] = "";
-        row[importState.errorColumnIndex] = errorText;
-      });
+      for (let row of batchRows) {
+        row[statusColumnIndex] = "Failed";
+        row[resultIdColumnIndex] = "";
+        row[actionColumnIndex] = "";
+        row[errorColumnIndex] = errorText;
+      }
       vm.batchMaxConcurrency(Math.min(vm.batchMaxConcurrency(), 0) - 1);
-    }).then(function() {
+    }).then(() => {
       vm.activeBatches(vm.activeBatches() - 1);
       updateResult(importData().importTable);
       executeBatch();
-    }).catch(function(error) {
+    }).catch(error => {
       console.error("Unexpected exception", error);
       vm.isProcessingQueue(false);
     }));
   }
 
   function csvSerialize(table, separator) {
-    return table.map(function(row) { return row.map(function(text) { return "\"" + ("" + (text == null ? "" : text)).split("\"").join("\"\"") + "\""; }).join(separator); }).join("\r\n");
+    return table.map(row => row.map(text => "\"" + ("" + (text == null ? "" : text)).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n");
   }
 
   function csvParse(csv, separator) {
-    var table = [];
-    var row = [];
-    var offset = 0;
+    let table = [];
+    let row = [];
+    let offset = 0;
     while (true) {
-      var text, next;
+      let text, next;
       if (offset != csv.length && csv[offset] == "\"") {
         next = csv.indexOf("\"", offset + 1);
         text = "";
@@ -610,11 +592,11 @@ function dataImportVm(copyToClipboard) {
         }
       } else {
         next = csv.length;
-        i = csv.indexOf(separator, offset);
+        let i = csv.indexOf(separator, offset);
         if (i != -1 && i < next) {
           next = i;
         }
-        var i = csv.indexOf("\n", offset);
+        i = csv.indexOf("\n", offset);
         if (i != -1 && i < next) {
           if (i > offset && csv[i - 1] == "\r") {
             next = i - 1;
@@ -633,8 +615,8 @@ function dataImportVm(copyToClipboard) {
         if (table.length == 0) {
           throw {message: "no data", offsetStart: 0, offsetEnd: csv.length};
         }
-        var len = table[0].length;
-        for (var i = 0; i < table.length; i++) {
+        let len = table[0].length;
+        for (let i = 0; i < table.length; i++) {
           if (table[i].length != len) {
             throw {
               message: "row " + (i + 1) + " has " + table[i].length + " cells, expected " + len,

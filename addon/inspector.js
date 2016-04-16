@@ -5,28 +5,28 @@ var session, sfHost;
 var apiVersion = "36.0";
 
 function askSalesforce(url, progressHandler, options) {
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     options = options || {};
     if (!session) {
       reject(new Error("Session not found"));
       return;
     }
-    url += (url.indexOf("?") > -1 ? '&' : '?') + 'cache=' + Math.random();
-    var xhr = new XMLHttpRequest();
+    url += (url.includes("?") ? "&" : "?") + "cache=" + Math.random();
+    let xhr = new XMLHttpRequest();
     if (progressHandler) {
-      progressHandler.abort = function(result) {
+      progressHandler.abort = result => {
         resolve(result);
         xhr.abort();
       }
     }
     xhr.open(options.method || "GET", "https://" + session.hostname + url, true);
-    xhr.setRequestHeader('Authorization', "OAuth " + session.key);
-    xhr.setRequestHeader('Accept', "application/json");
+    xhr.setRequestHeader("Authorization", "OAuth " + session.key);
+    xhr.setRequestHeader("Accept", "application/json");
     if (options.body) {
-      xhr.setRequestHeader('Content-Type', "application/json");
+      xhr.setRequestHeader("Content-Type", "application/json");
     }
     xhr.responseType = "json";
-    xhr.onreadystatechange = function() {
+    xhr.onreadystatechange = () => {
       if (xhr.readyState == 4) {
         if (xhr.status == 200) {
           resolve(xhr.response);
@@ -34,7 +34,7 @@ function askSalesforce(url, progressHandler, options) {
           resolve(null);
         } else {
           console.error("Received error response from Salesforce API", xhr);
-          var text;
+          let text;
           if (xhr.status == 400 && xhr.response) {
             try {
               text = xhr.response.map(err => err.errorCode + ": " + err.message).join("\n");
@@ -56,16 +56,16 @@ function askSalesforce(url, progressHandler, options) {
 }
 
 function askSalesforceSoap(url, namespace, request) {
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     if (!session) {
       reject(new Error("Session not found"));
       return;
     }
-    var xhr = new XMLHttpRequest();
+    let xhr = new XMLHttpRequest();
     xhr.open("POST", "https://" + session.hostname + url + "?cache=" + Math.random(), true);
-    xhr.setRequestHeader('Content-Type', "text/xml");
-    xhr.setRequestHeader('SOAPAction', '""');
-    xhr.onreadystatechange = function() {
+    xhr.setRequestHeader("Content-Type", "text/xml");
+    xhr.setRequestHeader("SOAPAction", '""');
+    xhr.onreadystatechange = () => {
       if (xhr.readyState == 4) {
         if (xhr.status == 200) {
           resolve(xhr.responseXML);

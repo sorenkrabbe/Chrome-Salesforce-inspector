@@ -4,7 +4,7 @@ if (!this.isUnitTest) {
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
 initButton(true);
-chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
+chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   session = message;
 
   let queryInput = document.querySelector("#query");
@@ -26,7 +26,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
     clear() { localStorage.removeItem("insextQueryHistory"); }
   };
 
-  let vm = dataExportVm(args, queryInputVm, queryHistoryStorage, copyToClipboard);
+  let vm = dataExportVm({args, queryInput: queryInputVm, queryHistoryStorage, copyToClipboard});
   ko.applyBindings(vm, document.documentElement);
 
   function queryAutocompleteEvent() {
@@ -40,7 +40,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
 
   // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
   // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown. Might be https://code.google.com/p/chromium/issues/detail?id=13891#c50
-  queryInput.addEventListener("keydown", function(e) {
+  queryInput.addEventListener("keydown", e => {
     if (e.which == 32 /* space */ && e.ctrlKey) {
       e.preventDefault();
       vm.queryAutocompleteHandler({ctrlSpace: true});
@@ -84,7 +84,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
 
 }
 
-function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
+function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) {
 
   let vm = {
     sfLink: "https://" + sfHost,
@@ -157,7 +157,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
   let describeInfo = new DescribeInfo(spinFor);
   describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
 
-  spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(function(res) {
+  spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(res => {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
@@ -177,16 +177,16 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
    */
   let autocompleteState = "";
   let autocompleteProgress = {};
-  function queryAutocompleteHandler(e) {
+  function queryAutocompleteHandler(e = {}) {
     let useToolingApi = vm.queryTooling();
     let query = queryInput.getValue();
     let selStart = queryInput.getSelStart();
     let selEnd = queryInput.getSelEnd();
-    let ctrlSpace = e && e.ctrlSpace;
+    let ctrlSpace = e.ctrlSpace;
 
     // Skip the calculation when no change is made. This improves performance and prevents async operations (Ctrl+Space) from being canceled when they should not be.
     let newAutocompleteState = [useToolingApi, query, selStart, selEnd].join("$");
-    if (newAutocompleteState == autocompleteState && !ctrlSpace && !(e && e.newDescribe)) {
+    if (newAutocompleteState == autocompleteState && !ctrlSpace && !e.newDescribe) {
       return;
     }
     autocompleteState = newAutocompleteState;
@@ -196,8 +196,8 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
       autocompleteProgress.abort();
     }
 
-    vm.autocompleteClick = function(item) {
-      queryInput.insertText(item.value + item.suffix, selStart, selEnd);
+    vm.autocompleteClick = ({value, suffix}) => {
+      queryInput.insertText(value + suffix, selStart, selEnd);
       queryAutocompleteHandler();
     };
 
@@ -207,33 +207,33 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
       : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0];
     selStart = selEnd - searchTerm.length;
 
-    function sortRank(e) {
+    function sortRank({value, title}) {
       let i = 0;
-      if (e.value.toLowerCase() == searchTerm.toLowerCase()) {
+      if (value.toLowerCase() == searchTerm.toLowerCase()) {
         return i;
       }
       i++;
-      if (e.title.toLowerCase() == searchTerm.toLowerCase()) {
+      if (title.toLowerCase() == searchTerm.toLowerCase()) {
         return i;
       }
       i++;
-      if (e.value.toLowerCase().startsWith(searchTerm.toLowerCase())) {
+      if (value.toLowerCase().startsWith(searchTerm.toLowerCase())) {
         return i;
       }
       i++;
-      if (e.title.toLowerCase().startsWith(searchTerm.toLowerCase())) {
+      if (title.toLowerCase().startsWith(searchTerm.toLowerCase())) {
         return i;
       }
       i++;
-      if (e.value.toLowerCase().includes("__" + searchTerm.toLowerCase())) {
+      if (value.toLowerCase().includes("__" + searchTerm.toLowerCase())) {
         return i;
       }
       i++;
-      if (e.value.toLowerCase().includes("_" + searchTerm.toLowerCase())) {
+      if (value.toLowerCase().includes("_" + searchTerm.toLowerCase())) {
         return i;
       }
       i++;
-      if (e.title.toLowerCase().includes(" " + searchTerm.toLowerCase())) {
+      if (title.toLowerCase().includes(" " + searchTerm.toLowerCase())) {
         return i;
       }
       i++;
@@ -404,7 +404,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
         let queryMethod = useToolingApi ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
         let acQuery = "select " + contextValueField.field.name + " from " + contextValueField.sobjectDescribe.name + " where " + contextValueField.field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + contextValueField.field.name + " limit 100";
         spinFor(askSalesforce("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
-          .catch(function(err) {
+          .catch(err => {
             vm.autocompleteResults({
               sobjectName: sobjectName,
               title: "Error: " + ((err && err.askSalesforceError) || err),
@@ -412,7 +412,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
             });
             return null;
           })
-          .then(function queryHandler(data) {
+          .then(data => {
             autocompleteProgress = {};
             if (!data) {
               return;
@@ -435,8 +435,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
         });
         return;
       }
-      var ar = new Enumerable(contextValueFields).flatMap(function*(contextValueField) {
-        let field = contextValueField.field;
+      let ar = new Enumerable(contextValueFields).flatMap(function*({field}) {
         yield* field.picklistValues.map(pickVal => ({value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " ", rank: 1}));
         if (field.type == "boolean") {
           yield {value: "true", title: "true", suffix: " ", rank: 1};
@@ -688,7 +687,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
         exportedData: exportedData
       });
       return null;
-    }, function(err) {
+    }, err => {
       if (!err || !err.askSalesforceError) {
         throw err; // not an askSalesforceError
       }
@@ -709,7 +708,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
         exportedData: null
       });
       return null;
-    }).then(null, function(error) {
+    }).catch(error => {
       console.error(error);
       vm.exportResult({
         isWorking: false,
@@ -731,7 +730,7 @@ function dataExportVm(args, queryInput, queryHistoryStorage, copyToClipboard) {
     exportProgress.abort({records: [], done: true, totalSize: -1});
   }
 
-  vm.resultsFilter.subscribe(function() {
+  vm.resultsFilter.subscribe(() => {
     let exportResult = vm.exportResult();
     if (exportResult.exportedData == null) {
       return;

@@ -1,19 +1,19 @@
 "use strict";
 function assertEquals(expected, actual) {
-  var strExpected = JSON.stringify(expected);
-  var strActual = JSON.stringify(actual);
+  let strExpected = JSON.stringify(expected);
+  let strActual = JSON.stringify(actual);
   if (strExpected !== strActual) {
-    var msg = new Error("assertEquals failed: Expected " + strExpected + " but found " + strActual + ".");
+    let msg = new Error("assertEquals failed: Expected " + strExpected + " but found " + strActual + ".");
     console.error(msg);
     throw msg;
   }
 }
 
 function assertNotEquals(expected, actual) {
-  var strExpected = JSON.stringify(expected);
-  var strActual = JSON.stringify(actual);
+  let strExpected = JSON.stringify(expected);
+  let strActual = JSON.stringify(actual);
   if (strExpected === strActual) {
-    var msg = new Error("assertNotEquals failed: Found " + strActual + ".");
+    let msg = new Error("assertNotEquals failed: Found " + strActual + ".");
     console.error(msg);
     throw msg;
   }
@@ -21,14 +21,14 @@ function assertNotEquals(expected, actual) {
 
 function assert(truth, msg) {
   if (!truth) {
-    var msg = new Error("assert failed: " + msg);
+    let msg = new Error("assert failed: " + msg);
     console.error(msg);
     throw msg;
   }
 }
 
 function async(iterator) {
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     function await(step) {
       if (step.done) {
         resolve(step.value);
@@ -42,9 +42,9 @@ function async(iterator) {
 
 function vfRemoteAction(controllerMethod) {
   // Calling @RemoteAction in Visualforce controller
-  var args = Array.prototype.slice.call(arguments, 1);
-  return new Promise(function(resolve, reject) {
-    args.push(function(result, event) {
+  let args = Array.prototype.slice.call(arguments, 1);
+  return new Promise((resolve, reject) => {
+    args.push((result, event) => {
       if (event.status) {
         resolve(result);
       } else {
@@ -59,4 +59,4 @@ function vfRemoteAction(controllerMethod) {
 async(function*() {
   yield* dataImportTest();
   yield* dataExportTest();
-}()).then(function(e) { console.log("Salesforce Inspector unit test finished"); }, function(e) { console.error("error", e); });
+}()).then(e => { console.log("Salesforce Inspector unit test finished"); }, e => { console.error("error", e); });

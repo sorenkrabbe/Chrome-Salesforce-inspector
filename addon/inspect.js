@@ -4,16 +4,15 @@ if (!this.isUnitTest) {
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
 initButton(true);
-chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
+chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   session = message;
-  var popupWin = window;
 
-  var objectData = ko.observable(null);
-  var recordData = ko.observable(null);
-  var layoutInfo = ko.observable(null);
-  var isDragging = false;
+  let objectData = ko.observable(null);
+  let recordData = ko.observable(null);
+  let layoutInfo = ko.observable(null);
+  let isDragging = false;
 
-  var vm = {
+  let vm = {
     sfLink: "https://" + sfHost,
     spinnerCount: ko.observable(0),
     recordHeading() {
@@ -132,7 +131,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       spinFor(
         "saving record",
         askSalesforce(recordUrl, null, {method: "PATCH", body: record})
-          .then(function() {
+          .then(() => {
             clearRecordData();
             setRecordData(askSalesforce(recordUrl));
           })
@@ -159,7 +158,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
     },
   };
 
-  var fetchFieldDescriptions = vm.showFieldDescriptionColumn.subscribe(function() {
+  let fetchFieldDescriptions = vm.showFieldDescriptionColumn.subscribe(() => {
     fetchFieldDescriptions.dispose();
     vm.fieldRows().forEach(fieldRow => fieldRow.showFieldDescription());
   });
@@ -326,7 +325,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         return "open-field-setup.html?" + args;
       },
       summary() {
-        var fieldDescribe = fieldVm.fieldDescribe();
+        let fieldDescribe = fieldVm.fieldDescribe();
         if (fieldDescribe) {
           return fieldName + "\n"
             + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
@@ -416,7 +415,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
           return;
         }
         spinFor("getting field definition metadata for " + fieldName, askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle().FieldDefinition.DurableId + "'"))
-          .then(function(fieldDefs) {
+          .then(fieldDefs => {
             fieldVm.fieldParticleMetadata(fieldDefs.records[0]);
           }));
       }
@@ -563,8 +562,8 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       let value = allFieldMetadata[key];
       let row = key + "," + value;
       fieldDetailVms.push({
-        key: key,
-        value: value,
+        key,
+        value,
         isString: typeof value == "string",
         isNumber: typeof value == "number",
         isBoolean: typeof value == "boolean",
@@ -581,7 +580,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
   ko.applyBindings(vm, document.documentElement);
 
   function setRecordData(recordDataPromise) {
-    spinFor("retrieving record", recordDataPromise.then(function(res) {
+    spinFor("retrieving record", recordDataPromise.then(res => {
       for (let name in res) {
         if (name != "attributes") {
           fieldRowList.getRow(name).dataTypedValue(res[name]);
@@ -592,9 +591,9 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
       vm.showFieldValueColumn(true);
       spinFor(
         "describing layout",
-        sobjectDescribePromise.then(function(sobjectDescribe) {
+        sobjectDescribePromise.then(sobjectDescribe => {
           if (sobjectDescribe.urls.layouts) {
-            return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA")).then(function(layoutDescribe) {
+            return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA")).then(layoutDescribe => {
               for (let layoutType of [{sections: "detailLayoutSections", observable: "detailLayoutInfo"}, {sections: "editLayoutSections", observable: "editLayoutInfo"}]) {
                 layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
                   section.layoutRows.forEach((row, rowIndex) => {
@@ -604,15 +603,15 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
                           fieldRowList.getRow(component.value)[layoutType.observable]({
                             indexes: {
                               shownOnLayout: true,
-                              sectionIndex: sectionIndex,
-                              rowIndex: rowIndex,
-                              itemIndex: itemIndex,
-                              componentIndex: componentIndex
+                              sectionIndex,
+                              rowIndex,
+                              itemIndex,
+                              componentIndex
                             },
-                            section: section,
-                            row: row,
-                            item: item,
-                            component: component
+                            section,
+                            row,
+                            item,
+                            component
                           });
                         }
                       });
@@ -654,7 +653,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
   function spinFor(actionName, promise) {
     vm.spinnerCount(vm.spinnerCount() + 1);
     promise
-      .then(null, function(err) {
+      .catch(err => {
         console.error(err);
         vm.errorMessages.push("Error " + actionName + ": " + ((err && err.askSalesforceError) || err));
       })
@@ -664,7 +663,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  var sobjectInfoPromise;
+  let sobjectInfoPromise;
   var sobjectDescribePromise;
   var recordDataPromise;
   if (args.has("q")) {
@@ -674,8 +673,8 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
         askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/")
       ])
-      .then(function(responses) {
-        var currentObjKeyPrefix = recordId.substring(0, 3);
+      .then(responses => {
+        let currentObjKeyPrefix = recordId.substring(0, 3);
         for (let generalMetadataResponse of responses) {
           let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordId.toLowerCase());
           if (sobject) {
@@ -697,7 +696,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
         throw 'Unknown salesforce object: ' + recordId;
       });
   } else if (args.has("objectType")) {
-    sobjectInfoPromise = Promise.resolve().then(function() {
+    sobjectInfoPromise = Promise.resolve().then(() => {
       vm.sobjectName(args.get("objectType"));
       sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (args.has("useToolingApi") ? "tooling/" : "") + "sobjects/" + args.get("objectType") + "/describe/");
       if (!args.get("recordUrl")) {
@@ -709,10 +708,10 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
   } else {
     sobjectInfoPromise = Promise.reject("unknown input for showAllData");
   }
-  spinFor("describing global", sobjectInfoPromise.then(function() {
+  spinFor("describing global", sobjectInfoPromise.then(() => {
 
     // Fetch object data using object describe call
-    spinFor("describing object", sobjectDescribePromise.then(function(sobjectDescribe) {
+    spinFor("describing object", sobjectDescribePromise.then(sobjectDescribe => {
       // Display the retrieved object data
       objectData(sobjectDescribe);
       for (let fieldDescribe of sobjectDescribe.fields) {
@@ -736,7 +735,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
     // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
     spinFor("querying tooling particles", askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
-      .then(function(res) {
+      .then(res => {
         for (let entityParticle of res.records) {
           fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle(entityParticle);
         }

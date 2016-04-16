@@ -2,7 +2,7 @@
 
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
-chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
+chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   session = message;
   let sobjectName = args.get("object");
   if (!sobjectName.endsWith("__c")) {
@@ -19,6 +19,6 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, function(message) {
     }
     askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Id from CustomObject where NamespacePrefix = '" + namespacePrefix + "' and DeveloperName = '" + developerName + "'"))
       .then(res => location.replace("https://" + sfHost + "/" + res.records[0].Id.slice(0, -3)))
-      .catch(function(err) { console.log("Error showing object setup", err); document.title = "Error"; document.body.textContent = "Error showing object setup"; });
+      .catch(err => { console.log("Error showing object setup", err); document.title = "Error"; document.body.textContent = "Error showing object setup"; });
   }
 });

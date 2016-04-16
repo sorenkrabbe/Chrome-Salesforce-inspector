@@ -2,10 +2,6 @@
 	background: linear-gradient(to right, #eee, #ddd);
 	border: solid 1px grey; 
 }
-.salesforce-inspector-details.salesforce-inspector-error {
-	background: linear-gradient(to right, #ddd, #ccc);
-	border: solid 1px grey; 
-}
 .salesforce-inspector-details table {
 	text-align: left;
 	font-size: 0.9em;

@@ -50,7 +50,7 @@ function DescribeInfo(spinFor) {
     if (!allDescribes[prop]) {
       allDescribes[prop] = new Map();
       console.log(useToolingApi ? "getting tooling objects" : "getting objects");
-      spinFor(askSalesforce(useToolingApi ? "/services/data/v" + apiVersion + "/tooling/sobjects/" : "/services/data/v" + apiVersion + "/sobjects/").then(function(res) {
+      spinFor(askSalesforce(useToolingApi ? "/services/data/v" + apiVersion + "/tooling/sobjects/" : "/services/data/v" + apiVersion + "/sobjects/").then(res => {
         for (let sobjectDescribe of res.sobjects) {
           allDescribes[prop].set(sobjectDescribe.name.toLowerCase(), {describeGlobalResult: sobjectDescribe, isLoading: false, describeSobject: null});
         }
@@ -71,17 +71,17 @@ function DescribeInfo(spinFor) {
     },
     // Returns an object where sobjectFound indicates if the object exists, and sobjectDescribe contains a DescribeSObjectResult if the object exists and has been loaded
     describeSobject(useToolingApi, sobjectName) {
-      var sobjectInfo = getGlobal(useToolingApi).get(sobjectName.toLowerCase());
+      let sobjectInfo = getGlobal(useToolingApi).get(sobjectName.toLowerCase());
       if (!sobjectInfo) {
         return {sobjectFound: false, sobjectDescribe: null};
       }
       if (!sobjectInfo.isLoading) {
         console.log("getting fields for " + sobjectInfo.describeGlobalResult.name);
         sobjectInfo.isLoading = true;
-        spinFor(askSalesforce(sobjectInfo.describeGlobalResult.urls.describe).then(function(res) {
+        spinFor(askSalesforce(sobjectInfo.describeGlobalResult.urls.describe).then(res => {
           sobjectInfo.describeSobject = res;
           sobjectAllDescribes.valueHasMutated();
-        }, function() {
+        }, () => {
           sobjectInfo.isLoading = false; // Request failed, allow trying again
           sobjectAllDescribes.valueHasMutated();
         }));
@@ -95,10 +95,10 @@ function DescribeInfo(spinFor) {
 function copyToClipboard(value) {
   // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.
   // The oncopy event only works on editable elements, e.g. an input field.
-  var temp = document.createElement("input");
+  let temp = document.createElement("input");
   // The oncopy event only works if there is something selected in the editable element.
   temp.value = "temp";
-  temp.addEventListener("copy", function(e) {
+  temp.addEventListener("copy", e => {
     e.clipboardData.setData("text/plain", value);
     e.preventDefault();
   });
@@ -107,7 +107,7 @@ function copyToClipboard(value) {
     // The oncopy event only works if there is something selected in the editable element.
     temp.select();
     // Trigger the oncopy event
-    var success = document.execCommand("copy");
+    let success = document.execCommand("copy");
     if (!success) {
       alert("Copy failed");
     }
@@ -121,7 +121,7 @@ function renderCell(rt, cell, td) {
     let a = document.createElement("a");
     a.href = "about:blank";
     a.title = "Show all data";
-    a.addEventListener("click", function(e) {
+    a.addEventListener("click", e => {
       e.preventDefault();
       let pop = document.createElement("div");
       pop.className = "pop-menu";
@@ -241,36 +241,36 @@ interface Cell {
 */
 function initScrollTable(scroller, dataObs, resizeObs) {
   "use strict";
-  var scrolled = document.createElement("div");
+  let scrolled = document.createElement("div");
   scrolled.className = "scrolltable-scrolled";
   scroller.appendChild(scrolled);
 
-  var initialRowHeight = 15; // constant: The initial estimated height of a row before it is rendered
-  var initialColWidth = 50; // constant: The initial estimated width of a column before it is rendered
-  var bufferHeight = 500; // constant: The number of pixels to render above and below the current viewport
-  var bufferWidth = 500; // constant: The number of pixels to render to the left and right of the current viewport
-  var headerRows = 1; // constant: The number of header rows
-  var headerCols = 0; // constant: The number of header columns
+  let initialRowHeight = 15; // constant: The initial estimated height of a row before it is rendered
+  let initialColWidth = 50; // constant: The initial estimated width of a column before it is rendered
+  let bufferHeight = 500; // constant: The number of pixels to render above and below the current viewport
+  let bufferWidth = 500; // constant: The number of pixels to render to the left and right of the current viewport
+  let headerRows = 1; // constant: The number of header rows
+  let headerCols = 0; // constant: The number of header columns
 
-  var rowHeights = []; // The height in pixels of each row
-  var rowVisible = []; // The visibility of each row. 0 = hidden, 1 = visible
-  var rowCount = 0;
-  var totalHeight = 0; // The sum of heights of visible cells
-  var firstRowIdx = 0; // The index of the first rendered row
-  var firstRowTop = 0; // The distance from the top of the table to the top of the first rendered row
-  var lastRowIdx = 0; // The index of the row below the last rendered row
-  var lastRowTop = 0; // The distance from the top of the table to the bottom of the last rendered row (the top of the row below the last rendered row)
-  var colWidths = []; // The width in pixels of each column
-  var colVisible = []; // The visibility of each column. 0 = hidden, 1 = visible
-  var colCount =  0;
-  var totalWidth = 0; // The sum of widths of visible cells
-  var firstColIdx = 0; // The index of the first rendered column
-  var firstColLeft = 0; // The distance from the left of the table to the left of the first rendered column
-  var lastColIdx = 0; // The index of the column to the right of the last rendered column
-  var lastColLeft = 0; // The distance from the left of the table to the right of the last rendered column (the left of the column after the last rendered column)
+  let rowHeights = []; // The height in pixels of each row
+  let rowVisible = []; // The visibility of each row. 0 = hidden, 1 = visible
+  let rowCount = 0;
+  let totalHeight = 0; // The sum of heights of visible cells
+  let firstRowIdx = 0; // The index of the first rendered row
+  let firstRowTop = 0; // The distance from the top of the table to the top of the first rendered row
+  let lastRowIdx = 0; // The index of the row below the last rendered row
+  let lastRowTop = 0; // The distance from the top of the table to the bottom of the last rendered row (the top of the row below the last rendered row)
+  let colWidths = []; // The width in pixels of each column
+  let colVisible = []; // The visibility of each column. 0 = hidden, 1 = visible
+  let colCount =  0;
+  let totalWidth = 0; // The sum of widths of visible cells
+  let firstColIdx = 0; // The index of the first rendered column
+  let firstColLeft = 0; // The distance from the left of the table to the left of the first rendered column
+  let lastColIdx = 0; // The index of the column to the right of the last rendered column
+  let lastColLeft = 0; // The distance from the left of the table to the right of the last rendered column (the left of the column after the last rendered column)
 
   function dataChange() {
-    var data = dataObs();
+    let data = dataObs();
     if (data == null || data.rowVisibilities.length == 0 || data.colVisibilities.length == 0) {
       // First render, or table was cleared
       rowHeights = [];
@@ -293,30 +293,30 @@ function initScrollTable(scroller, dataObs, resizeObs) {
       render(data, {force: true});
     } else {
       // Data or visibility was changed
-      var newRowCount = data.rowVisibilities.length;
-      for (var r = rowCount; r < newRowCount; r++) {
+      let newRowCount = data.rowVisibilities.length;
+      for (let r = rowCount; r < newRowCount; r++) {
         rowHeights[r] = initialRowHeight;
         rowVisible[r] = 0;
       }
       rowCount = newRowCount;
-      for (var r = 0; r < rowCount; r++) {
-        var newVisible = Number(data.rowVisibilities[r]);
-        var visibilityChange = newVisible - rowVisible[r];
+      for (let r = 0; r < rowCount; r++) {
+        let newVisible = Number(data.rowVisibilities[r]);
+        let visibilityChange = newVisible - rowVisible[r];
         totalHeight += visibilityChange * rowHeights[r];
         if (r < firstRowIdx) {
           firstRowTop += visibilityChange * rowHeights[r];
         }
         rowVisible[r] = newVisible;
       }
-      var newColCount = data.colVisibilities.length;
-      for (var c = colCount; c < newColCount; c++) {
+      let newColCount = data.colVisibilities.length;
+      for (let c = colCount; c < newColCount; c++) {
         colWidths[c] = initialColWidth;
         colVisible[c] = 0;
       }
       colCount = newColCount;
-      for (var c = 0; c < colCount; c++) {
-        var newVisible = Number(data.colVisibilities[c]);
-        var visibilityChange = newVisible - colVisible[c];
+      for (let c = 0; c < colCount; c++) {
+        let newVisible = Number(data.colVisibilities[c]);
+        let visibilityChange = newVisible - colVisible[c];
         totalWidth += visibilityChange * colWidths[c];
         if (c < firstColIdx) {
           firstColLeft += visibilityChange * colWidths[c];
@@ -331,7 +331,7 @@ function initScrollTable(scroller, dataObs, resizeObs) {
     render(dataObs(), {});
   }
 
-  function render(data, options) {
+  function render(data, {force}) {
     if (rowCount == 0 || colCount == 0) {
       scrolled.textContent = ""; // Delete previously rendered content
       scrolled.style.height = "0px";
@@ -339,12 +339,12 @@ function initScrollTable(scroller, dataObs, resizeObs) {
       return;
     }
 
-    var scrollTop = scroller.scrollTop;
-    var scrollLeft = scroller.scrollLeft;
-    var offsetHeight = scroller.offsetHeight;
-    var offsetWidth = scroller.offsetWidth;
+    let scrollTop = scroller.scrollTop;
+    let scrollLeft = scroller.scrollLeft;
+    let offsetHeight = scroller.offsetHeight;
+    let offsetWidth = scroller.offsetWidth;
 
-    if (!options.force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || lastRowIdx == rowCount) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || lastColIdx == colCount)) {
+    if (!force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || lastRowIdx == rowCount) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || lastColIdx == colCount)) {
       return;
     }
     console.log("render");
@@ -383,20 +383,20 @@ function initScrollTable(scroller, dataObs, resizeObs) {
     scrolled.style.height = totalHeight + "px";
     scrolled.style.width = totalWidth + "px";
 
-    var table = document.createElement("table");
-    var cellsVisible = false;
-    for (var r = firstRowIdx; r < lastRowIdx; r++) {
+    let table = document.createElement("table");
+    let cellsVisible = false;
+    for (let r = firstRowIdx; r < lastRowIdx; r++) {
       if (rowVisible[r] == 0) {
         continue;
       }
-      var row = data.table[r];
-      var tr = document.createElement("tr");
-      for (var c = firstColIdx; c < lastColIdx; c++) {
+      let row = data.table[r];
+      let tr = document.createElement("tr");
+      for (let c = firstColIdx; c < lastColIdx; c++) {
         if (colVisible[c] == 0) {
           continue;
         }
-        var cell = row[c];
-        var td = document.createElement("td");
+        let cell = row[c];
+        let td = document.createElement("td");
         td.className = "scrolltable-cell";
         if (r < headerRows || c < headerCols) {
           td.className += " header";
@@ -414,27 +414,27 @@ function initScrollTable(scroller, dataObs, resizeObs) {
     scrolled.appendChild(table);
     // Before this point we invalidate style and layout. After this point we recalculate style and layout, and we do not invalidate them again.
     if (cellsVisible) {
-      tr = table.firstElementChild;
-      for (var r = firstRowIdx; r < lastRowIdx; r++) {
+      let tr = table.firstElementChild;
+      for (let r = firstRowIdx; r < lastRowIdx; r++) {
         if (rowVisible[r] == 0) {
           continue;
         }
-        var rowRect = tr.firstElementChild.getBoundingClientRect();
-        var oldHeight = rowHeights[r];
-        var newHeight = Math.max(oldHeight, rowRect.height);
+        let rowRect = tr.firstElementChild.getBoundingClientRect();
+        let oldHeight = rowHeights[r];
+        let newHeight = Math.max(oldHeight, rowRect.height);
         rowHeights[r] = newHeight;
         totalHeight += newHeight - oldHeight;
         lastRowTop += newHeight - oldHeight;
         tr = tr.nextElementSibling;
       }
-      td = table.firstElementChild.firstElementChild;
-      for (var c = firstColIdx; c < lastColIdx; c++) {
+      let td = table.firstElementChild.firstElementChild;
+      for (let c = firstColIdx; c < lastColIdx; c++) {
         if (colVisible[c] == 0) {
           continue;
         }
-        var colRect = td.getBoundingClientRect();
-        var oldWidth = colWidths[c];
-        var newWidth = Math.max(oldWidth, colRect.width);
+        let colRect = td.getBoundingClientRect();
+        let oldWidth = colWidths[c];
+        let newWidth = Math.max(oldWidth, colRect.width);
         colWidths[c] = newWidth;
         totalWidth += newWidth - oldWidth;
         lastColLeft += newWidth - oldWidth;
