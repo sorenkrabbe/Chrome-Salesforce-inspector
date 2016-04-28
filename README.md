@@ -22,6 +22,10 @@ Features
 ![Data importer](https://raw.githubusercontent.com/sorenkrabbe/Chrome-Salesforce-inspector/master/docs/screenshots/5.png)
 
 
+Troubleshooting
+-----
+If the tool is not available after installation, the most likely issue is that your browser is not up to date. See [instructions for Google Chrome](https://productforums.google.com/forum/#!topic/chrome/YK1-o4KoSjc).
+
 Unit tests
 -----
 1. Set up a Developer Edition org with the customizations described in `test/org/`.
