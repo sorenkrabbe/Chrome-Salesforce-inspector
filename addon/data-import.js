@@ -10,6 +10,23 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   let vm = dataImportVm(copyToClipboard);
   ko.applyBindings(vm, document.documentElement);
 
+  function unloadListener(e) {
+    // Ask the user for confirmation before leaving
+    e.returnValue = "The import will be stopped";
+  }
+  // We completely remove the listener when not needed (as opposed to just not setting returnValue in the listener),
+  // because having the listener disables BFCache in Firefox (even if the listener does nothing).
+  // Chrome does not have a BFCache.
+  ko.computed(vm.isWorking).subscribe(working => {
+    if (working) {
+      console.log("added listener");
+      addEventListener("beforeunload", unloadListener);
+    } else {
+      console.log("removed listener");
+      removeEventListener("beforeunload", unloadListener);
+    }
+  });
+
   let resize = ko.observable({});
   addEventListener("resize", () => { resize({}); });
 
