@@ -21,9 +21,9 @@ function assertNotEquals(expected, actual) {
 
 function assert(truth, msg) {
   if (!truth) {
-    let msg = new Error("assert failed: " + msg);
-    console.error(msg);
-    throw msg;
+    console.error("assert failed", msg);
+    let err = new Error("assert failed: " + msg);
+    throw err;
   }
 }
 
@@ -40,23 +40,20 @@ function async(iterator) {
   });
 }
 
-function vfRemoteAction(controllerMethod) {
-  // Calling @RemoteAction in Visualforce controller
-  let args = Array.prototype.slice.call(arguments, 1);
-  return new Promise((resolve, reject) => {
-    args.push((result, event) => {
-      if (event.status) {
-        resolve(result);
-      } else {
-        reject(event)
-      }
-    });
-    args.push({buffer: false, escape: false});
-    controllerMethod.apply(null, args);
-  });
+function* anonApex(apex) {
+  let res = yield askSalesforce("/services/data/v" + apiVersion + "/tooling/executeAnonymous/?anonymousBody=" + encodeURIComponent(apex));
+  assert(res.success, res);
 }
 
-async(function*() {
-  yield* dataImportTest();
-  yield* dataExportTest();
-}()).then(e => { console.log("Salesforce Inspector unit test finished"); }, e => { console.error("error", e); });
+var isUnitTest = true;
+addEventListener("load", () => {
+  async(function*() {
+    let args = new URLSearchParams(location.search.slice(1));
+    sfHost = args.get("host");
+    session = yield new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({message: "getSession", sfHost}, resolve);
+    });
+    yield* dataImportTest();
+    yield* dataExportTest();
+  }()).then(e => { console.log("Salesforce Inspector unit test finished"); }, e => { console.error("error", e); });
+});

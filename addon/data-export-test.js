@@ -260,12 +260,13 @@ function* dataExportTest() {
   assertEquals("ApexClass", vm.autocompleteResults().sobjectName);
 
   // Set up test records
-  yield vfRemoteAction(InspectorUnitTest.setTestRecords, [
-    {Name: "test1", Checkbox__c: false, Number__c: 100.01},
-    {Name: "test2", Checkbox__c: true, Number__c: 200.02, Lookup__r: {Name: "test1"}},
-    {Name: "test3", Checkbox__c: false, Number__c: 300.03},
-    {Name: "test4", Checkbox__c: true, Number__c: 400.04, Lookup__r: {Name: "test3"}}
-  ]);
+  yield* anonApex(`
+    delete [select Id from Inspector_Test__c];
+    insert new Inspector_Test__c(Name = 'test1', Checkbox__c = false, Number__c = 100.01);
+    insert new Inspector_Test__c(Name = 'test2', Checkbox__c = true, Number__c = 200.02, Lookup__r = new Inspector_Test__c(Name = 'test1'));
+    insert new Inspector_Test__c(Name = 'test3', Checkbox__c = false, Number__c = 300.03);
+    insert new Inspector_Test__c(Name = 'test4', Checkbox__c = true, Number__c = 400.04, Lookup__r = new Inspector_Test__c(Name = 'test3'));
+  `);
 
   // Export data
   queryInput.value = "select Name, Checkbox__c, Number__c from Inspector_Test__c order by Name";
@@ -442,7 +443,14 @@ function* dataExportTest() {
   assertEquals(null, vm.exportResult().exportError);
 
   // Set up test records
-  yield vfRemoteAction(InspectorUnitTest.setTestRecordCount, 3000); // More than one batch when exporting (a batch is 2000)
+  yield* anonApex(`
+    delete [select Id from Inspector_Test__c];
+    List<Inspector_Test__c> records = new List<Inspector_Test__c>();
+    for (Integer i = 0; i < 3000; i++) { // More than one batch when exporting (a batch is 2000)
+      records.add(new Inspector_Test__c());
+    }
+    insert records;
+  `);
 
   // Export many
   queryInput.value = "select Id from Inspector_Test__c";
@@ -466,7 +474,7 @@ function* dataExportTest() {
   assertEquals(null, vm.exportResult().exportError);
 
   // Set up test records
-  yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
+  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
 
   // Query all
   vm.queryAll(true);

@@ -48,10 +48,11 @@ function* dataImportTest() {
   assert(vm.userInfo().indexOf(" / ") > -1);
 
   // Set up test records
-  yield vfRemoteAction(InspectorUnitTest.setTestRecords, [
-    {Name: "test1", Checkbox__c: false, Number__c: 100.01},
-    {Name: "test2", Checkbox__c: true, Number__c: 200.02}
-  ]);
+  yield* anonApex(`
+    delete [select Id from Inspector_Test__c];
+    insert new Inspector_Test__c(Name = 'test1', Checkbox__c = false, Number__c = 100.01);
+    insert new Inspector_Test__c(Name = 'test2', Checkbox__c = true, Number__c = 200.02);
+  `);
   let records;
 
   // Create csv
@@ -208,7 +209,7 @@ function* dataImportTest() {
   ], records);
 
   // Create multiple batches
-  yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
+  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
   vm.dataFormat("csv");
   vm.importAction("create");
   vm.batchSize("3");
@@ -229,7 +230,7 @@ function* dataImportTest() {
   ], records);
 
   // Stop import
-  yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
+  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
   vm.dataFormat("csv");
   vm.importAction("create");
   vm.batchSize("3");
@@ -295,7 +296,7 @@ assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "
   assertEquals({Queued: 1, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
   // Errors (whole batch)
-  yield vfRemoteAction(InspectorUnitTest.setTestRecords, []);
+  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
   vm.dataFormat("csv");
   vm.importAction("create");
   vm.setData('Name,unknownfield\r\ntest2,222\r\ntest6,666\r\n');
