@@ -151,4 +151,5 @@ function init(params) {
     });
   });
   document.body.classList.remove("loading");
+  document.querySelector(".version").textContent = "(v" + chrome.runtime.getManifest().version + ")";
 }
