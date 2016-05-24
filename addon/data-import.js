@@ -43,6 +43,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
 function dataImportVm(copyToClipboard) {
 
   let importData = ko.observable();
+  let consecutiveFailures = 0;
 
   let vm = {
     sfLink: "https://" + sfHost,
@@ -188,14 +189,13 @@ function dataImportVm(copyToClipboard) {
       }
       return "";
     },
-    // If positive: The number of successful batches since the last failed batch
-    // If negative: The number of failed batches since the last successful batch
-    // Record level failures don't count
-    batchMaxConcurrency: ko.observable(0),
-    batchConcurrency: ko.observable("10"),
+    batchConcurrency: ko.observable("6"),
     batchConcurrencyError() {
       if (!(+vm.batchConcurrency() > 0)) { // This also handles NaN
         return "Error: Must be a positive number";
+      }
+      if (+vm.batchConcurrency() > 6) {
+        return "Note: More than 6 threads will not help since Salesforce does not support HTTP2";
       }
       return "";
     },
@@ -294,8 +294,8 @@ function dataImportVm(copyToClipboard) {
         inputIdColumnIndex: vm.inputIdColumnIndex()
       });
 
+      consecutiveFailures = 0;
       vm.isProcessingQueue(true);
-      vm.batchMaxConcurrency(1);
       executeBatch();
     },
     confirmPopupNo() {
@@ -442,16 +442,7 @@ function dataImportVm(copyToClipboard) {
       return;
     }
 
-    // We start slowly and grow the number of concurrent batches until we reach batchConcurrency
-    // If a batch fails (the whole batch, not individual records), we slow down again
-    if (Math.min(Math.max(vm.batchMaxConcurrency(), 1), batchConcurrency) <= vm.activeBatches()) {
-      return;
-    }
-
-    // If we reach three consecutive failed batches, we stop, since it is likely all other batches will fail
-    // See also http://dev.chromium.org/throttling
-    if (vm.batchMaxConcurrency() <= -3) {
-      vm.isProcessingQueue(false);
+    if (batchConcurrency <= vm.activeBatches()) {
       return;
     }
 
@@ -521,13 +512,25 @@ function dataImportVm(copyToClipboard) {
       }
     }
     if (batchRows.length == 0) {
-      vm.isProcessingQueue(false);
+      if (vm.activeBatches() == 0) {
+        vm.isProcessingQueue(false);
+      }
       return;
     }
     let batchXml = new XMLSerializer().serializeToString(doc);
     vm.activeBatches(vm.activeBatches() + 1);
     updateResult(importData().importTable);
-    executeBatch();
+
+    // When receiving invalid input, Salesforce will respond with HTTP status 500.
+    // Chrome misinterprets that as the server being overloaded,
+    // and will block the connection if it receives too many such errors too quickly.
+    // See http://dev.chromium.org/throttling
+    // To avoid that, we delay each batch a little at the beginning,
+    // and we stop processing when we receive too many consecutive batch level errors.
+    // Note: When a batch finishes successfully, it will start a timeout parallel to any existing timeouts,
+    // so we will reach full batchConcurrency faster that timeoutDelay*batchConcurrency,
+    // unless batches are slower than timeoutDelay.
+    setTimeout(executeBatch, 2500);
 
     spinFor(askSalesforceSoap(useToolingApi ? "/services/Soap/T/" + apiVersion : "/services/Soap/c/" + apiVersion, useToolingApi ? "urn:tooling.soap.sforce.com" : "urn:enterprise.soap.sforce.com", batchXml).then(res => {
       let results = res.querySelectorAll("Body result");
@@ -553,7 +556,7 @@ function dataImportVm(copyToClipboard) {
             + " [" + Array.from(errorNode.querySelectorAll("fields")).map(f => f.textContent).join(", ") + "]"
         ).join(", ");
       }
-      vm.batchMaxConcurrency(Math.max(vm.batchMaxConcurrency(), 0) + 1);
+      consecutiveFailures = 0;
     }, xhr => {
       if (!xhr || xhr.readyState != 4) {
         throw xhr; // Not an HTTP error response
@@ -571,7 +574,16 @@ function dataImportVm(copyToClipboard) {
         row[actionColumnIndex] = "";
         row[errorColumnIndex] = errorText;
       }
-      vm.batchMaxConcurrency(Math.min(vm.batchMaxConcurrency(), 0) - 1);
+      consecutiveFailures++;
+      // If a whole batch has failed (as opposed to individual records failing),
+      // too many times in a row, we stop the import.
+      // This is useful when an error will affect all batches, for example a field name being misspelled.
+      // This also helps prevent throtteling in Chrome.
+      // A batch failing might not affect all batches, so we wait for a few consecutive errors before we stop.
+      // For example, a whole batch will fail if one of the field values is of an incorrect type or format.
+      if (consecutiveFailures >= 3) {
+        vm.isProcessingQueue(false);
+      }
     }).then(() => {
       vm.activeBatches(vm.activeBatches() - 1);
       updateResult(importData().importTable);

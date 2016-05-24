@@ -86,10 +86,10 @@
           <span class="conf-label">Threads</span>
           <span class="conf-value">
             <input type="number" data-bind="value: batchConcurrency, css: {confError: batchConcurrencyError()}" class="batch-size">
+            <span data-bind="visible: isWorking(), text: activeBatches()"></span>
             <div class="conf-error" data-bind="visible: batchConcurrencyError(), text: batchConcurrencyError()"></div>
           </span>
         </label>
-        <span data-bind="visible: isWorking(), text: activeBatches()"></span>
       </div>
       <datalist id="sobjectlist" data-bind="foreach: sobjectList()"><option data-bind="attr: {value: $data}"></datalist>
       <datalist id="idlookuplist" data-bind="foreach: idLookupList()"><option data-bind="attr: {value: $data}"></datalist>
@@ -110,7 +110,7 @@
     <span class="conf-label"></span>
     <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>
     <button data-bind="click: doImport, disable: invalidInput() || isWorking() || importCounts().Queued == 0">Import</button>
-    <button data-bind="enable: isWorking() && importCounts().Queued != 0, click: toggleProcessing, text: isWorking() && importCounts().Queued != 0 && !isProcessingQueue() ? 'Resume queued' : 'Cancel queued'"></button>
+    <button data-bind="enable: isWorking(), click: toggleProcessing, text: isWorking() && !isProcessingQueue() ? 'Resume queued' : 'Cancel queued'"></button>
     <button data-bind="enable: importCounts().Failed > 0, click: retryFailed" style="margin-right: 20px">Retry failed</button>
     <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy import result to clipboard for pasting into Excel or similar">Copy Excel</button>
     <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy import result to clipboard for saving as a CSV file">Copy CSV</button>
