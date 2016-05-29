@@ -154,7 +154,7 @@ function renderCell(rt, cell, td) {
     // contains only alphanumeric characters,
     // the record part (after the 3 character object key prefix and 2 character instance id) starts with at least four zeroes,
     // and the 3 character object key prefix is not all zeroes.
-    return /[a-z0-9]{5}0000[a-z0-9]{9}/i.exec(recordId) && !recordId.startsWith("000");
+    return /^[a-z0-9]{5}0000[a-z0-9]{9}$/i.exec(recordId) && !recordId.startsWith("000");
   }
   if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
     popLink(
