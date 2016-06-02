@@ -655,68 +655,72 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     exportedData.isTooling = vm.queryTooling();
     let query = queryInput.getValue();
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
-    spinFor(askSalesforce("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress).then(function queryHandler(data) {
-      exportedData.addToTable(data.records);
-      if (data.totalSize != -1) {
-        exportedData.totalSize = data.totalSize;
-      }
-      if (!data.done) {
-        let pr = askSalesforce(data.nextRecordsUrl, exportProgress).then(queryHandler);
-        vm.exportResult({
-          isWorking: true,
-          exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
-          exportError: null,
-          exportedData: exportedData
-        });
-        return pr;
-      }
-      vm.queryHistory(addToQueryHistory(query));
-      if (exportedData.records.length == 0) {
+    function batchHandler(batch) {
+      return batch.then(data => {
+        exportedData.addToTable(data.records);
+        if (data.totalSize != -1) {
+          exportedData.totalSize = data.totalSize;
+        }
+        if (!data.done) {
+          let pr = batchHandler(askSalesforce(data.nextRecordsUrl, exportProgress));
+          vm.exportResult({
+            isWorking: true,
+            exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
+            exportError: null,
+            exportedData: exportedData
+          });
+          return pr;
+        }
+        vm.queryHistory(addToQueryHistory(query));
+        if (exportedData.records.length == 0) {
+          vm.exportResult({
+            isWorking: false,
+            exportStatus: data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.",
+            exportError: null,
+            exportedData: exportedData
+          });
+          return null;
+        }
         vm.exportResult({
           isWorking: false,
-          exportStatus: data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.",
+          exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s).",
           exportError: null,
           exportedData: exportedData
         });
         return null;
-      }
-      vm.exportResult({
-        isWorking: false,
-        exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s).",
-        exportError: null,
-        exportedData: exportedData
-      });
-      return null;
-    }, err => {
-      if (!err || !err.askSalesforceError) {
-        throw err; // not an askSalesforceError
-      }
-      if (exportedData.totalSize != -1) {
-        // We already got some data. Show it, and indicate that not all data was exported
+      }, err => {
+        if (!err || !err.askSalesforceError) {
+          throw err; // not an askSalesforceError
+        }
+        if (exportedData.totalSize != -1) {
+          // We already got some data. Show it, and indicate that not all data was exported
+          vm.exportResult({
+            isWorking: false,
+            exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " record(s). Stopped by error.",
+            exportError: null,
+            exportedData: exportedData
+          });
+          return null;
+        }
         vm.exportResult({
           isWorking: false,
-          exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " record(s). Stopped by error.",
-          exportError: null,
-          exportedData: exportedData
+          exportStatus: "Error",
+          exportError: err.askSalesforceError,
+          exportedData: null
         });
         return null;
-      }
-      vm.exportResult({
-        isWorking: false,
-        exportStatus: "Error",
-        exportError: err.askSalesforceError,
-        exportedData: null
       });
-      return null;
-    }).catch(error => {
-      console.error(error);
-      vm.exportResult({
-        isWorking: false,
-        exportStatus: "Error",
-        exportError: "UNEXPECTED EXCEPTION:" + error,
-        exportedData: null
-      });
-    }));
+    }
+    spinFor(batchHandler(askSalesforce("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress))
+      .catch(error => {
+        console.error(error);
+        vm.exportResult({
+          isWorking: false,
+          exportStatus: "Error",
+          exportError: "UNEXPECTED EXCEPTION:" + error,
+          exportedData: null
+        });
+      }));
     vm.resultsFilter("");
     vm.exportResult({
       isWorking: true,
