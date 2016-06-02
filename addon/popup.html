@@ -1,42 +1,14 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body class="loading">
-  <div class="header">
-    <div class="header-icon">
-      <svg viewBox="0 0 24 24">
-        <path d="
-          M11 9c-.5 0-1-.5-1-1s.5-1 1-1 1 .5 1 1-.5 1-1 1z
-          m1 5.8c0 .2-.1.3-.3.3h-1.4c-.2 0-.3-.1-.3-.3v-4.6c0-.2.1-.3.3-.3h1.4c.2.0.3.1.3.3z
-          M11 3.8c-4 0-7.2 3.2-7.2 7.2s3.2 7.2 7.2 7.2s7.2-3.2 7.2-7.2s-3.2-7.2-7.2-7.2z
-          m0 12.5c-2.9 0-5.3-2.4-5.3-5.3s2.4-5.3 5.3-5.3s5.3 2.4 5.3 5.3-2.4 5.3-5.3 5.3z
-          M 17.6 15.9c-.2-.2-.3-.2-.5 0l-1.4 1.4c-.2.2-.2.3 0 .5l4 4c.2.2.3.2.5 0l1.4-1.4c.2-.2.2-.3 0-.5z
-          " />
-      </svg>
-    </div>
-    Salesforce inspector
-  </div>
-  <div class="main">
-    <div id="thispage">
-      <button id="showStdPageDetailsBtn" class="button">Show field <u>m</u>etadata</button>
-      <a id="showAllDataBtn" target="_top" class="button">Show <u>a</u>ll data</a>
-    </div>
-    <div class="input-with-button">
-      <input id="showAllDataInp" placeholder="Record ID, ID prefix or sObject name" list="sobjects">
-      <a id="showAllDataForBtn" target="_top" class="button">Go</a>
-    </div>
-    <datalist id="sobjects"></datalist>
-    <a id="dataExportBtn" target="_top" class="button">Data <u>E</u>xport</a>
-    <a id="dataImportBtn" target="_top" class="button">Data <u>I</u>mport</a>
-    <a id="apiExploreBtn" target="_top" class="button">E<u>x</u>plore API</a>
-  </div>
-  <div class="footer">
-    <div class="meta"><div class="version">(v?)</div><a href="https://github.com/sorenkrabbe/Chrome-Salesforce-inspector" target="_top">About</a></div>
-  </div>
-  <script src="inspector.js"></script>
-  <script src="popup.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="popup.css">
+    <script src="react-15.1.0.js"></script>
+    <script src="react-dom-15.1.0.js"></script>
+    <script src="inspector.js"></script>
+    <script src="popup.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

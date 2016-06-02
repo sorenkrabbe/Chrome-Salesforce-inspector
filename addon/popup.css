@@ -8,12 +8,10 @@ html, body {
     margin: 0;
     height: 100%;
 }
-body {
+body, #root, [data-reactroot] {
     display: flex;
     flex-direction: column;
-}
-body.loading {
-    display: none;
+    flex: 1;
 }
 .main {
     padding: 12px 8px;
@@ -106,7 +104,7 @@ button.button:active, a[href]:active {
     border-radius: .25rem;
     transition: border .1s linear,background-color .1s linear;
     display: inline-block;
-    padding: 0 1rem 0 .75rem;
+    padding: 0 2rem 0 .75rem;
     line-height: 2.125rem;
     min-height: calc(2.125rem + 2px);
     border-top-right-radius: 0;
@@ -126,11 +124,63 @@ button.button:active, a[href]:active {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     padding: 0 .6rem;
+    margin-bottom: 0;
 }
 .input-with-button {
     display: flex;
 }
-.button, #showAllDataInp {
+.input-with-dropdown {
+    position: relative;
+    flex-grow: 1;
+}
+.input-with-dropdown svg {
+    width: .75rem;
+    height: .75rem;
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    margin-top: -.375rem;
+    fill: #54698d;
+}
+.autocomplete-container {
+    position: relative;
+}
+.autocomplete {
+    border: 1px solid #d8dde6;
+    border-radius: .25rem;
+    padding: .25rem 0;
+    background-color: white;
+    max-height: 100px;
+    position: absolute;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.autocomplete-item {
+    display: block;
+    padding: .25rem .5rem;
+    color: #16325c;
+    line-height: 1.5;
+    cursor: pointer;
+}
+.autocomplete-item-main, .autocomplete-item-sub {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.autocomplete-item-sub {
+    font-size: .75rem;
+    color: #54698d;
+    margin-top: -.25rem;
+}
+.autocomplete-item mark {
+    font-weight: 700;
+    background-color: transparent;
+}
+.autocomplete-item.selected {
+    background-color: #f4f6f9;
+}
+.button, .input-with-button {
     margin-bottom: 4px;
 }
 @keyframes bg-load {
