@@ -11,7 +11,7 @@ General
 * If you have an outdated browser version that is not supported by the latest version of Salesforce Inspector, Salesforce Inspector will not autoupdate.
 
 Show all data
-=============
+-------------
 * When copy-pasting a value, there is no longer extra white-space at the beginning and end of the copied text.
 
 Data import
