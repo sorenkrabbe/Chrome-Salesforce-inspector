@@ -1,3 +1,32 @@
+Version NEXT
+============
+
+General
+-------
+* The Inspector is now shown in regular tabs instead of popups. You can now choose if you want to open a link in the same tab (the default), or a new tab/window, using normal browser menus and shortcuts. Previously every link opened a new popup window.
+* Restyled the Inspector menu to use Lightning Design. Restyling the rest will come later.
+* Switched to a more robust API for getting the Salesforce session ID. It now works with all session security settings, and it works in Lightning Experience.
+* Added a logo/icon.
+* The salesforce hostname is now visible as a parameter in the URL bar.
+* If you have an outdated browser version that is not supported by the latest version of Salesforce Inspector, Salesforce Inspector will not autoupdate.
+
+Show all data
+=============
+* When copy-pasting a value, there is no longer extra white-space at the beginning and end of the copied text.
+
+Data import
+-----------
+* Ask for confirmation before closing an in-progress data import.
+* Tweaks to how batch concurrency/threads work.
+
+Data export
+-----------
+* If an error occurs during a data export, we now keep the data that is already exported.
+
+Known Issues
+------------
+* When using Firefox, it no longer works in Private Browsing mode, since it cannot get the Salesforce session ID. See https://bugzilla.mozilla.org/show_bug.cgi?id=1254221 .
+
 Version 0.10
 ============
 
