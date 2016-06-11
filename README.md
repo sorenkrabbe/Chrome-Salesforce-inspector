@@ -37,7 +37,7 @@ Unit tests
 
 Release
 -------
-Version number must be manually incremented in [version.json](version.json) file
+Version number must be manually incremented in [addon/manifest.json](addon/manifest.json) file
 
 **Chrome:** When commit message contains *#releaseIt* the revision will be packaged and uploaded to Chrome Web Store ready for manual release to the masses.
 

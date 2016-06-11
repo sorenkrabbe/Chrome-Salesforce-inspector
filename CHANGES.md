@@ -1,4 +1,4 @@
-Version NEXT
+Version 1.0
 ============
 
 General
