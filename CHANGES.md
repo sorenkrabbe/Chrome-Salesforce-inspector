@@ -9,6 +9,7 @@ General
 * Added a logo/icon.
 * The salesforce hostname is now visible as a parameter in the URL bar.
 * If you have an outdated browser version that is not supported by the latest version of Salesforce Inspector, Salesforce Inspector will not autoupdate.
+* Updated API version to Summer 16.
 
 Show all data
 -------------
