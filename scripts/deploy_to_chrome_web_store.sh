@@ -73,7 +73,6 @@ UPLOAD_RESULT=$(curl \
      -T $ZIP_FILE_NAME https://www.googleapis.com/upload/chromewebstore/v1.1/items/$CHROME_APP_ID \
      | jq '.')
 
-
 if [[ $(echo $UPLOAD_RESULT | jq '.uploadState') == '"SUCCESS"' ]]
      then
      log_message "2.2.1) Upload succesful!";
@@ -81,6 +80,28 @@ else
      log_error "2.2.1) Upload failed";
      log_detail "$UPLOAD_RESULT";
      exit 1;
+fi
+
+if [[ $ENVIRONMENT_TYPE == "BETA" ]]
+then
+     log_message "2.3) Publish new version to trusted testers"
+
+     PUBLISH_RESULT=$(curl \
+          -H "Authorization: Bearer $CHROME_ACCESS_TOKEN"  \
+          -H "x-goog-api-version: 2" \
+          -H "Content-Type: application/json" -d '{"target":"trustedTesters"}' \
+          -X POST -v \
+          https://www.googleapis.com/chromewebstore/v1.1/items/$CHROME_APP_ID/publish \
+          | jq '.')
+
+     if [[ $(echo $PUBLISH_RESULT | jq '.status[0]') == '"OK"' ]]
+          then
+          log_message "2.3.1) Publish succesful!";
+     else
+          log_error "2.3.1) Publish failed";
+          log_detail "$PUBLISH_RESULT";
+          exit 1;
+     fi
 fi
 
 log_message "3) Release logic completed.";
