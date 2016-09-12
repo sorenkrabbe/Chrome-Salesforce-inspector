@@ -53,6 +53,7 @@ addEventListener("load", () => {
     session = yield new Promise((resolve, reject) => {
       chrome.runtime.sendMessage({message: "getSession", sfHost}, resolve);
     });
+    yield* buttonTest();
     yield* dataImportTest();
     yield* dataExportTest();
   }()).then(e => { console.log("Salesforce Inspector unit test finished"); }, e => { console.error("error", e); });

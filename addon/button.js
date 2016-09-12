@@ -58,7 +58,7 @@ function initButton(inInspector) {
         closePopup();
       }
       if (e.source == popupEl.contentWindow && e.data.insextShowStdPageDetails) {
-        showStdPageDetails(getRecordId())
+        showStdPageDetails(getRecordId(location))
           .then(
             () => {
               popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: true}, "*");
@@ -73,7 +73,7 @@ function initButton(inInspector) {
     });
     rootEl.appendChild(popupEl);
     function openPopup() {
-      popupEl.contentWindow.postMessage({insextUpdateRecordId: true, recordId: getRecordId()}, "*");
+      popupEl.contentWindow.postMessage({insextUpdateRecordId: true, recordId: getRecordId(location)}, "*");
       rootEl.classList.add("insext-active");
       // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector
       addEventListener("click", outsidePopupClick);
@@ -90,30 +90,42 @@ function initButton(inInspector) {
         closePopup();
       }
     }
-    function getRecordId() {
-      // Find record ID from URL
-      let recordId = null;
-      let match = document.location.search.match(/(\?|&)id=([a-zA-Z0-9]*)(&|$)/);
-      if (match) {
-        recordId = match[2];
-      }
-      if (!recordId && location.hostname.indexOf(".salesforce.com") > -1) {
-        match = document.location.pathname.match(/\/([a-zA-Z0-9]*)(\/|$)/);
-        if (match) {
-          recordId = match[1];
-        }
-      }
-      if (recordId && recordId.length != 3 && recordId.length != 15 && recordId.length != 18) {
-        recordId = null;
-      }
-      if (!recordId && location.hostname.includes(".lightning.force.com")) {
-        match = document.location.hash.match(/\/sObject\/([a-zA-Z0-9]*)(\/|$)/);
-        if (match) {
-          recordId = match[1];
-        }
-      }
-      return recordId;
-    }
   }
 
+}
+
+function getRecordId(url) {
+  // Find record ID from URL
+  let searchParams = new URLSearchParams(url.search.substring(1));
+  // Salesforce Classic and Console
+  if (url.hostname.endsWith(".salesforce.com")) {
+    let match = url.pathname.match(/\/([a-zA-Z0-9]{3}|[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})(?:\/|$)/);
+    if (match) {
+      let res = match[1];
+      if (res.includes("0000") || res.length == 3) {
+        return match[1];
+      }
+    }
+  }
+  // Lightning Experience and Salesforce1
+  if (url.hostname.endsWith(".lightning.force.com")) {
+    let match = url.hash.match(/\/sObject\/([a-zA-Z0-9]+)(?:\/|$)/);
+    if (match) {
+      return match[1];
+    }
+  }
+  // Visualforce
+  {
+    let idParam = searchParams.get("id");
+    if (idParam) {
+      return idParam;
+    }
+  }
+  // Visualforce page that does not follow standard Visualforce naming
+  for (let [, p] of searchParams) {
+    if (p.match(/^([a-zA-Z0-9]{3}|[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$/) && p.includes("0000")) {
+      return p;
+    }
+  }
+  return null;
 }
