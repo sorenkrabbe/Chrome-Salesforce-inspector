@@ -58,7 +58,7 @@ function* dataExportTest() {
 
   // Autocomplete object names
   assertEquals("Objects:", vm.autocompleteResults().title);
-  assertEquals(["Account", "AccountContactRole"], getValues(vm.autocompleteResults().results).slice(0, 2));
+  assertEquals(["Account", "AccountContactRelation"], getValues(vm.autocompleteResults().results).slice(0, 2));
 
   // See user info
   assert(vm.userInfo().indexOf(" / ") > -1);
@@ -250,7 +250,7 @@ function* dataExportTest() {
   vm.queryTooling(true);
   yield waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults().title);
-  assertEquals(["ApexClass", "ApexClassMember"], getValues(vm.autocompleteResults().results));
+  assertEquals(["ApexClass", "ApexClassMember", "autogen__ApexClass"], getValues(vm.autocompleteResults().results));
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("select Id from ApexClass ", queryInput.value);
   yield waitForSpinner();

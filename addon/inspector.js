@@ -2,7 +2,7 @@
 
 var session, sfHost;
 
-var apiVersion = "37.0";
+var apiVersion = "38.0";
 
 function askSalesforce(url, progressHandler, options) {
   return new Promise((resolve, reject) => {
