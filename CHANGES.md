@@ -1,3 +1,15 @@
+Version 1.1
+============
+
+General
+-------
+* Update API versoin to Winter 17.
+* Find the current page's record ID for Visualforce pages that store the record ID in a non-standard parameter name.
+
+Data import
+-----------
+* Don't make describe calls in an infinite loop when Salesforce returns an error (Salesforce Winter 17 Tooling API has a number objects starting with autogen__ that don't work properly).
+
 Version 1.0
 ============
 
