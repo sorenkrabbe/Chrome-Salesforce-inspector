@@ -95,7 +95,13 @@ function dataImportVm(copyToClipboard) {
     },
 
     sobjectList() {
-      return describeInfo.describeGlobal(vm.useToolingApi()).filter(sobjectDescribe => sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable).map(sobjectDescribe => sobjectDescribe.name);
+      let {globalDescribe} = describeInfo.describeGlobal(vm.useToolingApi());
+      if (!globalDescribe) {
+        return [];
+      }
+      return globalDescribe.sobjects
+        .filter(sobjectDescribe => sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable)
+        .map(sobjectDescribe => sobjectDescribe.name);
     },
     idLookupList() {
       let sobjectName = vm.importType();

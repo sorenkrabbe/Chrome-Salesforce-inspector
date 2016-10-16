@@ -86,6 +86,9 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
 
 function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) {
 
+  let describeInfo = new DescribeInfo(spinFor);
+  describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
+
   let vm = {
     sfLink: "https://" + sfHost,
     spinnerCount: ko.observable(0),
@@ -130,6 +133,9 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       vm.queryHistory([]);
     },
     queryAutocompleteHandler: queryAutocompleteHandler,
+    autocompleteReload() {
+      describeInfo.reloadAll();
+    },
     doExport: doExport,
     canCopy() {
       return vm.exportResult().exportedData != null;
@@ -153,9 +159,6 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
   function stopSpinner() {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
-
-  let describeInfo = new DescribeInfo(spinFor);
-  describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
 
   spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(res => {
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
@@ -245,10 +248,37 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
 
     // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
+      let {globalStatus, globalDescribe} = describeInfo.describeGlobal(useToolingApi);
+      if (!globalDescribe) {
+        switch (globalStatus) {
+          case "loading":
+            vm.autocompleteResults({
+              sobjectName: "",
+              title: "Loading metadata...",
+              results: []
+            });
+            return;
+          case "loadfailed":
+            vm.autocompleteResults({
+              sobjectName: "",
+              title: "Loading metadata failed.",
+              results: [{value: "Retry", title: "Retry"}]
+            });
+            vm.autocompleteClick = vm.autocompleteReload
+            return;
+          default:
+            vm.autocompleteResults({
+              sobjectName: "",
+              title: "Unexpected error: " + globalStatus,
+              results: []
+            });
+            return;
+        }
+      }
       vm.autocompleteResults({
         sobjectName: "",
         title: "Objects:",
-        results: new Enumerable(describeInfo.describeGlobal(useToolingApi))
+        results: new Enumerable(globalDescribe.sobjects)
           .filter(sobjectDescribe => sobjectDescribe.name.toLowerCase().includes(searchTerm.toLowerCase()) || sobjectDescribe.label.toLowerCase().includes(searchTerm.toLowerCase()))
           .map(sobjectDescribe => ({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " ", rank: 1}))
           .toArray()
@@ -289,24 +319,39 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
         isAfterFrom = selStart > fromKeywordMatch.index + fromKeywordMatch[0].length;
       }
     }
-    let describeSobject = describeInfo.describeSobject(useToolingApi, sobjectName);
-    let sobjectDescribe = describeSobject.sobjectDescribe;
-
-    if (!describeSobject.sobjectFound) {
-      vm.autocompleteResults({
-        sobjectName: sobjectName,
-        title: "Unknown object: " + sobjectName,
-        results: []
-      });
-      return;
-    }
+    let {sobjectStatus, sobjectDescribe} = describeInfo.describeSobject(useToolingApi, sobjectName);
     if (!sobjectDescribe) {
-      vm.autocompleteResults({
-        sobjectName: sobjectName,
-        title: "Loading metadata for object: " + sobjectName,
-        results: []
-      });
-      return;
+      switch (sobjectStatus) {
+        case "loading":
+          vm.autocompleteResults({
+            sobjectName: sobjectName,
+            title: "Loading " + sobjectName + " metadata...",
+            results: []
+          });
+          return;
+        case "loadfailed":
+          vm.autocompleteResults({
+            sobjectName: sobjectName,
+            title: "Loading " + sobjectName + " metadata failed.",
+            results: [{value: "Retry", title: "Retry"}]
+          });
+          vm.autocompleteClick = vm.autocompleteReload
+          return;
+        case "notfound":
+          vm.autocompleteResults({
+            sobjectName: sobjectName,
+            title: "Unknown object: " + sobjectName,
+            results: []
+          });
+          return;
+        default:
+          vm.autocompleteResults({
+            sobjectName: sobjectName,
+            title: "Unexpected error for object: " + sobjectName + ": " + sobjectStatus,
+            results: []
+          });
+          return;
+      }
     }
 
     /*
@@ -340,7 +385,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     */
     let contextSobjectDescribes = new Enumerable([sobjectDescribe]);
     let contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0];
-    let isLoading = false;
+    let sobjectStatuses = new Map(); // Keys are error statuses, values are an object name with that status. Only one object name in the value, since we only show one error message.
     if (contextPath) {
       let contextFields = contextPath.split(".");
       contextFields.pop(); // always empty
@@ -351,13 +396,11 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
           .filter(field => field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase())
           .flatMap(field => field.referenceTo))
         {
-          let describeReferencedSobject = describeInfo.describeSobject(useToolingApi, referencedSobjectName);
-          if (describeReferencedSobject.sobjectFound) {
-            if (describeReferencedSobject.sobjectDescribe) {
-              newContextSobjectDescribes.add(describeReferencedSobject.sobjectDescribe);
-            } else {
-              isLoading = true;
-            }
+          let {sobjectStatus, sobjectDescribe} = describeInfo.describeSobject(useToolingApi, referencedSobjectName);
+          if (sobjectDescribe) {
+            newContextSobjectDescribes.add(sobjectDescribe);
+          } else {
+            sobjectStatuses.set(sobjectStatus, referencedSobjectName);
           }
         }
         contextSobjectDescribes = new Enumerable(newContextSobjectDescribes);
@@ -365,9 +408,42 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     }
 
     if (!contextSobjectDescribes.some()) {
+      if (sobjectStatuses.has("loading")) {
+        vm.autocompleteResults({
+          sobjectName: sobjectName,
+          title: "Loading " + sobjectStatuses.get("loading") + " metadata...",
+          results: []
+        });
+        return;
+      }
+      if (sobjectStatuses.has("loadfailed")) {
+        vm.autocompleteResults({
+          sobjectName: sobjectName,
+          title: "Loading " + sobjectStatuses.get("loadfailed") + " metadata failed.",
+          results: [{value: "Retry", title: "Retry"}]
+        });
+        vm.autocompleteClick = vm.autocompleteReload
+        return;
+      }
+      if (sobjectStatuses.has("notfound")) {
+        vm.autocompleteResults({
+          sobjectName: sobjectName,
+          title: "Unknown object: " + sobjectStatuses.get("notfound"),
+          results: []
+        });
+        return;
+      }
+      if (sobjectStatuses.size > 0) {
+        vm.autocompleteResults({
+          sobjectName: sobjectName,
+          title: "Unexpected error: " + sobjectStatus,
+          results: []
+        });
+        return;
+      }
       vm.autocompleteResults({
         sobjectName: sobjectName,
-        title: isLoading ? "Loading metadata..." : "Unknown field: " + sobjectName + "." + contextPath,
+        title: "Unknown field: " + sobjectName + "." + contextPath,
         results: []
       });
       return;

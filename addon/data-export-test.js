@@ -65,7 +65,7 @@ function* dataExportTest() {
 
   // Autocomplete field name in SELECT with no field metadata
   setQuery("select Id, nam", "", " from Account");
-  assertEquals("Loading metadata for object: Account", vm.autocompleteResults().title);
+  assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
   assertEquals([], vm.autocompleteResults().results);
 
   // Load Account field describe
@@ -97,7 +97,7 @@ function* dataExportTest() {
   // Select relationship field in SELECT
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("select Id, Owner. from Account", queryInput.value);
-  assertEquals("Loading metadata...", vm.autocompleteResults().title);
+  assertEquals("Loading User metadata...", vm.autocompleteResults().title);
   assertEquals([], vm.autocompleteResults().results);
 
   // Load User field describe
@@ -191,7 +191,7 @@ function* dataExportTest() {
 
   // Autocomplete field value
   setQuery("select Id from Account where owner.profile.name = admini", "", "");
-  assertEquals("Loading metadata...", vm.autocompleteResults().title);
+  assertEquals("Loading Profile metadata...", vm.autocompleteResults().title);
   assertEquals([], getValues(vm.autocompleteResults().results));
   yield waitForSpinner();
   assertEquals("Profile.Name values (Press Ctrl+Space):", vm.autocompleteResults().title);
@@ -531,4 +531,55 @@ function* dataExportTest() {
   assertEquals("select count() from Inspector_Test__c", queryInput.value);
   vm.clearHistory();
   assertEquals([], vm.queryHistory());
+
+  // Autocomplete load errors
+  let askOrig = askSalesforce;
+  let askError = () => Promise.reject();
+
+  // Autocomplete load errors for global describe
+  setQuery("select Id from Acco", "", "");
+  askSalesforce = askError;
+  vm.autocompleteReload();
+  assertEquals("Loading metadata...", vm.autocompleteResults().title);
+  assertEquals(0, vm.autocompleteResults().results.length);
+  yield waitForSpinner();
+  assertEquals("Loading metadata failed.", vm.autocompleteResults().title);
+  assertEquals(1, vm.autocompleteResults().results.length);
+  askSalesforce = askOrig;
+  vm.autocompleteClick(vm.autocompleteResults().results[0]);
+  assertEquals("Loading metadata...", vm.autocompleteResults().title);
+  assertEquals(0, vm.autocompleteResults().results.length);
+  yield waitForSpinner();
+  assertEquals("Objects:", vm.autocompleteResults().title);
+
+  // Autocomplete load errors for object describe
+  askSalesforce = askError;
+  setQuery("select Id", "", " from Account");
+  assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
+  assertEquals(0, vm.autocompleteResults().results.length);
+  yield waitForSpinner();
+  assertEquals("Loading Account metadata failed.", vm.autocompleteResults().title);
+  assertEquals(1, vm.autocompleteResults().results.length);
+  askSalesforce = askOrig;
+  vm.autocompleteClick(vm.autocompleteResults().results[0]);
+  assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
+  assertEquals(0, vm.autocompleteResults().results.length);
+  yield waitForSpinner();
+  assertEquals("Account fields:", vm.autocompleteResults().title);
+
+  // Autocomplete load errors for relationship object describe
+  askSalesforce = askError;
+  setQuery("select Id, OWNER.USERN", "", " from Account");
+  assertEquals("Loading User metadata...", vm.autocompleteResults().title);
+  assertEquals(0, vm.autocompleteResults().results.length);
+  yield waitForSpinner();
+  assertEquals("Loading User metadata failed.", vm.autocompleteResults().title);
+  assertEquals(1, vm.autocompleteResults().results.length);
+  askSalesforce = askOrig;
+  vm.autocompleteClick(vm.autocompleteResults().results[0]);
+  assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
+  assertEquals(0, vm.autocompleteResults().results.length);
+  yield waitForSpinner();
+  assertEquals("User fields:", vm.autocompleteResults().title);
+  
 }

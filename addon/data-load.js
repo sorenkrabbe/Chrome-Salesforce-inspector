@@ -43,21 +43,32 @@ Enumerable.prototype.flatMap.prototype = Enumerable.prototype;
 Enumerable.prototype.concat.prototype = Enumerable.prototype;
 
 function DescribeInfo(spinFor) {
-  let sobjectAllDescribes = ko.observable({dataDescribes: null, toolingDescribes: null});
+  function initialState() {
+    return {
+    data: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null},
+    tool: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null}
+  };
+  }
+  let sobjectAllDescribes = ko.observable(initialState());
   function getGlobal(useToolingApi) {
-    let prop = useToolingApi ? "toolingDescribes" : "dataDescribes";
-    let allDescribes = sobjectAllDescribes();
-    if (!allDescribes[prop]) {
-      allDescribes[prop] = new Map();
+    let apiDescribes = sobjectAllDescribes()[useToolingApi ? "tool" : "data"];
+    if (apiDescribes.global.globalStatus == "pending") {
+      apiDescribes.global.globalStatus = "loading";
       console.log(useToolingApi ? "getting tooling objects" : "getting objects");
       spinFor(askSalesforce(useToolingApi ? "/services/data/v" + apiVersion + "/tooling/sobjects/" : "/services/data/v" + apiVersion + "/sobjects/").then(res => {
+        apiDescribes.global.globalStatus = "ready";
+        apiDescribes.global.globalDescribe = res;
+        apiDescribes.sobjects = new Map();
         for (let sobjectDescribe of res.sobjects) {
-          allDescribes[prop].set(sobjectDescribe.name.toLowerCase(), {describeGlobalResult: sobjectDescribe, isLoading: false, describeSobject: null});
+          apiDescribes.sobjects.set(sobjectDescribe.name.toLowerCase(), {global: sobjectDescribe, sobject: {sobjectStatus: "pending", sobjectDescribe: null}});
         }
+        sobjectAllDescribes.valueHasMutated();
+      }, () => {
+        apiDescribes.global.globalStatus = "loadfailed";
         sobjectAllDescribes.valueHasMutated();
       }));
     }
-    return allDescribes[prop];
+    return apiDescribes;
   }
   // Makes global and sobject describe API calls, and caches the results.
   // If the result of an API call is not already cashed, empty data is returned immediately, and the API call is made asynchronously.
@@ -65,28 +76,49 @@ function DescribeInfo(spinFor) {
   return {
     // A Knockout observable to listen for updates to describe data
     dataUpdate: sobjectAllDescribes,
-    // Returns an array of DescribeGlobalSObjectResult, or an empty array if the data is not loaded
+    // Returns an object with two properties:
+    // - globalStatus: a string with one of the following values:
+    //    "pending": (has not started loading, never returned by this function)
+    //    "loading": Describe info for the api is being downloaded
+    //    "loadfailed": Downloading of describe info for the api failed
+    //    "ready": Describe info is available
+    // - globalDescribe: contains a DescribeGlobalResult if it has been loaded
     describeGlobal(useToolingApi) {
-      return Array.from(getGlobal(useToolingApi).values()).map(sobjectInfo => sobjectInfo.describeGlobalResult);
+      return getGlobal(useToolingApi).global;
     },
-    // Returns an object where sobjectFound indicates if the object exists, and sobjectDescribe contains a DescribeSObjectResult if the object exists and has been loaded
+    // Returns an object with two properties:
+    // - sobjectStatus: a string with one of the following values:
+    //    "pending": (has not started loading, never returned by this function)
+    //    "notfound": The object does not exist
+    //    "loading": Describe info for the object is being downloaded
+    //    "loadfailed": Downloading of describe info for the object failed
+    //    "ready": Describe info is available
+    // - sobjectDescribe: contains a DescribeSObjectResult if the object exists and has been loaded
     describeSobject(useToolingApi, sobjectName) {
-      let sobjectInfo = getGlobal(useToolingApi).get(sobjectName.toLowerCase());
-      if (!sobjectInfo) {
-        return {sobjectFound: false, sobjectDescribe: null};
+      let apiDescribes = getGlobal(useToolingApi);
+      if (!apiDescribes.sobjects) {
+        return {sobjectStatus: apiDescribes.global.globalStatus, sobjectDescribe: null};
       }
-      if (!sobjectInfo.isLoading) {
-        console.log("getting fields for " + sobjectInfo.describeGlobalResult.name);
-        sobjectInfo.isLoading = true;
-        spinFor(askSalesforce(sobjectInfo.describeGlobalResult.urls.describe).then(res => {
-          sobjectInfo.describeSobject = res;
+      let sobjectInfo = apiDescribes.sobjects.get(sobjectName.toLowerCase());
+      if (!sobjectInfo) {
+        return {sobjectStatus: "notfound", sobjectDescribe: null};
+      }
+      if (sobjectInfo.sobject.sobjectStatus == "pending") {
+        sobjectInfo.sobject.sobjectStatus = "loading";
+        console.log("getting fields for " + sobjectInfo.global.name);
+        spinFor(askSalesforce(sobjectInfo.global.urls.describe).then(res => {
+          sobjectInfo.sobject.sobjectStatus = "ready";
+          sobjectInfo.sobject.sobjectDescribe = res;
           sobjectAllDescribes.valueHasMutated();
         }, () => {
-          sobjectInfo.isLoading = false; // Request failed, allow trying again
+          sobjectInfo.sobject.sobjectStatus = "loadfailed";
           sobjectAllDescribes.valueHasMutated();
         }));
       }
-      return {sobjectFound: true, sobjectDescribe: sobjectInfo.describeSobject};
+      return sobjectInfo.sobject;
+    },
+    reloadAll() {
+      sobjectAllDescribes(initialState());
     }
   };
 }
