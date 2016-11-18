@@ -7,148 +7,205 @@ initButton(true);
 chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   session = message;
 
-  let objectData = ko.observable(null);
-  let recordData = ko.observable(null);
-  let layoutInfo = ko.observable(null);
-  let isDragging = false;
-
   let vm = {
+    callbacks: [],
+    didUpdate(cb) {
+      vm.callbacks.forEach(f => f(cb));
+    },
     sfLink: "https://" + sfHost,
-    spinnerCount: ko.observable(0),
+    spinnerCount: 0,
+    objectData: null,
+    recordData: null,
+    layoutInfo: null,
+    isDragging: false,
     recordHeading() {
-      if (recordData()) {
-        return "(" + recordData().Name + " / " + recordData().Id + ")";
+      if (vm.recordData) {
+        return "(" + vm.recordData.Name + " / " + vm.recordData.Id + ")";
       }
-      if (objectData()) {
-        return"(" + objectData().label + " / " + objectData().keyPrefix + ")";
+      if (vm.objectData) {
+        return"(" + vm.objectData.label + " / " + vm.objectData.keyPrefix + ")";
       }
       return "Loading all data...";
     },
-    sobjectName: ko.observable(),
+    sobjectName: undefined,
     objectName() {
       // Get with correct case if available, otherwise just return the input.
-      return objectData() ? objectData().name : vm.sobjectName();
+      return vm.objectData ? vm.objectData.name : vm.sobjectName;
     },
     title() {
-      return (objectData() ? "ALL DATA: " + objectData().name + " " : "") + vm.recordHeading();
+      return (vm.objectData ? "ALL DATA: " + vm.objectData.name + " " : "") + vm.recordHeading();
     },
-    errorMessages: ko.observableArray(),
-    rowsFilterFocus: ko.observable(true),
-    rowsFilter: ko.observable(""),
-    fieldRows: ko.observableArray(),
-    childRows: ko.observableArray(),
-    clearAndFocusFilter() {
-      vm.rowsFilter("");
-      vm.rowsFilterFocus(true);
+    errorMessages: [],
+    rowsFilter: "",
+    fieldRows: [],
+    childRows: [],
+    onRowsFilterInput(e) {
+      vm.rowsFilter = e.target.value;
+      vm.didUpdate();
+    },
+    onDetailsFilterInput(e) {
+      vm.detailsFilter = e.target.value;
+      vm.didUpdate();
+    },
+    onShowFieldLabelColumnChange(e) {
+      vm.showFieldLabelColumn = e.target.checked;
+      vm.didUpdate();
+    },
+    onShowFieldHelptextColumnChange(e) {
+      vm.showFieldHelptextColumn = e.target.checked;
+      vm.didUpdate();
+    },
+    fetchFieldDescriptions: true,
+    onShowFieldDescriptionColumnChange(e) {
+      if (vm.fetchFieldDescriptions) {
+        vm.fetchFieldDescriptions = false;
+        vm.fieldRows.forEach(fieldRow => fieldRow.showFieldDescription());
+      }
+      vm.showFieldDescriptionColumn = e.target.checked;
+      vm.didUpdate();
+    },
+    onShowFieldValueColumnChange(e) {
+      vm.showFieldValueColumn = e.target.checked;
+      vm.didUpdate();
+    },
+    onShowFieldTypeColumnChange(e) {
+      vm.showFieldTypeColumn = e.target.checked;
+      vm.didUpdate();
+    },
+    clearAndFocusFilter(e, rowsFilter) {
+      e.preventDefault();
+      vm.rowsFilter = "";
+      rowsFilter.focus();
+      vm.didUpdate();
     },
     sortFieldsByName() {
       fieldRowList.sortRows("name");
+      vm.didUpdate();
     },
     sortFieldsByLabel() {
       fieldRowList.sortRows("label");
+      vm.didUpdate();
     },
     sortFieldsByHelptext() {
       fieldRowList.sortRows("helptext");
+      vm.didUpdate();
     },
     sortFieldsByDesc() {
       fieldRowList.sortRows("desc");
+      vm.didUpdate();
     },
     sortFieldsByValue() {
       fieldRowList.sortRows("dataValue");
+      vm.didUpdate();
     },
     sortFieldsByType() {
       fieldRowList.sortRows("type");
+      vm.didUpdate();
     },
     sortChildsByName() {
       childRowList.sortRows("name");
+      vm.didUpdate();
     },
     sortChildsByObject() {
       childRowList.sortRows("object");
+      vm.didUpdate();
     },
     sortChildsByField() {
       childRowList.sortRows("field");
+      vm.didUpdate();
     },
     sortChildsByLabel() {
       childRowList.sortRows("label");
+      vm.didUpdate();
     },
-    detailsFilterFocus: ko.observable(false),
-    detailsFilter: ko.observable(""),
-    detailsBox: ko.observable(null),
-    isEditing: ko.observable(false),
-    hasEntityParticles: ko.observable(false),
-    showFieldLabelColumn: ko.observable(true),
-    showFieldHelptextColumn: ko.observable(false),
-    showFieldDescriptionColumn: ko.observable(false),
-    showFieldValueColumn: ko.observable(false),
-    showFieldTypeColumn: ko.observable(true),
-    closeDetailsBox() {
-      vm.detailsBox(null);
+    detailsFilter: "",
+    detailsBox: null,
+    isEditing: false,
+    hasEntityParticles: false,
+    showFieldLabelColumn: true,
+    showFieldHelptextColumn: false,
+    showFieldDescriptionColumn: false,
+    showFieldValueColumn: false,
+    showFieldTypeColumn: true,
+    closeDetailsBox(e) {
+      if (e) {
+        e.preventDefault();
+      }
+      vm.detailsBox = null;
+      vm.didUpdate();
     },
-    showObjectMetadata() {
-      let objectDescribe = objectData();
+    showObjectMetadata(e, cb) {
+      e.preventDefault();
+      let objectDescribe = vm.objectData;
       let props = {};
       addProperties(props, objectDescribe, "desc.", {fields: true, childRelationships: true});
-      addProperties(props, layoutInfo(), "layout.", {detailLayoutSections: true, editLayoutSections: true, relatedLists: true});
+      addProperties(props, vm.layoutInfo, "layout.", {detailLayoutSections: true, editLayoutSections: true, relatedLists: true});
       showAllFieldMetadata(objectDescribe.name, props, false);
+      vm.didUpdate(cb);
     },
-    detailsFilterClick(field) {
+    detailsFilterClick(e, field) {
+      e.preventDefault();
       vm.closeDetailsBox();
-      vm.rowsFilter(field.key + "=" + JSON.stringify(field.value));
+      vm.rowsFilter = field.key + "=" + JSON.stringify(field.value);
+      vm.didUpdate();
     },
     tableMouseDown() {
-      isDragging = false;
-      return true;
+      vm.isDragging = false;
     },
-    tableMouseMove(_, e) {
-      if (e.movementX || e.movementY) {
-        isDragging = true;
+    tableMouseMove(e) {
+      if (e.nativeEvent.movementX || e.nativeEvent.movementY) {
+        vm.isDragging = true;
       }
-      return true;
     },
-    tableClick(_, e) {
-      if (!e.target.closest("a, textarea") && !isDragging) {
-        let td = e.target.closest(".quick-select");
+    tableClick(e) {
+      if (!e.nativeEvent.target.closest("a, textarea") && !vm.isDragging) {
+        let td = e.nativeEvent.target.closest(".quick-select");
         getSelection().selectAllChildren(td.firstElementChild || td);
       }
-      return true;
     },
     canEdit() {
-      return objectData() && objectData().updateable && recordData() && recordData().Id;
+      return vm.objectData && vm.objectData.updateable && vm.recordData && vm.recordData.Id;
     },
     doEdit() {
-      for (let fieldRow of vm.fieldRows()) {
+      for (let fieldRow of vm.fieldRows) {
         if (fieldRow.canEdit()) {
-          fieldRow.dataEditValue(fieldRow.dataStringValue());
+          fieldRow.dataEditValue = fieldRow.dataStringValue();
         }
       }
-      vm.isEditing(true);
+      vm.isEditing = true;
+      vm.didUpdate();
     },
     doSave() {
-      vm.errorMessages.remove(e => e.startsWith("Error saving record:"));
+      let i = vm.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
+      vm.errorMessages.splice(i, 1);
       let record = {};
-      vm.fieldRows().forEach(fieldRow => fieldRow.saveDataValue(record));
-      let recordUrl = objectData().urls.rowTemplate.replace("{ID}", recordData().Id);
+      vm.fieldRows.forEach(fieldRow => fieldRow.saveDataValue(record));
+      let recordUrl = vm.objectData.urls.rowTemplate.replace("{ID}", vm.recordData.Id);
       spinFor(
         "saving record",
         askSalesforce(recordUrl, null, {method: "PATCH", body: record})
           .then(() => {
             clearRecordData();
             setRecordData(askSalesforce(recordUrl));
+            vm.didUpdate();
           })
       );
+      vm.didUpdate();
     },
     cancelEdit() {
-      vm.errorMessages.remove(e => e.startsWith("Error saving record:"));
-      for (let fieldRow of vm.fieldRows()) {
-        fieldRow.dataEditValue(null);
+      let i = vm.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
+      vm.errorMessages.splice(i, 1);
+      for (let fieldRow of vm.fieldRows) {
+        fieldRow.dataEditValue = null;
       }
-      vm.isEditing(false);
+      vm.isEditing = false;
+      vm.didUpdate();
     },
     canView() {
-      return recordData() && recordData().Id;
+      return vm.recordData && vm.recordData.Id;
     },
     viewLink() {
-      return recordData() && recordData().Id && "https://" + sfHost + "/" + recordData().Id;
+      return vm.recordData && vm.recordData.Id && "https://" + sfHost + "/" + vm.recordData.Id;
     },
     openSetup() {
       let args = new URLSearchParams();
@@ -158,25 +215,21 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     },
   };
 
-  let fetchFieldDescriptions = vm.showFieldDescriptionColumn.subscribe(() => {
-    fetchFieldDescriptions.dispose();
-    vm.fieldRows().forEach(fieldRow => fieldRow.showFieldDescription());
-  });
-
   function RowList(rows, constructor) {
     let map = new Map();
     let sortCol = "name";
     let sortDir = 1;
+    let reactKey = 0;
     let list = {
       getRow(name) {
         if (!name) { // related lists may not have a name
-          let row = new constructor(name);
+          let row = new constructor(name, reactKey++);
           rows.push(row);
           return row;
         }
         let row = map.get(name);
         if (!row) {
-          row = new constructor(name);
+          row = new constructor(name, reactKey++);
           rows.push(row);
           map.set(name, row);
         }
@@ -196,61 +249,65 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
 
   var fieldRowList = new RowList(vm.fieldRows, FieldRow);
 
-  function FieldRow(fieldName) {
+  function FieldRow(fieldName, reactKey) {
     function fieldProperties() {
       let props = {};
-      if (typeof fieldVm.dataTypedValue() != "undefined") {
-        addProperties(props, {dataValue: fieldVm.dataTypedValue()}, "", {});
+      if (typeof fieldVm.dataTypedValue != "undefined") {
+        addProperties(props, {dataValue: fieldVm.dataTypedValue}, "", {});
       }
-      if (fieldVm.fieldDescribe()) {
-      addProperties(props, fieldVm.fieldDescribe(), "desc.", {});
+      if (fieldVm.fieldDescribe) {
+      addProperties(props, fieldVm.fieldDescribe, "desc.", {});
       }
-      if (fieldVm.entityParticle()) {
-        addProperties(props, fieldVm.entityParticle(), "part.", {});
+      if (fieldVm.entityParticle) {
+        addProperties(props, fieldVm.entityParticle, "part.", {});
       }
-      if (fieldVm.fieldParticleMetadata()) {
-        addProperties(props, fieldVm.fieldParticleMetadata(), "meta.", {});
+      if (fieldVm.fieldParticleMetadata) {
+        addProperties(props, fieldVm.fieldParticleMetadata, "meta.", {});
       }
-      if (fieldVm.detailLayoutInfo()) {
-        addProperties(props, fieldVm.detailLayoutInfo().indexes, "layout.", {});
-        addProperties(props, fieldVm.detailLayoutInfo().section, "layoutSection.", {layoutRows: true});
-        addProperties(props, fieldVm.detailLayoutInfo().row, "layoutRow.", {layoutItems: true});
-        addProperties(props, fieldVm.detailLayoutInfo().item, "layoutItem.", {layoutComponents: true});
-        addProperties(props, fieldVm.detailLayoutInfo().component, "layoutComponent.", {details: true});
-      } else if (layoutInfo()) {
+      if (fieldVm.detailLayoutInfo) {
+        addProperties(props, fieldVm.detailLayoutInfo.indexes, "layout.", {});
+        addProperties(props, fieldVm.detailLayoutInfo.section, "layoutSection.", {layoutRows: true});
+        addProperties(props, fieldVm.detailLayoutInfo.row, "layoutRow.", {layoutItems: true});
+        addProperties(props, fieldVm.detailLayoutInfo.item, "layoutItem.", {layoutComponents: true});
+        addProperties(props, fieldVm.detailLayoutInfo.component, "layoutComponent.", {details: true});
+      } else if (vm.layoutInfo) {
         addProperties(props, {shownOnLayout: false}, "layout.", {});
       }
-      if (fieldVm.editLayoutInfo()) {
-        addProperties(props, fieldVm.editLayoutInfo().indexes, "editLayout.", {});
-        addProperties(props, fieldVm.editLayoutInfo().section, "editLayoutSection.", {layoutRows: true});
-        addProperties(props, fieldVm.editLayoutInfo().row, "editLayoutRow.", {layoutItems: true});
-        addProperties(props, fieldVm.editLayoutInfo().item, "editLayoutItem.", {layoutComponents: true});
-        addProperties(props, fieldVm.editLayoutInfo().component, "editLayoutComponent.", {details: true});
-      } else if (layoutInfo()) {
+      if (fieldVm.editLayoutInfo) {
+        addProperties(props, fieldVm.editLayoutInfo.indexes, "editLayout.", {});
+        addProperties(props, fieldVm.editLayoutInfo.section, "editLayoutSection.", {layoutRows: true});
+        addProperties(props, fieldVm.editLayoutInfo.row, "editLayoutRow.", {layoutItems: true});
+        addProperties(props, fieldVm.editLayoutInfo.item, "editLayoutItem.", {layoutComponents: true});
+        addProperties(props, fieldVm.editLayoutInfo.component, "editLayoutComponent.", {details: true});
+      } else if (vm.layoutInfo) {
         addProperties(props, {shownOnLayout: false}, "editLayout.", {});
       }
       return props;
     }
 
     let fieldVm = {
-      fieldDescribe: ko.observable(),
-      dataTypedValue: ko.observable(),
-      dataEditValue: ko.observable(null),
-      detailLayoutInfo: ko.observable(),
-      editLayoutInfo: ko.observable(),
-      hasFocus: ko.observable(false),
-      entityParticle: ko.observable(),
-      fieldParticleMetadata: ko.observable(),
+      reactKey,
+      fieldDescribe: undefined,
+      dataTypedValue: undefined,
+      dataEditValue: null,
+      detailLayoutInfo: undefined,
+      editLayoutInfo: undefined,
+      entityParticle: undefined,
+      fieldParticleMetadata: undefined,
 
+      onDataEditValueInput(e) {
+        fieldVm.dataEditValue = e.target.value;
+        vm.didUpdate();
+      },
       dataStringValue() {
-        return fieldVm.dataTypedValue() == null ? "" : "" + fieldVm.dataTypedValue();
+        return fieldVm.dataTypedValue == null ? "" : "" + fieldVm.dataTypedValue;
       },
       fieldLabel() {
-        if (fieldVm.fieldDescribe()) {
-          return fieldVm.fieldDescribe().label;
+        if (fieldVm.fieldDescribe) {
+          return fieldVm.fieldDescribe.label;
         }
-        if (fieldVm.entityParticle()) {
-          return fieldVm.entityParticle().Label;
+        if (fieldVm.entityParticle) {
+          return fieldVm.entityParticle.Label;
         }
         return "Unknown Label";
       },
@@ -259,16 +316,16 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return typeof fieldVm.fieldHelptext() != "undefined";
       },
       fieldHelptext() {
-        return fieldVm.fieldDescribe() && fieldVm.fieldDescribe().inlineHelpText;
+        return fieldVm.fieldDescribe && fieldVm.fieldDescribe.inlineHelpText;
       },
       hasFieldDesc() {
         return typeof fieldVm.fieldDesc() != "undefined";
       },
       fieldDesc() {
-        return fieldVm.fieldParticleMetadata() && fieldVm.fieldParticleMetadata().Metadata.description;
+        return fieldVm.fieldParticleMetadata && fieldVm.fieldParticleMetadata.Metadata.description;
       },
       fieldTypeDesc() {
-        let fieldDescribe = fieldVm.fieldDescribe();
+        let fieldDescribe = fieldVm.fieldDescribe;
         if (fieldDescribe) {
           return fieldDescribe.type == "reference"
           ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
@@ -277,7 +334,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
             + (fieldDescribe.precision || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
             + (fieldDescribe.calculated ? "*" : "");
         }
-        let particle = fieldVm.entityParticle();
+        let particle = fieldVm.entityParticle;
         if (particle) {
           return particle.DataType == "reference" && particle.FieldDefinition.ReferenceTo.referenceTo
           ? "[" + particle.FieldDefinition.ReferenceTo.referenceTo.join(", ") + "]"
@@ -289,33 +346,33 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return "(Unknown)";
       },
       referenceTypes() {
-        let fieldDescribe = fieldVm.fieldDescribe();
+        let fieldDescribe = fieldVm.fieldDescribe;
         if (fieldDescribe) {
           return fieldDescribe.type == "reference" ? fieldDescribe.referenceTo : null;
         }
-        let particle = fieldVm.entityParticle();
+        let particle = fieldVm.entityParticle;
         if (particle) {
           return particle.DataType == "reference" ? particle.FieldDefinition.ReferenceTo.referenceTo : null;
         }
         return [];
       },
       fieldIsCalculated() {
-        if (fieldVm.fieldDescribe()) {
-          return fieldVm.fieldDescribe().calculated;
+        if (fieldVm.fieldDescribe) {
+          return fieldVm.fieldDescribe.calculated;
         }
-        if (fieldVm.entityParticle()) {
-          return fieldVm.entityParticle().IsCalculated;
+        if (fieldVm.entityParticle) {
+          return fieldVm.entityParticle.IsCalculated;
         }
         return false;
       },
       fieldIsHidden() {
-        return !fieldVm.fieldDescribe();
+        return !fieldVm.fieldDescribe;
       },
       hasDataValue() {
-        return typeof fieldVm.dataTypedValue() != "undefined";
+        return typeof fieldVm.dataTypedValue != "undefined";
       },
       hasBlankValue() {
-        return fieldVm.dataTypedValue() === null;
+        return fieldVm.dataTypedValue === null;
       },
       openSetup() {
         let args = new URLSearchParams();
@@ -325,7 +382,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return "open-field-setup.html?" + args;
       },
       summary() {
-        let fieldDescribe = fieldVm.fieldDescribe();
+        let fieldDescribe = fieldVm.fieldDescribe;
         if (fieldDescribe) {
           return fieldName + "\n"
             + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
@@ -337,42 +394,46 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return fieldName + "\n(Details not available)";
       },
       isEditing() {
-        return typeof fieldVm.dataEditValue() == "string";
+        return typeof fieldVm.dataEditValue == "string";
       },
       canEdit() {
-        return fieldVm.fieldDescribe() && fieldVm.fieldDescribe().updateable;
+        return fieldVm.fieldDescribe && fieldVm.fieldDescribe.updateable;
       },
-      tryEdit() {
+      tryEdit(upd) {
         if (!fieldVm.isEditing() && vm.canEdit() && fieldVm.canEdit()) {
-          fieldVm.dataEditValue(fieldVm.dataStringValue());
-          fieldVm.hasFocus(true);
-          vm.isEditing(true);
+          fieldVm.dataEditValue = fieldVm.dataStringValue();
+          vm.isEditing = true;
+          vm.didUpdate(upd);
         }
       },
-      cancelEdit() {
-        fieldVm.dataEditValue(null);
+      cancelEdit(e) {
+        e.preventDefault();
+        fieldVm.dataEditValue = null;
+        vm.didUpdate();
       },
       saveDataValue(recordData) {
         if (fieldVm.isEditing()) {
-          recordData[fieldVm.fieldDescribe().name] = fieldVm.dataEditValue() == "" ? null : fieldVm.dataEditValue();
+          recordData[fieldVm.fieldDescribe.name] = fieldVm.dataEditValue == "" ? null : fieldVm.dataEditValue;
         }
       },
       isId() {
-        if (fieldVm.fieldDescribe()) {
-          return fieldVm.fieldDescribe().type == "reference" && !!fieldVm.dataTypedValue();
+        if (fieldVm.fieldDescribe) {
+          return fieldVm.fieldDescribe.type == "reference" && !!fieldVm.dataTypedValue;
         }
-        if (fieldVm.entityParticle()) {
-          return fieldVm.entityParticle().DataType == "reference" && !!fieldVm.dataTypedValue();
+        if (fieldVm.entityParticle) {
+          return fieldVm.entityParticle.DataType == "reference" && !!fieldVm.dataTypedValue;
         }
         return false;
       },
-      openDetails() {
+      openDetails(e, cb) {
+        e.preventDefault();
         showAllFieldMetadata(fieldName, fieldProperties(), true);
+        vm.didUpdate(cb);
       },
       showRecordIdUrl() {
         let args = new URLSearchParams();
         args.set("host", sfHost);
-        args.set("q", fieldVm.dataTypedValue());
+        args.set("q", fieldVm.dataTypedValue);
         return "inspect.html?" + args;
       },
       showReferenceUrl(type) {
@@ -390,7 +451,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         type: () => fieldVm.fieldTypeDesc().trim()
       },
       visible() {
-        let values = vm.rowsFilter().trim().split(/[ \t]+/);
+        let values = vm.rowsFilter.trim().split(/[ \t]+/);
         return values.every(value => {
           let pair = value.split("=");
           if (pair.length == 2) {
@@ -401,22 +462,23 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
             }
           } else {
             let row = fieldVm.fieldName
-              + "," + (vm.showFieldLabelColumn() ? fieldVm.fieldLabel() : "")
-              + "," + (vm.showFieldHelptextColumn() ? fieldVm.fieldHelptext() || "" : "")
-              + "," + (vm.showFieldDescriptionColumn() ? fieldVm.fieldDesc() || "" : "")
-              + "," + (vm.showFieldValueColumn() ? fieldVm.dataStringValue() : "")
-              + "," + (vm.showFieldTypeColumn() ? fieldVm.fieldTypeDesc() : "");
+              + "," + (vm.showFieldLabelColumn ? fieldVm.fieldLabel() : "")
+              + "," + (vm.showFieldHelptextColumn ? fieldVm.fieldHelptext() || "" : "")
+              + "," + (vm.showFieldDescriptionColumn ? fieldVm.fieldDesc() || "" : "")
+              + "," + (vm.showFieldValueColumn ? fieldVm.dataStringValue() : "")
+              + "," + (vm.showFieldTypeColumn ? fieldVm.fieldTypeDesc() : "");
             return row.toLowerCase().indexOf(value.toLowerCase()) != -1;
           }
         });
       },
       showFieldDescription() {
-        if (!fieldVm.entityParticle()) {
+        if (!fieldVm.entityParticle) {
           return;
         }
-        spinFor("getting field definition metadata for " + fieldName, askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle().FieldDefinition.DurableId + "'"))
+        spinFor("getting field definition metadata for " + fieldName, askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle.FieldDefinition.DurableId + "'"))
           .then(fieldDefs => {
-            fieldVm.fieldParticleMetadata(fieldDefs.records[0]);
+            fieldVm.fieldParticleMetadata = fieldDefs.records[0];
+            vm.didUpdate();
           }));
       }
     };
@@ -425,45 +487,46 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
 
   var childRowList = new RowList(vm.childRows, ChildRow);
   
-  function ChildRow(childName) {
+  function ChildRow(childName, reactKey) {
     function childProperties() {
       let props = {};
-      if (childVm.childDescribe()) {
-        addProperties(props, childVm.childDescribe(), "child.", {});
+      if (childVm.childDescribe) {
+        addProperties(props, childVm.childDescribe, "child.", {});
       }
-      if (childVm.relatedListInfo()) {
-        addProperties(props, childVm.relatedListInfo(), "layout.", {});
-      } else if (layoutInfo()) {
+      if (childVm.relatedListInfo) {
+        addProperties(props, childVm.relatedListInfo, "layout.", {});
+      } else if (vm.layoutInfo) {
         addProperties(props, {shownOnLayout: false}, "layout.", {});
       }
       return props;
     }
 
     let childVm = {
-      childDescribe: ko.observable(),
-      relatedListInfo: ko.observable(),
+      reactKey,
+      childDescribe: undefined,
+      relatedListInfo: undefined,
       childName: childName,
       childObject() {
-        if (childVm.childDescribe()) {
-          return childVm.childDescribe().childSObject;
+        if (childVm.childDescribe) {
+          return childVm.childDescribe.childSObject;
         }
-        if (childVm.relatedListInfo()) {
-          return childVm.relatedListInfo().relatedList.sobject;
+        if (childVm.relatedListInfo) {
+          return childVm.relatedListInfo.relatedList.sobject;
         }
         return "(Unknown)";
       },
       childField() {
-        if (childVm.childDescribe()) {
-          return childVm.childDescribe().field;
+        if (childVm.childDescribe) {
+          return childVm.childDescribe.field;
         }
-        if (childVm.relatedListInfo()) {
-          return childVm.relatedListInfo().relatedList.field;
+        if (childVm.relatedListInfo) {
+          return childVm.relatedListInfo.relatedList.field;
         }
         return "(Unknown)";
       },
       childLabel() {
-        if (childVm.relatedListInfo()) {
-          return childVm.relatedListInfo().relatedList.label;
+        if (childVm.relatedListInfo) {
+          return childVm.relatedListInfo.relatedList.label;
         }
         return "";
       },
@@ -474,7 +537,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         label: () => (childVm.childLabel() || "").trim()
       },
       visible() {
-        let values = vm.rowsFilter().trim().split(/[ \t]+/);
+        let values = vm.rowsFilter.trim().split(/[ \t]+/);
         return values.every(value => {
           let pair = value.split("=");
           if (pair.length == 2) {
@@ -489,11 +552,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           }
         });
       },
-      openDetails() {
+      openDetails(e, cb) {
+        e.preventDefault();
         showAllFieldMetadata(childName, childProperties(), true);
+        vm.didUpdate(cb);
       },
       showChildObjectUrl() {
-        let childDescribe = childVm.childDescribe();
+        let childDescribe = childVm.childDescribe;
         if (childDescribe) {
           let args = new URLSearchParams();
           args.set("host", sfHost);
@@ -503,7 +568,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return "";
       },
       openSetup() {
-        let childDescribe = childVm.childDescribe();
+        let childDescribe = childVm.childDescribe;
         if (childDescribe) {
           let args = new URLSearchParams();
           args.set("host", sfHost);
@@ -511,7 +576,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           args.set("field", childDescribe.field);
           return "open-field-setup.html?" + args;
         }
-        let relatedListInfo = childVm.relatedListInfo();
+        let relatedListInfo = childVm.relatedListInfo;
         if (relatedListInfo) {
           let args = new URLSearchParams();
           args.set("host", sfHost);
@@ -522,7 +587,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return "open-field-setup.html";
       },
       queryListUrl() {
-        if (!recordData() || !recordData().Id) {
+        if (!vm.recordData || !vm.recordData.Id) {
           return "";
         }
         function dataExportUrl(query) {
@@ -531,13 +596,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           args.set("query", query);
           return "data-export.html?" + args;
         }
-        let relatedListInfo = childVm.relatedListInfo();
+        let relatedListInfo = childVm.relatedListInfo;
         if (relatedListInfo) {
-          return dataExportUrl("select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + recordData().Id + "'");
+          return dataExportUrl("select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + vm.recordData.Id + "'");
         }
-        let childDescribe = childVm.childDescribe();
+        let childDescribe = childVm.childDescribe;
         if (childDescribe) {
-          return dataExportUrl("select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + recordData().Id + "'");
+          return dataExportUrl("select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + vm.recordData.Id + "'");
         }
         return "";
       }
@@ -568,39 +633,212 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         isNumber: typeof value == "number",
         isBoolean: typeof value == "boolean",
         visible() {
-          let value = vm.detailsFilter().trim().toLowerCase();
+          let value = vm.detailsFilter.trim().toLowerCase();
           return !value || row.toLowerCase().indexOf(value) != -1;
         }
       });
     }
-    vm.detailsBox({rows: fieldDetailVms, name: name, showFilterButton: showFilterButton});
-    vm.detailsFilterFocus(true);
+    vm.detailsBox = {rows: fieldDetailVms, name: name, showFilterButton: showFilterButton};
   }
 
-  ko.applyBindings(vm, document.documentElement);
+  let App = React.createClass({
+    getInitialState() {
+      return {vm};
+    },
+    componentDidMount() {
+      vm.callbacks.push(this.cb);
+      this.refs.rowsFilter.focus();
+    },
+    componentWillUnmount() {
+      let i = vm.callbacks.indexOf(this.cb);
+      vm.callbacks.splice(i, 1);
+    },
+    cb(cb) {
+      this.setState({vm}, cb);
+    },
+    detailsFilterFocus() {
+      this.refs.detailsFilter.focus();
+    },
+    render() {
+      document.title = vm.title();
+      return (
+React.createElement("div", {},
+  React.createElement("div", {className: "object-bar"},
+    React.createElement("img", {id: "spinner", src: "data:image/gif;base64,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", hidden: vm.spinnerCount == 0}),
+    React.createElement("a", {href: vm.sfLink, className: "sf-link"},
+      React.createElement("svg", {viewBox: "0 0 24 24"},
+        React.createElement("path", {d: "M18.9 12.3h-1.5v6.6c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-5.1h-3.6v5.1c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-6.6H5.1c-.1 0-.3-.1-.3-.2s0-.2.1-.3l6.9-7c.1-.1.3-.1.4 0l7 7v.3c0 .1-.2.2-.3.2z"})
+      ),
+      " Back to Salesforce"
+    ),
+    React.createElement("span", {className: "filter-box"},
+      React.createElement("input", {className: "filter-input", placeholder: "Filter", value: vm.rowsFilter, onInput: vm.onRowsFilterInput, ref: "rowsFilter"}),
+      React.createElement("a", {href: "about:blank", className: "char-btn", onClick: e => vm.clearAndFocusFilter(e, this.refs.rowsFilter)}, "X")
+    ),
+    React.createElement("span", {className: "column-toggles"},
+      React.createElement("label", {},
+        React.createElement("input", {type: "checkbox", checked: vm.showFieldLabelColumn, onChange: vm.onShowFieldLabelColumnChange}),
+        " Label"
+      ),
+      React.createElement("label", {},
+        React.createElement("input", {type: "checkbox", checked: vm.showFieldHelptextColumn, onChange: vm.onShowFieldHelptextColumnChange}),
+        " Help text"
+      ),
+      React.createElement("label", {},
+        React.createElement("input", {type: "checkbox", checked: vm.showFieldDescriptionColumn, onChange: vm.onShowFieldDescriptionColumnChange, disabled: !vm.hasEntityParticles}),
+        " Description"
+      ),
+      React.createElement("label", {},
+        React.createElement("input", {type: "checkbox", checked: vm.showFieldValueColumn, onChange: vm.onShowFieldValueColumnChange, disabled: !vm.canView()}),
+        " Value"
+      ),
+      React.createElement("label", {},
+        React.createElement("input", {type: "checkbox", checked: vm.showFieldTypeColumn, onChange: vm.onShowFieldTypeColumnChange}),
+        " Type"
+      )
+    ),
+    React.createElement("span", {className: "object-actions"},
+      React.createElement("a", {hidden: !vm.canView(), href: vm.viewLink(), title: "View this record in Salesforce"}, "View"),
+      " ",
+      React.createElement("a", {href: "about:blank", hidden: !vm.objectName(), onClick: e => vm.showObjectMetadata(e, this.detailsFilterFocus)}, "More"),
+      " ",
+      React.createElement("a", {hidden: !vm.objectName(), href: vm.openSetup()}, "Setup")
+    )
+  ),
+  React.createElement("div", {className: "body " + (!vm.showFieldLabelColumn && !vm.showFieldHelptextColumn && !vm.showFieldDescriptionColumn && !vm.showFieldValueColumn && !vm.showFieldTypeColumn ? "empty " : "")},
+    React.createElement("h1", {},
+      React.createElement("span", {}, vm.objectName()),
+      React.createElement("span", {}, vm.recordHeading()),
+      " ",
+      React.createElement("button", {title: "Inline edit the values of this record", disabled: !vm.canEdit() || !vm.showFieldValueColumn, hidden: vm.isEditing, onClick: vm.doEdit}, "Edit"),
+      " ",
+      React.createElement("button", {title: "Inline edit the values of this record", hidden: !vm.isEditing, onClick: vm.doSave}, "Save"),
+      " ",
+      React.createElement("button", {title: "Inline edit the values of this record", hidden: !vm.isEditing, onClick: vm.cancelEdit}, "Cancel")
+    ),
+    React.createElement("div", {hidden: vm.errorMessages.length == 0, className: "error-message"}, vm.errorMessages.map((data, index) => React.createElement("div", {key: index}, data))),
+    React.createElement("table", {},
+      React.createElement("thead", {},
+        React.createElement("tr", {},
+          React.createElement("th", {className: "field-name", tabIndex: 0, onClick: vm.sortFieldsByName}, "Field API Name"),
+          React.createElement("th", {className: "field-label", tabIndex: 0, onClick: vm.sortFieldsByLabel, hidden: !vm.showFieldLabelColumn}, "Label"),
+          React.createElement("th", {className: "field-helptext", tabIndex: 0, onClick: vm.sortFieldsByHelptext, hidden: !vm.showFieldHelptextColumn}, "Help text"),
+          React.createElement("th", {className: "field-desc", tabIndex: 0, onClick: vm.sortFieldsByDesc, hidden: !vm.showFieldDescriptionColumn}, "Description"),
+          React.createElement("th", {className: "field-value", tabIndex: 0, onClick: vm.sortFieldsByValue, hidden: !vm.showFieldValueColumn}, "Value"),
+          React.createElement("th", {className: "field-type", tabIndex: 0, onClick: vm.sortFieldsByType, hidden: !vm.showFieldTypeColumn}, "Type"),
+          React.createElement("th", {className: "field-actions"}, "Actions")
+        )
+      ),
+      React.createElement("tbody", {id: "dataTableBody", onClick: vm.tableClick, onMouseMove: vm.tableMouseMove, onMouseDown: vm.tableMouseDown}, vm.fieldRows.map(row =>
+        React.createElement("tr", {className: (row.fieldIsCalculated() ? "fieldCalculated " : "") + (row.fieldIsHidden() ? "fieldHidden " : ""), hidden: !row.visible(), title: row.summary(), key: row.reactKey},
+          React.createElement("td", {className: "field-name quick-select"}, row.fieldName),
+          React.createElement("td", {hidden: !vm.showFieldLabelColumn, className: "field-label quick-select"}, row.fieldLabel()),
+          React.createElement("td", {hidden: !vm.showFieldHelptextColumn, className: "field-helptext quick-select"},
+            React.createElement("span", {}, row.fieldHelptext()),
+            !row.hasFieldHelptext() ? React.createElement("span", {className: "value-unknown"}, "(Unknown)") : null
+          ),
+          React.createElement("td", {hidden: !vm.showFieldDescriptionColumn, className: "field-desc quick-select"},
+            React.createElement("span", {}, row.fieldDesc()),
+            !row.hasFieldDesc() ? React.createElement("span", {className: "value-unknown"}, "(Unknown)") : null
+          ),
+          React.createElement("td", {className: "field-value quick-select", hidden: !vm.showFieldValueColumn, onDoubleClick: e => row.tryEdit(() => this.refs["dataEditValue-" + row.reactKey].focus())},
+            row.isId() && !row.isEditing() ? React.createElement("a", {href: row.showRecordIdUrl(), className: "value-text"}, row.dataStringValue()) : null,
+            !row.isId() && !row.isEditing() ? React.createElement("span", {className: "value-text"}, row.dataStringValue()) : null,
+            !row.hasDataValue() && !row.isEditing() ? React.createElement("span", {className: "value-unknown"}, "(Unknown)") : null,
+            row.hasBlankValue() && !row.isEditing() ? React.createElement("span", {className: "value-blank"}, "(Blank)") : null,
+            row.isEditing() ? React.createElement("textarea", {value: row.dataEditValue, onChange: row.onDataEditValueInput, ref: "dataEditValue-" + row.reactKey}) : null,
+            row.isEditing() ? React.createElement("a", {href: "about:blank", onClick: row.cancelEdit, className: "undo-button"}, "\u21B6") : null
+          ),
+          React.createElement("td", {className: "field-type quick-select", hidden: !vm.showFieldTypeColumn},
+            React.createElement("span", {hidden: row.referenceTypes()}, row.fieldTypeDesc()),
+            (row.referenceTypes() || []).map(data =>
+              React.createElement("a", {href: row.showReferenceUrl(data), key: data}, data)
+            )
+          ),
+          React.createElement("td", {className: "field-actions"},
+            React.createElement("a", {href: "about:blank", onClick: e => row.openDetails(e, this.detailsFilterFocus)}, "More"),
+            " ",
+            React.createElement("a", {href: row.openSetup()}, "Setup")
+          )
+        )
+      ))
+    ),
+    React.createElement("hr", {}),
+    React.createElement("table", {},
+      React.createElement("thead", {},
+        React.createElement("tr", {},
+          React.createElement("th", {className: "child-name", tabIndex: 0, onClick: vm.sortChildsByName}, "Relationship Name"),
+          React.createElement("th", {className: "child-object", tabIndex: 0, onClick: vm.sortChildsByObject}, "Child Object"),
+          React.createElement("th", {className: "child-field", tabIndex: 0, onClick: vm.sortChildsByField}, "Field"),
+          React.createElement("th", {className: "child-label", tabIndex: 0, onClick: vm.sortChildsByLabel}, "Label"),
+          React.createElement("th", {className: "child-actions"}, "Actions")
+        )
+      ),
+      React.createElement("tbody", {id: "dataTableBody", onClick: vm.tableClick, onMouseMove: vm.tableMouseMove, onMouseDown: vm.tableMouseDown}, vm.childRows.map(row =>
+        React.createElement("tr", {hidden: !row.visible(), key: row.reactKey},
+          React.createElement("td", {className: "child-name quick-select"}, row.childName),
+          React.createElement("td", {className: "child-object quick-select"}, React.createElement("a", {href: row.showChildObjectUrl()}, row.childObject())),
+          React.createElement("td", {className: "child-field quick-select"}, row.childField()),
+          React.createElement("td", {className: "child-label quick-select"}, row.childLabel()),
+          React.createElement("td", {className: "child-actions"},
+            React.createElement("a", {href: "about:blank", onClick: e => row.openDetails(e, this.detailsFilterFocus)}, "More"),
+            " ",
+            React.createElement("a", {href: row.queryListUrl(), hidden: !row.queryListUrl(), title: "Export records in this related list"}, "List"),
+            " ",
+            React.createElement("a", {href: row.openSetup()}, "Setup")
+          )
+        )
+      ))
+    )
+  ),
+  vm.detailsBox ? React.createElement("div", {},
+    React.createElement("div", {id: "fieldDetailsView"},
+      React.createElement("div", {className: "container"},
+        React.createElement("a", {href: "about:blank", className: "closeLnk", onClick: vm.closeDetailsBox}, "X"),
+        React.createElement("div", {className: "mainContent"},
+          React.createElement("h3", {}, "All available metadata for \"", React.createElement("span", {}, vm.detailsBox.name), "\""),
+          React.createElement("input", {placeholder: "Filter", value: vm.detailsFilter, onInput: vm.onDetailsFilterInput, ref: "detailsFilter"}),
+          React.createElement("table", {},
+            React.createElement("thead", {}, React.createElement("tr", {}, React.createElement("th", {}, "Key"), React.createElement("th", {}, "Value"))),
+            React.createElement("tbody", {}, vm.detailsBox.rows.map(row =>
+              React.createElement("tr", {hidden: !row.visible(), key: row.key},
+                React.createElement("td", {}, React.createElement("a", {href: "about:blank", onClick: e => vm.detailsFilterClick(e, row), hidden: !vm.detailsBox.showFilterButton, title: "Show fields with this property"}, "🔍"), " ", React.createElement("span", {}, row.key)),
+                React.createElement("td", {className: (row.isString ? "isString " : "") + (row.isNumber ? "isNumber " : "") + (row.isBoolean ? "isBoolean " : "")}, row.value)
+              )
+            ))
+          )
+        )
+      )
+    )
+  ) : null
+)
+      );
+    }
+  });
+  ReactDOM.render(React.createElement(App, {}), document.getElementById("root"));
 
   function setRecordData(recordDataPromise) {
     spinFor("retrieving record", recordDataPromise.then(res => {
       for (let name in res) {
         if (name != "attributes") {
-          fieldRowList.getRow(name).dataTypedValue(res[name]);
+          fieldRowList.getRow(name).dataTypedValue = res[name];
         }
       }
       fieldRowList.resortRows();
-      recordData(res);
-      vm.showFieldValueColumn(true);
+      vm.recordData = res;
+      vm.showFieldValueColumn = true;
       spinFor(
         "describing layout",
         sobjectDescribePromise.then(sobjectDescribe => {
           if (sobjectDescribe.urls.layouts) {
             return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA")).then(layoutDescribe => {
-              for (let layoutType of [{sections: "detailLayoutSections", observable: "detailLayoutInfo"}, {sections: "editLayoutSections", observable: "editLayoutInfo"}]) {
+              for (let layoutType of [{sections: "detailLayoutSections", property: "detailLayoutInfo"}, {sections: "editLayoutSections", property: "editLayoutInfo"}]) {
                 layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
                   section.layoutRows.forEach((row, rowIndex) => {
                     row.layoutItems.forEach((item, itemIndex) => {
                       item.layoutComponents.forEach((component, componentIndex) => {
                         if (component.type == "Field") {
-                          fieldRowList.getRow(component.value)[layoutType.observable]({
+                          fieldRowList.getRow(component.value)[layoutType.property] = {
                             indexes: {
                               shownOnLayout: true,
                               sectionIndex,
@@ -612,7 +850,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
                             row,
                             item,
                             component
-                          });
+                          };
                         }
                       });
                     });
@@ -621,37 +859,40 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
               }
               fieldRowList.resortRows();
               layoutDescribe.relatedLists.forEach((child, childIndex) => {
-                childRowList.getRow(child.name).relatedListInfo({
+                childRowList.getRow(child.name).relatedListInfo = {
                   shownOnLayout: true,
                   relatedListIndex: childIndex,
                   relatedList: child
-                });
+                };
               });
               childRowList.resortRows();
-              layoutInfo(layoutDescribe);
+              vm.layoutInfo = layoutDescribe;
+              vm.didUpdate();
             });
           }
         })
       );
+      vm.didUpdate();
     }));
   }
   function clearRecordData() {
-    for (let fieldRow of vm.fieldRows()) {
-      fieldRow.dataTypedValue(undefined);
-      fieldRow.dataEditValue(null);
-      fieldRow.detailLayoutInfo(undefined);
-      fieldRow.editLayoutInfo(undefined);
+    for (let fieldRow of vm.fieldRows) {
+      fieldRow.dataTypedValue = undefined;
+      fieldRow.dataEditValue = null;
+      fieldRow.detailLayoutInfo = undefined;
+      fieldRow.editLayoutInfo = undefined;
     }
-    for (let childRow of vm.childRows()) {
-      childRow.relatedListInfo(undefined);
+    for (let childRow of vm.childRows) {
+      childRow.relatedListInfo = undefined;
     }
-    vm.isEditing(false);
-    recordData(null);
-    layoutInfo(null);
+    vm.isEditing = false;
+    vm.recordData = null;
+    vm.layoutInfo = null;
   }
 
   function spinFor(actionName, promise) {
-    vm.spinnerCount(vm.spinnerCount() + 1);
+    vm.spinnerCount++;
+    vm.didUpdate();
     promise
       .catch(err => {
         console.error(err);
@@ -660,7 +901,8 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       .then(stopSpinner, stopSpinner);
   }
   function stopSpinner() {
-    vm.spinnerCount(vm.spinnerCount() - 1);
+    vm.spinnerCount--;
+    vm.didUpdate();
   }
 
   let sobjectInfoPromise;
@@ -678,7 +920,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         for (let generalMetadataResponse of responses) {
           let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordId.toLowerCase());
           if (sobject) {
-            vm.sobjectName(sobject.name);
+            vm.sobjectName = sobject.name;
             sobjectDescribePromise = askSalesforce(sobject.urls.describe);
             if (recordId.length < 15) {
               recordDataPromise = null; // Just a prefix, don't attempt to load the record
@@ -697,7 +939,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       });
   } else if (args.has("objectType")) {
     sobjectInfoPromise = Promise.resolve().then(() => {
-      vm.sobjectName(args.get("objectType"));
+      vm.sobjectName = args.get("objectType");
       sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (args.has("useToolingApi") ? "tooling/" : "") + "sobjects/" + args.get("objectType") + "/describe/");
       if (!args.get("recordUrl")) {
         recordDataPromise = null; // No record url
@@ -713,20 +955,22 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     // Fetch object data using object describe call
     spinFor("describing object", sobjectDescribePromise.then(sobjectDescribe => {
       // Display the retrieved object data
-      objectData(sobjectDescribe);
+      vm.objectData = sobjectDescribe;
       for (let fieldDescribe of sobjectDescribe.fields) {
-        fieldRowList.getRow(fieldDescribe.name).fieldDescribe(fieldDescribe);
+        fieldRowList.getRow(fieldDescribe.name).fieldDescribe = fieldDescribe;
       }
       fieldRowList.resortRows();
       for (let childDescribe of sobjectDescribe.childRelationships) {
-        childRowList.getRow(childDescribe.relationshipName).childDescribe(childDescribe);
+        childRowList.getRow(childDescribe.relationshipName).childDescribe = childDescribe;
       }
       childRowList.resortRows();
+      vm.didUpdate();
     }));
 
     // Fetch record data using record retrieve call
     if (recordDataPromise) {
       setRecordData(recordDataPromise);
+      vm.didUpdate();
     }
 
     // Fetch fields using a Tooling API call, which returns fields not readable by the current user, but fails if the user does not have access to the Tooling API.
@@ -734,13 +978,14 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     // We would like to query all meta-fields, to show them when the user clicks a field for more details.
     // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
-    spinFor("querying tooling particles", askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName() + "'"))
+    spinFor("querying tooling particles", askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName + "'"))
       .then(res => {
         for (let entityParticle of res.records) {
-          fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle(entityParticle);
+          fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
         }
-        vm.hasEntityParticles(true);
+        vm.hasEntityParticles = true;
         fieldRowList.resortRows();
+        vm.didUpdate();
       }));
 
   }));

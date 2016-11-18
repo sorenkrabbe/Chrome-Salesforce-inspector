@@ -83,6 +83,9 @@ th {
   vertical-align: top;
   margin-top: 5px;
 }
+.undo-button[hidden] {
+  display: none;
+}
 .field-type {
   text-align: right;
   width: 9em;
