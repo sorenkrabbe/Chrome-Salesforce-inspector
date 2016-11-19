@@ -648,24 +648,27 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     vm.detailsBox = {rows: fieldDetailVms, name: name, showFilterButton: showFilterButton};
   }
 
-  let App = React.createClass({
-    getInitialState() {
-      return {vm};
-    },
+  class App extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {vm};
+      this.cb = this.cb.bind(this);
+      this.detailsFilterFocus = this.detailsFilterFocus.bind(this);
+    }
     componentDidMount() {
       vm.callbacks.push(this.cb);
       this.refs.rowsFilter.focus();
-    },
+    }
     componentWillUnmount() {
       let i = vm.callbacks.indexOf(this.cb);
       vm.callbacks.splice(i, 1);
-    },
+    }
     cb(cb) {
       this.setState({vm}, cb);
-    },
+    }
     detailsFilterFocus() {
       this.refs.detailsFilter.focus();
-    },
+    }
     render() {
       document.title = vm.title();
       return (
@@ -821,7 +824,7 @@ React.createElement("div", {},
 )
       );
     }
-  });
+  }
   ReactDOM.render(React.createElement(App, {}), document.getElementById("root"));
 
   function setRecordData(recordDataPromise) {

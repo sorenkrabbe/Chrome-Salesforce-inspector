@@ -28,19 +28,23 @@ function init(params) {
   hostArg.set("host", sfHost);
   let addonVersion = chrome.runtime.getManifest().version;
 
-  let app = React.createClass({
-    getInitialState() {
-      return {
+  class app extends React.Component{
+    constructor(props) {
+      super(props);
+      this.state = {
         detailsShown: false,
         detailsLoading: false,
         recordId: null
       };
-    },
+      this.onUpdateRecordId = this.onUpdateRecordId.bind(this);
+      this.onShortcutKey = this.onShortcutKey.bind(this);
+      this.onDetailsClick = this.onDetailsClick.bind(this);
+    }
     onUpdateRecordId(e) {
       if (e.source == parent && e.data.insextUpdateRecordId) {
         this.setState({recordId: e.data.recordId});
       }
-    },
+    }
     onShortcutKey(e) {
       if (e.key == "m") {
         e.preventDefault();
@@ -62,7 +66,7 @@ function init(params) {
         e.preventDefault();
         this.refs.apiExploreBtn.click();
       }
-    },
+    }
     onDetailsClick() {
       let self = this;
       if (this.state.detailsShown || !this.state.recordId) {
@@ -79,15 +83,15 @@ function init(params) {
           }
         }
       });
-    },
+    }
     componentDidMount() {
       addEventListener("message", this.onUpdateRecordId);
       addEventListener("keydown", this.onShortcutKey);
-    },
+    }
     componentWillUnmount() {
       removeEventListener("message", this.onUpdateRecordId);
       removeEventListener("keydown", this.onShortcutKey);
-    },
+    }
     render() {
       return (
         React.createElement("div", {},
@@ -124,29 +128,36 @@ function init(params) {
         )
       );
     }
-  });
-  let AllDataSearch = React.createClass({
-    getInitialState() {
-      return {
+  }
+  class AllDataSearch extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {
         sobjects: null,
         sobjectsLoading: false,
         inspectQuery: ""
       };
-    },
+      this.onAllDataInput = this.onAllDataInput.bind(this);
+      this.onAllDataFocus = this.onAllDataFocus.bind(this);
+      this.onAllDataBlur = this.onAllDataBlur.bind(this);
+      this.onAllDataKeyDown = this.onAllDataKeyDown.bind(this);
+      this.updateAllDataInput = this.updateAllDataInput.bind(this);
+      this.onAllDataArrowClick = this.onAllDataArrowClick.bind(this);
+    }
     onAllDataInput(e) {
       let val = e.target.value;
       this.refs.autoComplete.handleInput();
       this.setState({inspectQuery: val});
-    },
+    }
     onAllDataFocus() {
       this.refs.autoComplete.handleFocus();
       if (this.state.sobjects == null && !this.state.sobjectsLoading) {
         this.loadSobjects();
       }
-    },
+    }
     onAllDataBlur() {
       this.refs.autoComplete.handleBlur();
-    },
+    }
     onAllDataKeyDown(e) {
       this.refs.autoComplete.handleKeyDown(e);
       if(e.key == "Enter" && !e.defaultPrevented) {
@@ -154,14 +165,14 @@ function init(params) {
         this.refs.allDataForBtn.click();
       }
       e.stopPropagation(); // Stop our keyboard shortcut handler
-    },
+    }
     updateAllDataInput(value) {
       this.setState({inspectQuery: value});
       this.refs.showAllDataInp.focus();
-    },
+    }
     onAllDataArrowClick() {
       this.refs.showAllDataInp.focus();
-    },
+    }
     loadSobjects() {
       this.setState({sobjectsLoading: true});
       new Promise((resolve, reject) => {
@@ -179,7 +190,7 @@ function init(params) {
       .catch(() => {
         this.setState({sobjectsLoading: false, sobjects: null});
       });
-    },
+    }
     render() {
       return (
         React.createElement("div", {className: "input-with-button"},
@@ -236,7 +247,7 @@ function init(params) {
         )
       );
     }
-  });
+  }
   function MarkSubstring({text, start, length}) {
     if (start == -1) {
       return React.createElement("span", {}, text);
@@ -247,23 +258,28 @@ function init(params) {
       text.substr(start + length)
     );
   }
-  let Autocomplete = React.createClass({
-    getInitialState() {
-      return {
+  class Autocomplete extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = {
         showResults: false,
         selectedIndex: -1,
         resultsMouseIsDown: false
       };
-    },
+      this.onResultsMouseDown = this.onResultsMouseDown.bind(this);
+      this.onResultsMouseUp = this.onResultsMouseUp.bind(this);
+      this.onResultClick = this.onResultClick.bind(this);
+      this.onResultMouseEnter = this.onResultMouseEnter.bind(this);
+    }
     handleInput() {
       this.setState({showResults: true, selectedIndex: -1});
-    },
+    }
     handleFocus() {
       this.setState({showResults: true, selectedIndex: -1});
-    },
+    }
     handleBlur() {
       this.setState({showResults: false});
-    },
+    }
     handleKeyDown(e) {
       if (e.key == "Enter") {
         if (this.state.selectedIndex >= 0) {
@@ -292,20 +308,20 @@ function init(params) {
         }
         this.setState({selectedIndex: index});
       }
-    },
+    }
     onResultsMouseDown() {
       this.setState({resultsMouseIsDown: true});
-    },
+    }
     onResultsMouseUp() {
       this.setState({resultsMouseIsDown: false});
-    },
+    }
     onResultClick(value) {
       this.props.updateInput(value);
       this.setState({showResults: false, selectedIndex: -1});
-    },
+    }
     onResultMouseEnter(index) {
       this.setState({selectedIndex: index});
-    },
+    }
    componentDidUpdate(prevProps, prevState) {
       if (this.state.selectedIndex != prevState.selectedIndex && this.refs.selectedItem) {
         let sel = this.refs.selectedItem;
@@ -315,7 +331,7 @@ function init(params) {
           this.refs.selectedItem.scrollIntoView(false);
         }
       }
-    },
+    }
     render() {
       return (
         React.createElement("div", {className: "autocomplete-container", style: {display: (this.state.showResults && this.props.matchingResults.length > 0) || this.state.resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
@@ -331,7 +347,7 @@ function init(params) {
         )
       );
     }
-  });
+  }
   ReactDOM.render(React.createElement(app, {
     isDevConsole: params.isDevConsole,
     inAura: params.inAura,
