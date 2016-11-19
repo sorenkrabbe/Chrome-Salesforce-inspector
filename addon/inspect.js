@@ -160,7 +160,9 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     tableClick(e) {
       if (!e.nativeEvent.target.closest("a, textarea") && !vm.isDragging) {
         let td = e.nativeEvent.target.closest(".quick-select");
-        getSelection().selectAllChildren(td.firstElementChild || td);
+        if (td) {
+          getSelection().selectAllChildren(td.firstElementChild || td);
+        }
       }
     },
     canEdit() {
@@ -183,12 +185,12 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       let recordUrl = vm.objectData.urls.rowTemplate.replace("{ID}", vm.recordData.Id);
       spinFor(
         "saving record",
-        askSalesforce(recordUrl, null, {method: "PATCH", body: record})
-          .then(() => {
-            clearRecordData();
-            setRecordData(askSalesforce(recordUrl));
-            vm.didUpdate();
-          })
+        askSalesforce(recordUrl, null, {method: "PATCH", body: record}),
+        () => {
+          clearRecordData();
+          setRecordData(askSalesforce(recordUrl));
+          vm.didUpdate();
+        }
       );
       vm.didUpdate();
     },
@@ -399,11 +401,12 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       canEdit() {
         return fieldVm.fieldDescribe && fieldVm.fieldDescribe.updateable;
       },
-      tryEdit(upd) {
+      tryEdit(e) {
         if (!fieldVm.isEditing() && vm.canEdit() && fieldVm.canEdit()) {
           fieldVm.dataEditValue = fieldVm.dataStringValue();
           vm.isEditing = true;
-          vm.didUpdate(upd);
+          let td = e.nativeEvent.currentTarget;
+          vm.didUpdate(() => td.querySelector("textarea").focus());
         }
       },
       cancelEdit(e) {
@@ -475,11 +478,15 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         if (!fieldVm.entityParticle) {
           return;
         }
-        spinFor("getting field definition metadata for " + fieldName, askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle.FieldDefinition.DurableId + "'"))
-          .then(fieldDefs => {
+        spinFor(
+          "getting field definition metadata for " + fieldName,
+          askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + fieldVm.entityParticle.FieldDefinition.DurableId + "'")),
+          fieldDefs => {
             fieldVm.fieldParticleMetadata = fieldDefs.records[0];
             vm.didUpdate();
-          }));
+          }
+        );
+        vm.didUpdate();
       }
     };
     return fieldVm;
@@ -698,63 +705,63 @@ React.createElement("div", {},
       )
     ),
     React.createElement("span", {className: "object-actions"},
-      React.createElement("a", {hidden: !vm.canView(), href: vm.viewLink(), title: "View this record in Salesforce"}, "View"),
+      vm.canView() ? React.createElement("a", {href: vm.viewLink(), title: "View this record in Salesforce"}, "View") : null,
       " ",
-      React.createElement("a", {href: "about:blank", hidden: !vm.objectName(), onClick: e => vm.showObjectMetadata(e, this.detailsFilterFocus)}, "More"),
+      vm.objectName() ? React.createElement("a", {href: "about:blank", onClick: e => vm.showObjectMetadata(e, this.detailsFilterFocus)}, "More") : null,
       " ",
-      React.createElement("a", {hidden: !vm.objectName(), href: vm.openSetup()}, "Setup")
+      vm.objectName() ? React.createElement("a", {href: vm.openSetup()}, "Setup") : null
     )
   ),
   React.createElement("div", {className: "body " + (!vm.showFieldLabelColumn && !vm.showFieldHelptextColumn && !vm.showFieldDescriptionColumn && !vm.showFieldValueColumn && !vm.showFieldTypeColumn ? "empty " : "")},
     React.createElement("h1", {},
-      React.createElement("span", {}, vm.objectName()),
-      React.createElement("span", {}, vm.recordHeading()),
+      vm.objectName(),
       " ",
-      React.createElement("button", {title: "Inline edit the values of this record", disabled: !vm.canEdit() || !vm.showFieldValueColumn, hidden: vm.isEditing, onClick: vm.doEdit}, "Edit"),
+      vm.recordHeading(),
       " ",
-      React.createElement("button", {title: "Inline edit the values of this record", hidden: !vm.isEditing, onClick: vm.doSave}, "Save"),
+      !vm.isEditing ? React.createElement("button", {title: "Inline edit the values of this record", disabled: !vm.canEdit() || !vm.showFieldValueColumn, onClick: vm.doEdit}, "Edit") : null,
       " ",
-      React.createElement("button", {title: "Inline edit the values of this record", hidden: !vm.isEditing, onClick: vm.cancelEdit}, "Cancel")
+      vm.isEditing ? React.createElement("button", {title: "Inline edit the values of this record", onClick: vm.doSave}, "Save") : null,
+      " ",
+      vm.isEditing ? React.createElement("button", {title: "Inline edit the values of this record", onClick: vm.cancelEdit}, "Cancel") : null
     ),
     React.createElement("div", {hidden: vm.errorMessages.length == 0, className: "error-message"}, vm.errorMessages.map((data, index) => React.createElement("div", {key: index}, data))),
     React.createElement("table", {},
       React.createElement("thead", {},
         React.createElement("tr", {},
           React.createElement("th", {className: "field-name", tabIndex: 0, onClick: vm.sortFieldsByName}, "Field API Name"),
-          React.createElement("th", {className: "field-label", tabIndex: 0, onClick: vm.sortFieldsByLabel, hidden: !vm.showFieldLabelColumn}, "Label"),
-          React.createElement("th", {className: "field-helptext", tabIndex: 0, onClick: vm.sortFieldsByHelptext, hidden: !vm.showFieldHelptextColumn}, "Help text"),
-          React.createElement("th", {className: "field-desc", tabIndex: 0, onClick: vm.sortFieldsByDesc, hidden: !vm.showFieldDescriptionColumn}, "Description"),
-          React.createElement("th", {className: "field-value", tabIndex: 0, onClick: vm.sortFieldsByValue, hidden: !vm.showFieldValueColumn}, "Value"),
-          React.createElement("th", {className: "field-type", tabIndex: 0, onClick: vm.sortFieldsByType, hidden: !vm.showFieldTypeColumn}, "Type"),
+          vm.showFieldLabelColumn ? React.createElement("th", {className: "field-label", tabIndex: 0, onClick: vm.sortFieldsByLabel}, "Label") : null,
+          vm.showFieldHelptextColumn ? React.createElement("th", {className: "field-helptext", tabIndex: 0, onClick: vm.sortFieldsByHelptext}, "Help text") : null,
+          vm.showFieldDescriptionColumn ? React.createElement("th", {className: "field-desc", tabIndex: 0, onClick: vm.sortFieldsByDesc}, "Description") : null,
+          vm.showFieldValueColumn ? React.createElement("th", {className: "field-value", tabIndex: 0, onClick: vm.sortFieldsByValue}, "Value") : null,
+          vm.showFieldTypeColumn ? React.createElement("th", {className: "field-type", tabIndex: 0, onClick: vm.sortFieldsByType}, "Type") : null,
           React.createElement("th", {className: "field-actions"}, "Actions")
         )
       ),
       React.createElement("tbody", {id: "dataTableBody", onClick: vm.tableClick, onMouseMove: vm.tableMouseMove, onMouseDown: vm.tableMouseDown}, vm.fieldRows.map(row =>
         React.createElement("tr", {className: (row.fieldIsCalculated() ? "fieldCalculated " : "") + (row.fieldIsHidden() ? "fieldHidden " : ""), hidden: !row.visible(), title: row.summary(), key: row.reactKey},
           React.createElement("td", {className: "field-name quick-select"}, row.fieldName),
-          React.createElement("td", {hidden: !vm.showFieldLabelColumn, className: "field-label quick-select"}, row.fieldLabel()),
-          React.createElement("td", {hidden: !vm.showFieldHelptextColumn, className: "field-helptext quick-select"},
-            React.createElement("span", {}, row.fieldHelptext()),
-            !row.hasFieldHelptext() ? React.createElement("span", {className: "value-unknown"}, "(Unknown)") : null
-          ),
-          React.createElement("td", {hidden: !vm.showFieldDescriptionColumn, className: "field-desc quick-select"},
-            React.createElement("span", {}, row.fieldDesc()),
-            !row.hasFieldDesc() ? React.createElement("span", {className: "value-unknown"}, "(Unknown)") : null
-          ),
-          React.createElement("td", {className: "field-value quick-select", hidden: !vm.showFieldValueColumn, onDoubleClick: e => row.tryEdit(() => this.refs["dataEditValue-" + row.reactKey].focus())},
+          vm.showFieldLabelColumn ? React.createElement("td", {className: "field-label quick-select"}, row.fieldLabel()) : null,
+          vm.showFieldHelptextColumn ? React.createElement("td", {className: "field-helptext " + (row.hasFieldHelptext() ? "quick-select " : "value-unknown ")},
+            row.hasFieldHelptext() ? row.fieldHelptext() : "(Unknown)"
+          ) : null,
+          vm.showFieldDescriptionColumn ? React.createElement("td", {className: "field-desc " + (row.hasFieldDesc() ? "quick-select " : "value-unknown")},
+            row.hasFieldDesc() ? row.fieldDesc() : "(Unknown)"
+          ) : null,
+          vm.showFieldValueColumn ? React.createElement("td", {className: "field-value quick-select", onDoubleClick: row.tryEdit},
             row.isId() && !row.isEditing() ? React.createElement("a", {href: row.showRecordIdUrl(), className: "value-text"}, row.dataStringValue()) : null,
             !row.isId() && !row.isEditing() ? React.createElement("span", {className: "value-text"}, row.dataStringValue()) : null,
             !row.hasDataValue() && !row.isEditing() ? React.createElement("span", {className: "value-unknown"}, "(Unknown)") : null,
             row.hasBlankValue() && !row.isEditing() ? React.createElement("span", {className: "value-blank"}, "(Blank)") : null,
-            row.isEditing() ? React.createElement("textarea", {value: row.dataEditValue, onChange: row.onDataEditValueInput, ref: "dataEditValue-" + row.reactKey}) : null,
+            row.isEditing() ? React.createElement("textarea", {value: row.dataEditValue, onChange: row.onDataEditValueInput}) : null,
             row.isEditing() ? React.createElement("a", {href: "about:blank", onClick: row.cancelEdit, className: "undo-button"}, "\u21B6") : null
-          ),
-          React.createElement("td", {className: "field-type quick-select", hidden: !vm.showFieldTypeColumn},
-            React.createElement("span", {hidden: row.referenceTypes()}, row.fieldTypeDesc()),
-            (row.referenceTypes() || []).map(data =>
-              React.createElement("a", {href: row.showReferenceUrl(data), key: data}, data)
-            )
-          ),
+          ) : null,
+          vm.showFieldTypeColumn ? React.createElement("td", {className: "field-type quick-select"},
+            row.referenceTypes()
+              ? row.referenceTypes().map(data =>
+                React.createElement("span", {key: data}, React.createElement("a", {href: row.showReferenceUrl(data)}, data), " ")
+              )
+              : row.fieldTypeDesc()
+          ) : null,
           React.createElement("td", {className: "field-actions"},
             React.createElement("a", {href: "about:blank", onClick: e => row.openDetails(e, this.detailsFilterFocus)}, "More"),
             " ",
@@ -783,7 +790,7 @@ React.createElement("div", {},
           React.createElement("td", {className: "child-actions"},
             React.createElement("a", {href: "about:blank", onClick: e => row.openDetails(e, this.detailsFilterFocus)}, "More"),
             " ",
-            React.createElement("a", {href: row.queryListUrl(), hidden: !row.queryListUrl(), title: "Export records in this related list"}, "List"),
+            row.queryListUrl() ? React.createElement("a", {href: row.queryListUrl(), title: "Export records in this related list"}, "List") : null,
             " ",
             React.createElement("a", {href: row.openSetup()}, "Setup")
           )
@@ -796,13 +803,13 @@ React.createElement("div", {},
       React.createElement("div", {className: "container"},
         React.createElement("a", {href: "about:blank", className: "closeLnk", onClick: vm.closeDetailsBox}, "X"),
         React.createElement("div", {className: "mainContent"},
-          React.createElement("h3", {}, "All available metadata for \"", React.createElement("span", {}, vm.detailsBox.name), "\""),
+          React.createElement("h3", {}, "All available metadata for \"" + vm.detailsBox.name + "\""),
           React.createElement("input", {placeholder: "Filter", value: vm.detailsFilter, onInput: vm.onDetailsFilterInput, ref: "detailsFilter"}),
           React.createElement("table", {},
             React.createElement("thead", {}, React.createElement("tr", {}, React.createElement("th", {}, "Key"), React.createElement("th", {}, "Value"))),
             React.createElement("tbody", {}, vm.detailsBox.rows.map(row =>
               React.createElement("tr", {hidden: !row.visible(), key: row.key},
-                React.createElement("td", {}, React.createElement("a", {href: "about:blank", onClick: e => vm.detailsFilterClick(e, row), hidden: !vm.detailsBox.showFilterButton, title: "Show fields with this property"}, "🔍"), " ", React.createElement("span", {}, row.key)),
+                React.createElement("td", {}, React.createElement("a", {href: "about:blank", onClick: e => vm.detailsFilterClick(e, row), hidden: !vm.detailsBox.showFilterButton, title: "Show fields with this property"}, "🔍"), " " + row.key),
                 React.createElement("td", {className: (row.isString ? "isString " : "") + (row.isNumber ? "isNumber " : "") + (row.isBoolean ? "isBoolean " : "")}, row.value)
               )
             ))
@@ -818,7 +825,7 @@ React.createElement("div", {},
   ReactDOM.render(React.createElement(App, {}), document.getElementById("root"));
 
   function setRecordData(recordDataPromise) {
-    spinFor("retrieving record", recordDataPromise.then(res => {
+    spinFor("retrieving record", recordDataPromise, res => {
       for (let name in res) {
         if (name != "attributes") {
           fieldRowList.getRow(name).dataTypedValue = res[name];
@@ -829,7 +836,8 @@ React.createElement("div", {},
       vm.showFieldValueColumn = true;
       spinFor(
         "describing layout",
-        sobjectDescribePromise.then(sobjectDescribe => {
+        sobjectDescribePromise,
+        sobjectDescribe => {
           if (sobjectDescribe.urls.layouts) {
             return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA")).then(layoutDescribe => {
               for (let layoutType of [{sections: "detailLayoutSections", property: "detailLayoutInfo"}, {sections: "editLayoutSections", property: "editLayoutInfo"}]) {
@@ -870,10 +878,10 @@ React.createElement("div", {},
               vm.didUpdate();
             });
           }
-        })
+        }
       );
       vm.didUpdate();
-    }));
+    });
   }
   function clearRecordData() {
     for (let fieldRow of vm.fieldRows) {
@@ -890,19 +898,27 @@ React.createElement("div", {},
     vm.layoutInfo = null;
   }
 
-  function spinFor(actionName, promise) {
+  /**
+   * Show the spinner while waiting for a promise, and show an error if it fails.
+   * vm.didUpdate(); must be called after calling spinFor, and must be called in the callback.
+   * @param actionName Name to show in the errors list if the operation fails.
+   * @param promise The promise to wait for.
+   * @param cb The callback to be called with the result if the promise is successful. The spinner is stopped just before calling the callback, to this change can reuse the same vm.didUpdate(); call for better performance.
+   */
+  function spinFor(actionName, promise, cb) {
     vm.spinnerCount++;
-    vm.didUpdate();
     promise
+      .then(res => {
+        vm.spinnerCount--;
+        cb(res);
+      })
       .catch(err => {
         console.error(err);
         vm.errorMessages.push("Error " + actionName + ": " + ((err && err.askSalesforceError) || err));
+        vm.spinnerCount--;
+        vm.didUpdate();
       })
-      .then(stopSpinner, stopSpinner);
-  }
-  function stopSpinner() {
-    vm.spinnerCount--;
-    vm.didUpdate();
+      .catch(err => console.log("error handling failed", err));
   }
 
   let sobjectInfoPromise;
@@ -950,10 +966,10 @@ React.createElement("div", {},
   } else {
     sobjectInfoPromise = Promise.reject("unknown input for showAllData");
   }
-  spinFor("describing global", sobjectInfoPromise.then(() => {
+  spinFor("describing global", sobjectInfoPromise, () => {
 
     // Fetch object data using object describe call
-    spinFor("describing object", sobjectDescribePromise.then(sobjectDescribe => {
+    spinFor("describing object", sobjectDescribePromise, sobjectDescribe => {
       // Display the retrieved object data
       vm.objectData = sobjectDescribe;
       for (let fieldDescribe of sobjectDescribe.fields) {
@@ -965,12 +981,11 @@ React.createElement("div", {},
       }
       childRowList.resortRows();
       vm.didUpdate();
-    }));
+    });
 
     // Fetch record data using record retrieve call
     if (recordDataPromise) {
       setRecordData(recordDataPromise);
-      vm.didUpdate();
     }
 
     // Fetch fields using a Tooling API call, which returns fields not readable by the current user, but fails if the user does not have access to the Tooling API.
@@ -978,17 +993,24 @@ React.createElement("div", {},
     // We would like to query all meta-fields, to show them when the user clicks a field for more details.
     // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
-    spinFor("querying tooling particles", askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName + "'"))
-      .then(res => {
+    spinFor(
+      "querying tooling particles",
+      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName + "'")),
+      res => {
         for (let entityParticle of res.records) {
           fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
         }
         vm.hasEntityParticles = true;
         fieldRowList.resortRows();
         vm.didUpdate();
-      }));
+      }
+    );
 
-  }));
+    vm.didUpdate();
+
+  });
+
+  vm.didUpdate();
 
 });
 
