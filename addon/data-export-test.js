@@ -250,7 +250,7 @@ function* dataExportTest() {
   vm.queryTooling(true);
   yield waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults().title);
-  assertEquals(["ApexClass", "ApexClassMember", "autogen__ApexClass"], getValues(vm.autocompleteResults().results));
+  assertEquals(["ApexClass", "ApexClassMember"], getValues(vm.autocompleteResults().results));
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("select Id from ApexClass ", queryInput.value);
   yield waitForSpinner();

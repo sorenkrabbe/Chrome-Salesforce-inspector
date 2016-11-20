@@ -1,6 +1,6 @@
 "use strict";
-function* buttonTest() {
-  console.log("TEST button");
+function* popupTest() {
+  console.log("TEST popup");
   // Classic & Console
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://na1.salesforce.com/001i0000007BlV0"))); // classic record detail page
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://cs81.salesforce.com/001i0000007BlV0"))); // in sandbox

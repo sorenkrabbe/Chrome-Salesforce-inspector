@@ -1,12 +1,14 @@
 "use strict";
-parent.postMessage({insextInitRequest: true}, "*");
-addEventListener("message", function initResponseHandler(e) {
-  if (e.source == parent && e.data.insextInitResponse) {
-    removeEventListener("message", initResponseHandler);
-    sfHost = e.data.sfHost;
-    init(e.data);
-  }
-});
+if (!this.isUnitTest) {
+  parent.postMessage({insextInitRequest: true}, "*");
+  addEventListener("message", function initResponseHandler(e) {
+    if (e.source == parent && e.data.insextInitResponse) {
+      removeEventListener("message", initResponseHandler);
+      sfHost = e.data.sfHost;
+      init(e.data);
+    }
+  });
+}
 
 function closePopup() {
   parent.postMessage({insextClosePopup: true}, "*");
@@ -34,8 +36,9 @@ function init(params) {
     }
     onUpdateRecordId(e) {
       if (e.source == parent && e.data.insextUpdateRecordId) {
-        this.setState({contextRecordId: e.data.recordId});
-        this.refs.showAllDataBox.updateSelection(e.data.recordId);
+        let recordId = getRecordId(e.data.locationHref);
+        this.setState({contextRecordId: recordId});
+        this.refs.showAllDataBox.updateSelection(recordId);
       }
     }
     loadSobjects() {
@@ -87,7 +90,7 @@ function init(params) {
         return;
       }
       this.setState({detailsShown: true, detailsLoading: true});
-      parent.postMessage({insextShowStdPageDetails: true}, "*");
+      parent.postMessage({insextShowStdPageDetails: true, insextRecordId: this.state.contextRecordId}, "*");
       addEventListener("message", function messageHandler(e) {
         if (e.source == parent && e.data.insextShowStdPageDetails) {
           removeEventListener("message", messageHandler);
@@ -471,4 +474,41 @@ function init(params) {
     inAura: params.inAura,
     inInspector: params.inInspector,
   }), document.getElementById("root"));
+}
+
+function getRecordId(href) {
+  let url = new URL(href);
+  // Find record ID from URL
+  let searchParams = new URLSearchParams(url.search.substring(1));
+  // Salesforce Classic and Console
+  if (url.hostname.endsWith(".salesforce.com")) {
+    let match = url.pathname.match(/\/([a-zA-Z0-9]{3}|[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})(?:\/|$)/);
+    if (match) {
+      let res = match[1];
+      if (res.includes("0000") || res.length == 3) {
+        return match[1];
+      }
+    }
+  }
+  // Lightning Experience and Salesforce1
+  if (url.hostname.endsWith(".lightning.force.com")) {
+    let match = url.hash.match(/\/sObject\/([a-zA-Z0-9]+)(?:\/|$)/);
+    if (match) {
+      return match[1];
+    }
+  }
+  // Visualforce
+  {
+    let idParam = searchParams.get("id");
+    if (idParam) {
+      return idParam;
+    }
+  }
+  // Visualforce page that does not follow standard Visualforce naming
+  for (let [, p] of searchParams) {
+    if (p.match(/^([a-zA-Z0-9]{3}|[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$/) && p.includes("0000")) {
+      return p;
+    }
+  }
+  return null;
 }
