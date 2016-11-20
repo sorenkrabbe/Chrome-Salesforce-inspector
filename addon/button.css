@@ -2,14 +2,14 @@
     z-index: 1000;
     display: block;
     position: fixed;
-    top: 205px;
+    top: 122px;
     right: 0;
     vertical-align: middle;
 }
 #insext .insext-popup {
     box-sizing: border-box;
-    width: 220px;
-    height: 300px;
+    width: 280px;
+    height: 400px;
     position:absolute;
     background-color: #ffffff;
     right: 0;
