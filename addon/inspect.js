@@ -839,48 +839,50 @@ React.createElement("div", {},
       vm.showFieldValueColumn = true;
       spinFor(
         "describing layout",
-        sobjectDescribePromise,
-        sobjectDescribe => {
+        sobjectDescribePromise.then(sobjectDescribe => {
           if (sobjectDescribe.urls.layouts) {
-            return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA")).then(layoutDescribe => {
-              for (let layoutType of [{sections: "detailLayoutSections", property: "detailLayoutInfo"}, {sections: "editLayoutSections", property: "editLayoutInfo"}]) {
-                layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
-                  section.layoutRows.forEach((row, rowIndex) => {
-                    row.layoutItems.forEach((item, itemIndex) => {
-                      item.layoutComponents.forEach((component, componentIndex) => {
-                        if (component.type == "Field") {
-                          fieldRowList.getRow(component.value)[layoutType.property] = {
-                            indexes: {
-                              shownOnLayout: true,
-                              sectionIndex,
-                              rowIndex,
-                              itemIndex,
-                              componentIndex
-                            },
-                            section,
-                            row,
-                            item,
-                            component
-                          };
-                        }
-                      });
+            return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA"));
+          }
+        }),
+        layoutDescribe => {
+          if (layoutDescribe) {
+            for (let layoutType of [{sections: "detailLayoutSections", property: "detailLayoutInfo"}, {sections: "editLayoutSections", property: "editLayoutInfo"}]) {
+              layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
+                section.layoutRows.forEach((row, rowIndex) => {
+                  row.layoutItems.forEach((item, itemIndex) => {
+                    item.layoutComponents.forEach((component, componentIndex) => {
+                      if (component.type == "Field") {
+                        fieldRowList.getRow(component.value)[layoutType.property] = {
+                          indexes: {
+                            shownOnLayout: true,
+                            sectionIndex,
+                            rowIndex,
+                            itemIndex,
+                            componentIndex
+                          },
+                          section,
+                          row,
+                          item,
+                          component
+                        };
+                      }
                     });
                   });
                 });
-              }
-              fieldRowList.resortRows();
-              layoutDescribe.relatedLists.forEach((child, childIndex) => {
-                childRowList.getRow(child.name).relatedListInfo = {
-                  shownOnLayout: true,
-                  relatedListIndex: childIndex,
-                  relatedList: child
-                };
               });
-              childRowList.resortRows();
-              vm.layoutInfo = layoutDescribe;
-              vm.didUpdate();
+            }
+            fieldRowList.resortRows();
+            layoutDescribe.relatedLists.forEach((child, childIndex) => {
+              childRowList.getRow(child.name).relatedListInfo = {
+                shownOnLayout: true,
+                relatedListIndex: childIndex,
+                relatedList: child
+              };
             });
+            childRowList.resortRows();
+            vm.layoutInfo = layoutDescribe;
           }
+          vm.didUpdate();
         }
       );
       vm.didUpdate();
