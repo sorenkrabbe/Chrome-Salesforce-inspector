@@ -35,7 +35,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     clear() { localStorage.removeItem("insextQueryHistory"); }
   };
 
-  let vm = dataExportVm({args, queryInput: queryInputVm, queryHistoryStorage, copyToClipboard});
+  let savedHistoryStorage = {
+    get() { return localStorage.insextSavedQueryHistory; },
+    set(v) { localStorage.insextSavedQueryHistory = v; },
+    clear() { localStorage.removeItem("insextSavedQueryHistory"); }
+  };
+
+  let vm = dataExportVm({args, queryInput: queryInputVm, queryHistoryStorage, savedHistoryStorage, copyToClipboard});
   ko.applyBindings(vm, document.documentElement);
 
   function queryAutocompleteEvent() {
@@ -93,7 +99,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
 
 }
 
-function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) {
+function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorage, copyToClipboard}) {
 
   let describeInfo = new DescribeInfo(spinFor);
   describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
@@ -113,6 +119,8 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     exportResult: ko.observable({isWorking: false, exportStatus: "Ready", exportError: null, exportedData: null}),
     queryHistory: ko.observable(getQueryHistory()),
     selectedHistoryEntry: ko.observable(),
+    savedHistory: ko.observable(getSavedHistory()),
+    selectedSavedEntry: ko.observable(),
     expandAutocomplete: ko.observable(false),
     resultsFilter: ko.observable(""),
     toggleHelp() {
@@ -140,6 +148,22 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     clearHistory() {
       clearQueryHistory();
       vm.queryHistory([]);
+    },
+    selectSavedEntry() {
+      if (vm.selectedSavedEntry() != undefined) {
+        queryInput.setValue(vm.selectedSavedEntry());
+        vm.selectedSavedEntry(undefined);
+      }
+    },
+    clearSavedHistory() {
+      clearSavedQueryHistory();
+      vm.savedHistory([]);
+    },
+    addToHistory() {
+      vm.savedHistory(addToSavedHistory(queryInput.getValue()));
+    },
+    removeFromHistory() {
+      vm.savedHistory(removeFromSavedHistory(queryInput.getValue()));
     },
     queryAutocompleteHandler,
     autocompleteReload() {
@@ -723,6 +747,19 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     return queryHistory;
   }
 
+  function getSavedHistory() {
+    let savedHistory;
+    try {
+      savedHistory = JSON.parse(savedHistoryStorage.get());
+    } catch (e) {
+      // empty
+    }
+    if (!Array.isArray(savedHistory)) {
+      savedHistory = [];
+    }
+    return savedHistory;
+  }
+
   function addToQueryHistory(query) {
     let queryHistory = getQueryHistory();
     let historyIndex = queryHistory.indexOf(query);
@@ -737,8 +774,36 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     return queryHistory;
   }
 
+  function addToSavedHistory(query) {
+    let savedHistory = getSavedHistory();
+    let historyIndex = savedHistory.indexOf(query);
+    if (historyIndex > -1) {
+      savedHistory.splice(historyIndex, 1);
+    }
+    savedHistory.splice(0, 0, query);
+    if (savedHistory.length > 50) {
+      savedHistory.pop();
+    }
+    savedHistoryStorage.set(JSON.stringify(savedHistory));
+    return savedHistory;
+  }
+
+  function removeFromSavedHistory(query) {
+    let savedHistory = getSavedHistory();
+    let historyIndex = savedHistory.indexOf(query);
+    if (historyIndex > -1) {
+      savedHistory.splice(historyIndex, 1);
+    }
+    savedHistoryStorage.set(JSON.stringify(savedHistory));
+    return savedHistory;
+  }
+
   function clearQueryHistory() {
     queryHistoryStorage.clear();
+  }
+
+  function clearSavedQueryHistory() {
+    savedHistoryStorage.clear();
   }
 
   let exportProgress = {};
