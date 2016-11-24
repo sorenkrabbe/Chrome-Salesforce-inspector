@@ -1,3 +1,9 @@
+/* eslint-disable no-unused-vars */
+/* global React ReactDOM */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported session sfHost */
+/* global initButton */
+/* eslint-enable no-unused-vars */
 "use strict";
 if (!this.isUnitTest) {
   parent.postMessage({insextInitRequest: true}, "*");
@@ -42,25 +48,25 @@ function init(params) {
       }
     }
     loadSobjects() {
-      new Promise((resolve, reject) => {
+      new Promise(resolve => {
         chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           session = message;
           resolve();
         });
       })
-      .then(() => {
-        return Promise.all([
-          askSalesforce("/services/data/v" + apiVersion + "/sobjects/").then(res => ({toolingApi: false, sobjects: res.sobjects})),
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").then(res => ({toolingApi: true, sobjects: res.sobjects}))
-        ]);
-      })
-      .then(res => {
-        this.setState({sobjectsLoading: false, sobjectsLists: res});
-        this.refs.showAllDataBox.updateSelection(this.state.contextRecordId);
-      })
-      .catch(() => {
-        this.setState({sobjectsLoading: false});
-      });
+        .then(() => {
+          return Promise.all([
+            askSalesforce("/services/data/v" + apiVersion + "/sobjects/").then(res => ({toolingApi: false, sobjects: res.sobjects})),
+            askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").then(res => ({toolingApi: true, sobjects: res.sobjects}))
+          ]);
+        })
+        .then(res => {
+          this.setState({sobjectsLoading: false, sobjectsLists: res});
+          this.refs.showAllDataBox.updateSelection(this.state.contextRecordId);
+        })
+        .catch(() => {
+          this.setState({sobjectsLoading: false});
+        });
     }
     onShortcutKey(e) {
       if (e.key == "m") {
@@ -224,7 +230,7 @@ function init(params) {
           res.unshift({recordId: query, sobject: objectForId, toolingApi: api.toolingApi, relevance: 1});
         }
       }
-      res.sort((a, b)  => a.relevance - b.relevance || a.sobject.name.localeCompare(b.sobject.name));
+      res.sort((a, b) => a.relevance - b.relevance || a.sobject.name.localeCompare(b.sobject.name));
       return res;
     }
     onDataSelect(value) {
@@ -443,7 +449,7 @@ function init(params) {
     onResultMouseEnter(index) {
       this.setState({selectedIndex: index});
     }
-   componentDidUpdate(prevProps, prevState) {
+    componentDidUpdate(prevProps, prevState) {
       let sel = this.refs.selectedItem;
       if (this.state.selectedIndex != prevState.selectedIndex && sel && sel.offsetParent) {
         if (sel.offsetTop < sel.offsetParent.scrollTop) {
@@ -456,13 +462,13 @@ function init(params) {
     render() {
       return (
         React.createElement("div", {className: "autocomplete-container", style: {display: (this.state.showResults && this.props.matchingResults.length > 0) || this.state.resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
-          React.createElement("div", {className: "autocomplete"}, this.props.matchingResults.map(({key, value, element}, index) => 
+          React.createElement("div", {className: "autocomplete"}, this.props.matchingResults.map(({key, value, element}, index) =>
             React.createElement("a", {
               key,
               ref: this.state.selectedIndex == index ? "selectedItem" : null,
               className: "autocomplete-item " + (this.state.selectedIndex == index ? "selected" : ""),
-              onClick: e => this.onResultClick(value),
-              onMouseEnter: e => this.onResultMouseEnter(index)
+              onClick: () => this.onResultClick(value),
+              onMouseEnter: () => this.onResultMouseEnter(index)
             }, element)
           ))
         )

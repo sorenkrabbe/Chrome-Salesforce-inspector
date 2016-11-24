@@ -1,10 +1,16 @@
+/* eslint-disable no-unused-vars */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported session sfHost */
+/* exported initButton */
+/* global showStdPageDetails */
+/* eslint-enable no-unused-vars */
 "use strict";
 // sfdcBody = normal Salesforce page
 // ApexCSIPage = Developer Console
 // auraLoadingBox = Lightning / Salesforce1
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
-  chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, function(message) {
+  chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, message => {
     sfHost = message;
     if (sfHost) {
       initButton(false);
@@ -31,7 +37,7 @@ function initButton(inInspector) {
   });
 
   function loadPopup() {
-    btn.addEventListener("click", function() {
+    btn.addEventListener("click", () => {
       if (!rootEl.classList.contains("insext-active")) {
         openPopup();
       } else {
@@ -43,7 +49,7 @@ function initButton(inInspector) {
     let popupEl = document.createElement("iframe");
     popupEl.className = "insext-popup";
     popupEl.src = popupSrc;
-    addEventListener("message", function(e) {
+    addEventListener("message", e => {
       if (e.source == popupEl.contentWindow && e.data.insextInitRequest) {
         popupEl.contentWindow.postMessage({
           insextInitResponse: true,
@@ -60,6 +66,7 @@ function initButton(inInspector) {
       if (e.source == popupEl.contentWindow && e.data.insextShowStdPageDetails) {
         showStdPageDetails(e.data.insextRecordId)
           .then(
+            /* eslint-disable indent */
             () => {
               popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: true}, "*");
             },
@@ -68,6 +75,7 @@ function initButton(inInspector) {
               popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: false}, "*");
               alert(error);
             }
+            /* eslint-enable indent */
           );
       }
     });

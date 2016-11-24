@@ -1,4 +1,12 @@
+/* eslint-disable no-unused-vars */
+/* global assertEquals assertNotEquals assert async anonApex isUnitTest */
+/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
+/* exported session sfHost */
+/* global getRecordId */
+/* exported popupTest */
+/* eslint-enable no-unused-vars */
 "use strict";
+/* eslint-disable require-yield */
 function* popupTest() {
   console.log("TEST popup");
   // Classic & Console

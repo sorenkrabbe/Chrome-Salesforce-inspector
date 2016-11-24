@@ -1,3 +1,7 @@
+/* eslint-disable no-unused-vars */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported session sfHost */
+/* eslint-enable no-unused-vars */
 "use strict";
 
 let args = new URLSearchParams(location.search.slice(1));

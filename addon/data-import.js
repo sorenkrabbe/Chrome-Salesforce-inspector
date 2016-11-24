@@ -1,10 +1,19 @@
+/* eslint-disable no-unused-vars */
+/* global ko */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported session sfHost */
+/* global initButton */
+/* global Enumerable DescribeInfo copyToClipboard initScrollTable */
+/* eslint-enable no-unused-vars */
 "use strict";
 if (!this.isUnitTest) {
 
+/* eslint-disable indent */
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
 initButton(true);
 chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
+/* eslint-enable indent */
   session = message;
 
   let vm = dataImportVm(copyToClipboard);
@@ -58,7 +67,7 @@ function dataImportVm(copyToClipboard) {
     },
     setData(text) {
       if (vm.isWorking()) {
-        return false;
+        return;
       }
       let separator = vm.dataFormat() == "excel" ? "\t" : ",";
       let data;
@@ -242,7 +251,7 @@ function dataImportVm(copyToClipboard) {
         table: [header, ...data],
         isTooling: undefined, // Only used in data export
         rowVisibilities: [true, ...importData().taggedRows.map(row => vm.showStatus[row.status]())],
-        colVisibilities: header.map(c => true)
+        colVisibilities: header.map(() => true)
       };
     },
     confirmPopupYes() {
@@ -545,8 +554,8 @@ function dataImportVm(copyToClipboard) {
         let row = batchRows[i];
         if (result.querySelector("success").textContent == "true") {
           row[statusColumnIndex] = "Succeeded";
-          row[actionColumnIndex] =
-            importAction == "create" ? "Inserted"
+          row[actionColumnIndex]
+            = importAction == "create" ? "Inserted"
             : importAction == "update" ? "Updated"
             : importAction == "upsert" ? (result.querySelector("created").textContent == "true" ? "Inserted" : "Updated")
             : importAction == "delete" ? "Deleted"
@@ -608,12 +617,12 @@ function dataImportVm(copyToClipboard) {
     let table = [];
     let row = [];
     let offset = 0;
-    while (true) {
+    for (;;) {
       let text, next;
       if (offset != csv.length && csv[offset] == "\"") {
         next = csv.indexOf("\"", offset + 1);
         text = "";
-        while (true) {
+        for (;;) {
           if (next == -1) {
             throw {message: "Quote not closed", offsetStart: offset, offsetEnd: offset + 1};
           }

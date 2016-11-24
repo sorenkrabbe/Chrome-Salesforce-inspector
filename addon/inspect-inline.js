@@ -1,8 +1,13 @@
+/* eslint-disable no-unused-vars */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported session sfHost */
+/* exported showStdPageDetails */
+/* eslint-enable no-unused-vars */
 "use strict";
 function showStdPageDetails(recordId) {
   let fieldDetailsByLabel = new Map();
   let metadataResponse = {};
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       if (message) {
         // Using current hostname so the requests are not blocked in Firefox content scripts. Works on Visualforce domains but not on Lightning domains.
@@ -11,40 +16,40 @@ function showStdPageDetails(recordId) {
       resolve();
     });
   })
-  .then(() =>
-    Promise
-    .all([
-      askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
-      askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/")
-    ])
-  )
-  .then(responses => {
-    let currentObjKeyPrefix = recordId.substring(0, 3);
-    for (let generalMetadataResponse of responses) {
-      let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix);
-      if (sobject) {
-        return askSalesforce(sobject.urls.describe);
+    .then(() =>
+      Promise
+        .all([
+          askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
+          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/")
+        ])
+    )
+    .then(responses => {
+      let currentObjKeyPrefix = recordId.substring(0, 3);
+      for (let generalMetadataResponse of responses) {
+        let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix);
+        if (sobject) {
+          return askSalesforce(sobject.urls.describe);
+        }
       }
-    }
-    throw "Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + currentObjKeyPrefix;
-  })
-  .then(res => {
-    metadataResponse = res;
-    // Loop through all label elements, add event listeners
-    for (let fieldDetails of metadataResponse.fields) {
-      if (!fieldDetailsByLabel.has(fieldDetails.label)) {
-        fieldDetailsByLabel.set(fieldDetails.label, []);
+      throw "Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + currentObjKeyPrefix;
+    })
+    .then(res => {
+      metadataResponse = res;
+      // Loop through all label elements, add event listeners
+      for (let fieldDetails of metadataResponse.fields) {
+        if (!fieldDetailsByLabel.has(fieldDetails.label)) {
+          fieldDetailsByLabel.set(fieldDetails.label, []);
+        }
+        fieldDetailsByLabel.get(fieldDetails.label).push(fieldDetails);
       }
-      fieldDetailsByLabel.get(fieldDetails.label).push(fieldDetails);
-    }
-    for (let labelEventElement of Array.from(document.querySelectorAll("td.labelCol, th.labelCol"))) {
-      if (labelEventElement.textContent.trim() != "") {
-        labelEventElement.addEventListener("mouseenter", softShowFieldDetails);
-        labelEventElement.addEventListener("click", makeFieldDetailsSticky);
-        labelEventElement.addEventListener("mouseleave", softHideFieldDetails);
+      for (let labelEventElement of Array.from(document.querySelectorAll("td.labelCol, th.labelCol"))) {
+        if (labelEventElement.textContent.trim() != "") {
+          labelEventElement.addEventListener("mouseenter", softShowFieldDetails);
+          labelEventElement.addEventListener("click", makeFieldDetailsSticky);
+          labelEventElement.addEventListener("mouseleave", softHideFieldDetails);
+        }
       }
-    }
-  });
+    });
 
 
   function softShowFieldDetails(e) {
@@ -68,7 +73,7 @@ function showStdPageDetails(recordId) {
         fieldDetails = fieldDetailsByLabel.get(metadataResponse.label + "" + labelText);
       }
       if (fieldDetails == null) { //e.g. API "Owner ID" vs UI "Account Owner" (Account.Owner)
-        let cleanedLabelName = labelText.replace(metadataResponse.label, "").trim()
+        let cleanedLabelName = labelText.replace(metadataResponse.label, "").trim();
         if (cleanedLabelName.length > 2) { //Only try to append ID if the label still has content after stripping the object name
           fieldDetails = fieldDetailsByLabel.get(cleanedLabelName + " ID");
         }
@@ -78,6 +83,7 @@ function showStdPageDetails(recordId) {
       }
     }
 
+    /* eslint new-cap: ["error", {"capIsNewExceptions": ["Ea", "E", "T"]}] */
     function Ea(name, attrs, children) {
       let e = document.createElement(name);
       for (let attrName in attrs) {
@@ -94,7 +100,7 @@ function showStdPageDetails(recordId) {
     function T(text) {
       return document.createTextNode(text);
     }
-    
+
     if (fieldDetails == null || fieldDetails.length == 0) {
       output.classList.add("salesforce-inspector-error");
       output.appendChild(E("p", [T("No fields with matching label?!")]));

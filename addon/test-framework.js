@@ -1,3 +1,9 @@
+/* eslint-disable no-unused-vars */
+/* exported assertEquals assertNotEquals assert async anonApex isUnitTest */
+/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
+/* exported session sfHost */
+/* global popupTest dataImportTest dataExportTest */
+/* eslint-enable no-unused-vars */
 "use strict";
 function assertEquals(expected, actual) {
   let strExpected = JSON.stringify(expected);
@@ -45,16 +51,16 @@ function* anonApex(apex) {
   assert(res.success, res);
 }
 
-var isUnitTest = true;
+this.isUnitTest = true;
 addEventListener("load", () => {
   async(function*() {
     let args = new URLSearchParams(location.search.slice(1));
     sfHost = args.get("host");
-    session = yield new Promise((resolve, reject) => {
+    session = yield new Promise(resolve => {
       chrome.runtime.sendMessage({message: "getSession", sfHost}, resolve);
     });
     yield* popupTest();
     yield* dataImportTest();
     yield* dataExportTest();
-  }()).then(e => { console.log("Salesforce Inspector unit test finished"); }, e => { console.error("error", e); });
+  }()).then(() => { console.log("Salesforce Inspector unit test finished"); }, e => { console.error("error", e); });
 });

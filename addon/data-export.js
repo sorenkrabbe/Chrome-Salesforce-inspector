@@ -1,10 +1,19 @@
+/* eslint-disable no-unused-vars */
+/* global ko */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported session sfHost */
+/* global initButton */
+/* global Enumerable DescribeInfo copyToClipboard initScrollTable */
+/* eslint-enable no-unused-vars */
 "use strict";
 if (!this.isUnitTest) {
 
+/* eslint-disable indent */
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
 initButton(true);
 chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
+/* eslint-enable indent */
   session = message;
 
   let queryInput = document.querySelector("#query");
@@ -264,7 +273,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
               title: "Loading metadata failed.",
               results: [{value: "Retry", title: "Retry"}]
             });
-            vm.autocompleteClick = vm.autocompleteReload
+            vm.autocompleteClick = vm.autocompleteReload;
             return;
           default:
             vm.autocompleteResults({
@@ -335,7 +344,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
             title: "Loading " + sobjectName + " metadata failed.",
             results: [{value: "Retry", title: "Retry"}]
           });
-          vm.autocompleteClick = vm.autocompleteReload
+          vm.autocompleteClick = vm.autocompleteReload;
           return;
         case "notfound":
           vm.autocompleteResults({
@@ -394,8 +403,8 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
         for (let referencedSobjectName of contextSobjectDescribes
           .flatMap(contextSobjectDescribe => contextSobjectDescribe.fields)
           .filter(field => field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase())
-          .flatMap(field => field.referenceTo))
-        {
+          .flatMap(field => field.referenceTo)
+        ) {
           let {sobjectStatus, sobjectDescribe} = describeInfo.describeSobject(useToolingApi, referencedSobjectName);
           if (sobjectDescribe) {
             newContextSobjectDescribes.add(sobjectDescribe);
@@ -422,7 +431,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
           title: "Loading " + sobjectStatuses.get("loadfailed") + " metadata failed.",
           results: [{value: "Retry", title: "Retry"}]
         });
-        vm.autocompleteClick = vm.autocompleteReload
+        vm.autocompleteClick = vm.autocompleteReload;
         return;
       }
       if (sobjectStatuses.has("notfound")) {
@@ -524,10 +533,15 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
             yield {value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2), title: "Today", suffix: " ", rank: 1};
           }
           if (field.type == "datetime") {
-            yield {value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2) + "T"
-              + pad(d.getHours(), 2) + ":" + pad(d.getMinutes(), 2) + ":" + pad(d.getSeconds(), 2) + "." + pad(d.getMilliseconds(), 3)
-              + (d.getTimezoneOffset() <= 0 ? "+" : "-") + pad(Math.floor(Math.abs(d.getTimezoneOffset()) / 60), 2)
-              + ":" + pad(Math.abs(d.getTimezoneOffset()) % 60, 2), title: "Now", suffix: " ", rank: 1};
+            yield {
+              value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2) + "T"
+                + pad(d.getHours(), 2) + ":" + pad(d.getMinutes(), 2) + ":" + pad(d.getSeconds(), 2) + "." + pad(d.getMilliseconds(), 3)
+                + (d.getTimezoneOffset() <= 0 ? "+" : "-") + pad(Math.floor(Math.abs(d.getTimezoneOffset()) / 60), 2)
+                + ":" + pad(Math.abs(d.getTimezoneOffset()) % 60, 2),
+              title: "Now",
+              suffix: " ",
+              rank: 1
+            };
           }
           // from http://www.salesforce.com/us/developer/docs/soql_sosl/Content/sforce_api_calls_soql_select_dateformats.htm Spring 15
           yield {value: "YESTERDAY", title: "Starts 12:00:00 the day before and continues for 24 hours.", suffix: " ", rank: 1};
@@ -604,11 +618,13 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
           .flatMap(function*(field) {
             yield {value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", ", rank: 1};
             if (field.relationshipName) {
-               yield {value: field.relationshipName + ".", title: field.label, suffix: "", rank: 1};
+              yield {value: field.relationshipName + ".", title: field.label, suffix: "", rank: 1};
             }
           })
           .concat(
+            /* eslint-disable indent */
             new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"])
+            /* eslint-enable indent */
               .filter(fn => fn.toLowerCase().startsWith(searchTerm.toLowerCase()))
               .map(fn => ({value: fn, title: fn + "()", suffix: "(", rank: 2}))
           )
@@ -686,7 +702,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       csvSerialize: separator => rt.table.map(row => row.map(cell => "\"" + cellToString(cell).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n"),
       updateVisibility() {
         let filter = vm.resultsFilter();
-        for (let r = 1 /* always show header */; r < rt.table.length; r++) {
+        for (let r = 1/* always show header */; r < rt.table.length; r++) {
           rt.rowVisibilities[r] = isVisible(rt.table[r], filter);
         }
       }
@@ -700,7 +716,9 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     let queryHistory;
     try {
       queryHistory = JSON.parse(queryHistoryStorage.get());
-    } catch(e) {}
+    } catch (e) {
+      // empty
+    }
     if (!Array.isArray(queryHistory)) {
       queryHistory = [];
     }

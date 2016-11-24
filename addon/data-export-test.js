@@ -1,3 +1,10 @@
+/* eslint-disable no-unused-vars */
+/* global assertEquals assertNotEquals assert async anonApex isUnitTest */
+/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
+/* exported session sfHost */
+/* global dataExportVm */
+/* exported dataExportTest */
+/* eslint-enable no-unused-vars */
 "use strict";
 function* dataExportTest() {
   console.log("TEST dataExportVm");
@@ -35,7 +42,7 @@ function* dataExportTest() {
   let vm = dataExportVm({args: new URLSearchParams(), queryInput: queryInputVm, queryHistoryStorage, copyToClipboard});
 
   function waitForSpinner() {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       let subs = vm.spinnerCount.subscribe(count => {
         if (count == 0) {
           subs.dispose();
@@ -74,13 +81,13 @@ function* dataExportTest() {
   // Autocomplete field name in SELECT, sould automatically update when describe call completes
   assertEquals("Account fields:", vm.autocompleteResults().title);
   assertEquals(["Name"], getValues(vm.autocompleteResults().results));
-  
+
   // Select autocomplete value in SELECT
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("select Id, Name,  from Account", queryInput.value);
   assertEquals("Account fields:", vm.autocompleteResults().title);
   assertNotEquals(["Name"], getValues(vm.autocompleteResults().results));
-  
+
   // Select multiple values in SELECT using Ctrl+Space
   setQuery("select Id, shipp", "", " from Account");
   assertEquals("select Id, shipp from Account", queryInput.value);
@@ -88,7 +95,7 @@ function* dataExportTest() {
   assertEquals(["ShippingAddress", "ShippingCity", "ShippingCountry", "ShippingGeocodeAccuracy", "ShippingLatitude", "ShippingLongitude", "ShippingPostalCode", "ShippingState", "ShippingStreet"], getValues(vm.autocompleteResults().results));
   vm.queryAutocompleteHandler({ctrlSpace: true});
   assertEquals("select Id, ShippingStreet, ShippingCity, ShippingState, ShippingPostalCode, ShippingCountry, ShippingLatitude, ShippingLongitude, ShippingGeocodeAccuracy, ShippingAddress,  from Account", queryInput.value);
-  
+
   // Autocomplete relationship field in SELECT
   setQuery("select Id, OWNE", "", " from Account");
   assertEquals("select Id, OWNE from Account", queryInput.value);
@@ -474,7 +481,7 @@ function* dataExportTest() {
   assertEquals(null, vm.exportResult().exportError);
 
   // Set up test records
-  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
+  yield* anonApex("delete [select Id from Inspector_Test__c];");
 
   // Query all
   vm.queryAll(true);
@@ -525,7 +532,14 @@ function* dataExportTest() {
   vm.queryTooling(false);
 
   // Query history
-  assertEquals(["select Name from ApexClass","select Id from Inspector_Test__c","select count() from Inspector_Test__c","select Id from Inspector_Test__c where name = 'no such name'","select Name, Lookup__r.Name from Inspector_Test__c order by Name","select Name, Checkbox__c, Number__c from Inspector_Test__c order by Name"], vm.queryHistory());
+  assertEquals([
+    "select Name from ApexClass",
+    "select Id from Inspector_Test__c",
+    "select count() from Inspector_Test__c",
+    "select Id from Inspector_Test__c where name = 'no such name'",
+    "select Name, Lookup__r.Name from Inspector_Test__c order by Name",
+    "select Name, Checkbox__c, Number__c from Inspector_Test__c order by Name"
+  ], vm.queryHistory());
   vm.selectedHistoryEntry(vm.queryHistory()[2]);
   vm.selectHistoryEntry();
   assertEquals("select count() from Inspector_Test__c", queryInput.value);
@@ -581,5 +595,5 @@ function* dataExportTest() {
   assertEquals(0, vm.autocompleteResults().results.length);
   yield waitForSpinner();
   assertEquals("User fields:", vm.autocompleteResults().title);
-  
+
 }

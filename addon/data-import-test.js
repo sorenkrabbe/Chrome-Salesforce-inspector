@@ -1,10 +1,16 @@
+/* eslint-disable no-unused-vars */
+/* global assertEquals assertNotEquals assert async anonApex isUnitTest */
+/* global ko */
+/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
+/* exported session sfHost */
+/* global dataImportVm */
+/* exported dataImportTest */
+/* eslint-enable no-unused-vars */
 "use strict";
 function* dataImportTest() {
   console.log("TEST dataImportVm");
 
-  let clipboardValue;
-  function copyToClipboard(value) {
-    clipboardValue = value;
+  function copyToClipboard() {
   }
 
   let vm = dataImportVm(copyToClipboard);
@@ -14,7 +20,7 @@ function* dataImportTest() {
   ko.computed(vm.columnList);
 
   function waitForSpinner() {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       let subs = vm.spinnerCount.subscribe(count => {
         if (count == 0) {
           subs.dispose();
@@ -26,7 +32,7 @@ function* dataImportTest() {
 
   function getRecords(result) {
     for (let record of result.records) {
-      record.attributes = undefined
+      record.attributes = undefined;
       if (record.Lookup__r) {
         record.Lookup__r.attributes = undefined;
       }
@@ -37,12 +43,13 @@ function* dataImportTest() {
   vm.importType("Inspector_Test__c");
   vm.importAction("update");
 
+  /* eslint-disable camelcase */ // sObject field names
   yield waitForSpinner();
 
   // Autocomplete lists
   assert(vm.sobjectList().indexOf("Inspector_Test__c") > -1);
   assertEquals(["Id", "Name"], vm.idLookupList());
-  assertEquals(["Id","OwnerId","Owner:Group:Id","Owner:Group:Name","Owner:User:Id","Owner:User:Username","Owner:User:Email","Owner:User:FederationIdentifier","Name","Checkbox__c","Number__c","Lookup__c","Lookup__r:Inspector_Test__c:Id","Lookup__r:Inspector_Test__c:Name","__Status","__Id","__Action","__Errors"], vm.columnList());
+  assertEquals(["Id", "OwnerId", "Owner:Group:Id", "Owner:Group:Name", "Owner:User:Id", "Owner:User:Username", "Owner:User:Email", "Owner:User:FederationIdentifier", "Name", "Checkbox__c", "Number__c", "Lookup__c", "Lookup__r:Inspector_Test__c:Id", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"], vm.columnList());
 
   // See user info
   assert(vm.userInfo().indexOf(" / ") > -1);
@@ -142,7 +149,7 @@ function* dataImportTest() {
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
   vm.dataFormat("csv");
   vm.importAction("update");
-  vm.setData('Id,Name,Number__c\r\n' + records[4].Id + ',test5update,500.50\r\n' + records[5].Id + ',test6update,600.60\r\n');
+  vm.setData("Id,Name,Number__c\r\n" + records[4].Id + ",test5update,500.50\r\n" + records[5].Id + ",test6update,600.60\r\n");
   vm.doImport();
   assertEquals({text: "2 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
@@ -165,7 +172,7 @@ function* dataImportTest() {
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Id from Inspector_Test__c order by Name")));
   vm.dataFormat("csv");
   vm.importAction("delete");
-  vm.setData('Id,_foo*,__Status\r\n' + records[5].Id + ',foo,Queued\r\n' + records[6].Id + ',foo,Succeeded');
+  vm.setData("Id,_foo*,__Status\r\n" + records[5].Id + ",foo,Queued\r\n" + records[6].Id + ",foo,Succeeded");
   assertEquals({Queued: 1, Processing: 0, Succeeded: 1, Failed: 0}, vm.importCounts());
   vm.doImport();
   assertEquals({text: "1 records will be imported. 1 records will be skipped because they have __Status Succeeded or Failed.", action: undefined}, vm.confirmPopup());
@@ -189,7 +196,7 @@ function* dataImportTest() {
   vm.dataFormat("csv");
   vm.importAction("upsert");
   vm.externalId("Name");
-  vm.setData('Name,Number__c\r\ntest2,222\r\ntest6,666\r\n');
+  vm.setData("Name,Number__c\r\ntest2,222\r\ntest6,666\r\n");
   vm.doImport();
   assertEquals({text: "2 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
@@ -209,12 +216,12 @@ function* dataImportTest() {
   ], records);
 
   // Create multiple batches
-  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
+  yield* anonApex("delete [select Id from Inspector_Test__c];");
   vm.dataFormat("csv");
   vm.importAction("create");
   vm.batchSize("3");
   vm.batchConcurrency("2");
-  vm.setData('Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25');
+  vm.setData("Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25");
   vm.doImport();
   assertEquals({text: "16 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
@@ -230,12 +237,12 @@ function* dataImportTest() {
   ], records);
 
   // Stop import
-  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
+  yield* anonApex("delete [select Id from Inspector_Test__c];");
   vm.dataFormat("csv");
   vm.importAction("create");
   vm.batchSize("3");
   vm.batchConcurrency("2");
-  vm.setData('Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25');
+  vm.setData("Name\r\ntest10\r\ntest11\r\ntest12\r\ntest13\r\ntest14\r\ntest15\r\ntest16\r\ntest17\r\ntest18\r\ntest19\r\ntest20\r\ntest21\r\ntest22\r\ntest23\r\ntest24\r\ntest25");
   vm.doImport();
   assertEquals({text: "16 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();
@@ -250,7 +257,7 @@ function* dataImportTest() {
   yield waitForSpinner();
   assertEquals(0, vm.activeBatches());
   assertEquals({Queued: 13, Processing: 0, Succeeded: 3, Failed: 0}, vm.importCounts());
-assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Succeeded", "--id--", "Inserted", ""], ["test11", "Succeeded", "--id--", "Inserted", ""], ["test12", "Succeeded", "--id--", "Inserted", ""], ["test13", "Queued", "", "", ""], ["test14", "Queued", "", "", ""], ["test15", "Queued", "", "", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table.map(row => row.map(cell => /^[a-zA-Z0-9]{18}$/.test(cell) ? "--id--" : cell)));
+  assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "Succeeded", "--id--", "Inserted", ""], ["test11", "Succeeded", "--id--", "Inserted", ""], ["test12", "Succeeded", "--id--", "Inserted", ""], ["test13", "Queued", "", "", ""], ["test14", "Queued", "", "", ""], ["test15", "Queued", "", "", ""], ["test16", "Queued", "", "", ""], ["test17", "Queued", "", "", ""], ["test18", "Queued", "", "", ""], ["test19", "Queued", "", "", ""], ["test20", "Queued", "", "", ""], ["test21", "Queued", "", "", ""], ["test22", "Queued", "", "", ""], ["test23", "Queued", "", "", ""], ["test24", "Queued", "", "", ""], ["test25", "Queued", "", "", ""]], vm.importTableResult().table.map(row => row.map(cell => /^[a-zA-Z0-9]{18}$/.test(cell) ? "--id--" : cell)));
   records = getRecords(yield askSalesforce("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name from Inspector_Test__c order by Name")));
   assertEquals([
     {Name: "test10"}, {Name: "test11"}, {Name: "test12"}
@@ -259,7 +266,7 @@ assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "
   // Errors (local validations)
   vm.dataFormat("csv");
   vm.importAction("create");
-  vm.setData('');
+  vm.setData("");
   assertEquals(true, vm.invalidInput());
   assertEquals("Error: no data", vm.dataError());
   assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
@@ -274,32 +281,32 @@ assertEquals([["Name", "__Status", "__Id", "__Action", "__Errors"], ["test10", "
   assertEquals("Error: unexpected token 't'", vm.dataError());
   assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  vm.setData('a,b\r\nc,d\r\ne');
+  vm.setData("a,b\r\nc,d\r\ne");
   assertEquals(true, vm.invalidInput());
   assertEquals("Error: row 3 has 1 cells, expected 2", vm.dataError());
   assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  vm.setData('Name');
+  vm.setData("Name");
   assertEquals(true, vm.invalidInput());
   assertEquals("Error: No records to import", vm.dataError());
   assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  vm.setData('Na*me\r\ntest0');
+  vm.setData("Na*me\r\ntest0");
   assertEquals(true, vm.invalidInput());
   assertEquals("", vm.dataError());
   assertEquals("Error: Invalid field name", vm.columns()[0].columnError());
   assertEquals({Queued: 1, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
-  vm.setData('a,b\r\nc,d');
+  vm.setData("a,b\r\nc,d");
   assertEquals(false, vm.invalidInput());
   assertEquals("", vm.dataError());
   assertEquals({Queued: 1, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
 
   // Errors (whole batch)
-  yield* anonApex(`delete [select Id from Inspector_Test__c];`);
+  yield* anonApex("delete [select Id from Inspector_Test__c];");
   vm.dataFormat("csv");
   vm.importAction("create");
-  vm.setData('Name,unknownfield\r\ntest2,222\r\ntest6,666\r\n');
+  vm.setData("Name,unknownfield\r\ntest2,222\r\ntest6,666\r\n");
   vm.doImport();
   assertEquals({text: "2 records will be imported.", action: undefined}, vm.confirmPopup());
   vm.confirmPopupYes();

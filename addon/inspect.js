@@ -1,11 +1,25 @@
+/* eslint-disable no-unused-vars */
+/* global React ReactDOM */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported session sfHost */
+/* global initButton */
+/* eslint-enable no-unused-vars */
 "use strict";
 if (!this.isUnitTest) {
 
+/* eslint-disable indent */
 let args = new URLSearchParams(location.search.slice(1));
 sfHost = args.get("host");
 initButton(true);
 chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
+/* eslint-ensable indent */
   session = message;
+
+  let fieldRowList;
+  let childRowList;
+  let sobjectInfoPromise;
+  let sobjectDescribePromise;
+  let recordDataPromise;
 
   let vm = {
     callbacks: [],
@@ -23,7 +37,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return "(" + vm.recordData.Name + " / " + vm.recordData.Id + ")";
       }
       if (vm.objectData) {
-        return"(" + vm.objectData.label + " / " + vm.objectData.keyPrefix + ")";
+        return "(" + vm.objectData.label + " / " + vm.objectData.keyPrefix + ")";
       }
       return "Loading all data...";
     },
@@ -249,7 +263,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     return list;
   }
 
-  var fieldRowList = new RowList(vm.fieldRows, FieldRow);
+  fieldRowList = new RowList(vm.fieldRows, FieldRow);
 
   function FieldRow(fieldName, reactKey) {
     function fieldProperties() {
@@ -460,7 +474,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           if (pair.length == 2) {
             try {
               return fieldProperties()[pair[0]] === JSON.parse(pair[1]);
-            } catch(e) {
+            } catch (e) {
               return false;
             }
           } else {
@@ -492,8 +506,8 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     return fieldVm;
   }
 
-  var childRowList = new RowList(vm.childRows, ChildRow);
-  
+  childRowList = new RowList(vm.childRows, ChildRow);
+
   function ChildRow(childName, reactKey) {
     function childProperties() {
       let props = {};
@@ -550,7 +564,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           if (pair.length == 2) {
             try {
               return childProperties()[pair[0]] === JSON.parse(pair[1]);
-            } catch(e) {
+            } catch (e) {
               return false;
             }
           } else {
@@ -621,6 +635,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     for (let key in object) {
       let value = object[key];
       if (ignore[key]) {
+        // empty
       } else if (value && typeof value == "object") {
         addProperties(map, value, prefix + key + ".", {});
       } else {
@@ -843,6 +858,7 @@ React.createElement("div", {},
           if (sobjectDescribe.urls.layouts) {
             return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA"));
           }
+          return undefined;
         }),
         layoutDescribe => {
           if (layoutDescribe) {
@@ -926,9 +942,6 @@ React.createElement("div", {},
       .catch(err => console.log("error handling failed", err));
   }
 
-  let sobjectInfoPromise;
-  var sobjectDescribePromise;
-  var recordDataPromise;
   if (args.has("q")) {
     let recordId = args.get("q");
     sobjectInfoPromise = Promise
@@ -956,7 +969,7 @@ React.createElement("div", {},
             return;
           }
         }
-        throw 'Unknown salesforce object: ' + recordId;
+        throw "Unknown salesforce object: " + recordId;
       });
   } else if (args.has("objectType")) {
     sobjectInfoPromise = Promise.resolve().then(() => {

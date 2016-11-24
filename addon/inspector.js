@@ -1,8 +1,10 @@
+/* exported session sfHost apiVersion askSalesforce askSalesforceSoap */
 "use strict";
 
+/* eslint-disable no-var */
 var session, sfHost;
-
 var apiVersion = "38.0";
+/* eslint-enable no-var */
 
 function askSalesforce(url, progressHandler, options) {
   return new Promise((resolve, reject) => {
@@ -17,7 +19,7 @@ function askSalesforce(url, progressHandler, options) {
       progressHandler.abort = result => {
         resolve(result);
         xhr.abort();
-      }
+      };
     }
     xhr.open(options.method || "GET", "https://" + session.hostname + url, true);
     xhr.setRequestHeader("Authorization", "OAuth " + session.key);
@@ -38,7 +40,8 @@ function askSalesforce(url, progressHandler, options) {
           if (xhr.status == 400 && xhr.response) {
             try {
               text = xhr.response.map(err => err.errorCode + ": " + err.message).join("\n");
-            } catch(ex) {
+            } catch (ex) {
+              // empty
             }
           }
           if (xhr.status == 0) {
@@ -50,7 +53,7 @@ function askSalesforce(url, progressHandler, options) {
           reject({askSalesforceError: text});
         }
       }
-    }
+    };
     xhr.send(JSON.stringify(options.body));
   });
 }
@@ -73,7 +76,9 @@ function askSalesforceSoap(url, namespace, request) {
           reject(xhr);
         }
       }
-    }
+    };
+    /* eslint-disable quotes */
     xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="' + namespace + '"><SessionHeader><sessionId>' + session.key + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="' + namespace + '">' + request + '</soapenv:Body></soapenv:Envelope>');
+    /* eslint-enable quotes */
   });
 }

@@ -1,3 +1,8 @@
+/* eslint-disable no-unused-vars */
+/* global ko */
+/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* exported Enumerable DescribeInfo copyToClipboard initScrollTable */
+/* eslint-enable no-unused-vars */
 "use strict";
 
 // Inspired by C# System.Linq.Enumerable
@@ -28,7 +33,9 @@ Enumerable.prototype = {
     yield* other;
   },
   some() {
+    /* eslint-disable no-unused-vars */
     for (let e of this) {
+    /* eslint-enable no-unused-vars */
       return true;
     }
     return false;
@@ -36,7 +43,7 @@ Enumerable.prototype = {
   toArray() {
     return Array.from(this);
   }
-}
+};
 Enumerable.prototype.map.prototype = Enumerable.prototype;
 Enumerable.prototype.filter.prototype = Enumerable.prototype;
 Enumerable.prototype.flatMap.prototype = Enumerable.prototype;
@@ -45,9 +52,9 @@ Enumerable.prototype.concat.prototype = Enumerable.prototype;
 function DescribeInfo(spinFor) {
   function initialState() {
     return {
-    data: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null},
-    tool: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null}
-  };
+      data: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null},
+      tool: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null}
+    };
   }
   let sobjectAllDescribes = ko.observable(initialState());
   function getGlobal(useToolingApi) {
@@ -272,7 +279,6 @@ interface Cell {
 }
 */
 function initScrollTable(scroller, dataObs, resizeObs) {
-  "use strict";
   let scrolled = document.createElement("div");
   scrolled.className = "scrolltable-scrolled";
   scroller.appendChild(scrolled);
@@ -294,7 +300,7 @@ function initScrollTable(scroller, dataObs, resizeObs) {
   let lastRowTop = 0; // The distance from the top of the table to the bottom of the last rendered row (the top of the row below the last rendered row)
   let colWidths = []; // The width in pixels of each column
   let colVisible = []; // The visibility of each column. 0 = hidden, 1 = visible
-  let colCount =  0;
+  let colCount = 0;
   let totalWidth = 0; // The sum of widths of visible cells
   let firstColIdx = 0; // The index of the first rendered column
   let firstColLeft = 0; // The distance from the left of the table to the left of the first rendered column
@@ -316,7 +322,7 @@ function initScrollTable(scroller, dataObs, resizeObs) {
 
       colWidths = [];
       colVisible = [];
-      colCount =  0;
+      colCount = 0;
       totalWidth = 0;
       firstColIdx = 0;
       firstColLeft = 0;
