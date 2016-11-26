@@ -4,6 +4,7 @@ module.exports = {
     "es6": true,
     "webextensions": true
   },
+  "root": true,
   "extends": "eslint:recommended",
   "rules": {
     "indent": ["error", 2, {"SwitchCase": 1, "MemberExpression": 1, "FunctionDeclaration": {"parameters": 1}, "FunctionExpression": {"parameters": 1}, "CallExpression": {"arguments": 1}}],

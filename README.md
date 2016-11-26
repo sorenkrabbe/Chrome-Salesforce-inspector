@@ -35,6 +35,12 @@ Unit tests
 3. Open your browser's developer tools console.
 4. Wait until "Salesforce Inspector unit test finished" is logged, and verify that no error messages are logged (HTTP 4xx messages are OK)
 
+### Linting
+
+1. Install Node.js with npm
+2. `npm install`
+3. `npm test`
+
 Release
 -------
 Version number must be manually incremented in [addon/manifest.json](addon/manifest.json) file

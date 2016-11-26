@@ -1,0 +1,9 @@
+{
+  "name": "salesforce-inspector",
+  "scripts": {
+    "test": "./node_modules/.bin/eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^3.11.0"
+  }
+}

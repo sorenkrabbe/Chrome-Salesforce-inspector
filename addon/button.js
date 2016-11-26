@@ -66,16 +66,14 @@ function initButton(inInspector) {
       if (e.source == popupEl.contentWindow && e.data.insextShowStdPageDetails) {
         showStdPageDetails(e.data.insextRecordId)
           .then(
-            /* eslint-disable indent */
-            () => {
+            () => { // eslint-disable-line indent
               popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: true}, "*");
             },
-            error => {
+            error => { // eslint-disable-line indent
               console.error(error);
               popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: false}, "*");
               alert(error);
             }
-            /* eslint-enable indent */
           );
       }
     });

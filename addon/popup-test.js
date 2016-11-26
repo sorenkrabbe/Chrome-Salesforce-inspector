@@ -6,8 +6,7 @@
 /* exported popupTest */
 /* eslint-enable no-unused-vars */
 "use strict";
-/* eslint-disable require-yield */
-function* popupTest() {
+function* popupTest() { // eslint-disable-line require-yield
   console.log("TEST popup");
   // Classic & Console
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://na1.salesforce.com/001i0000007BlV0"))); // classic record detail page

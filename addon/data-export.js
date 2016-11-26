@@ -622,9 +622,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
             }
           })
           .concat(
-            /* eslint-disable indent */
-            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"])
-            /* eslint-enable indent */
+            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"]) //  eslint-disable-line indent
               .filter(fn => fn.toLowerCase().startsWith(searchTerm.toLowerCase()))
               .map(fn => ({value: fn, title: fn + "()", suffix: "(", rank: 2}))
           )
