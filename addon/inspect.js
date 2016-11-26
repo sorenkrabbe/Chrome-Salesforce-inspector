@@ -327,7 +327,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         }
         return "Unknown Label";
       },
-      fieldName: fieldName,
+      fieldName,
       hasFieldHelptext() {
         return typeof fieldVm.fieldHelptext() != "undefined";
       },
@@ -526,7 +526,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       reactKey,
       childDescribe: undefined,
       relatedListInfo: undefined,
-      childName: childName,
+      childName,
       childObject() {
         if (childVm.childDescribe) {
           return childVm.childDescribe.childSObject;
@@ -660,7 +660,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         }
       });
     }
-    vm.detailsBox = {rows: fieldDetailVms, name: name, showFilterButton: showFilterButton};
+    vm.detailsBox = {rows: fieldDetailVms, name, showFilterButton};
   }
 
   class App extends React.Component {

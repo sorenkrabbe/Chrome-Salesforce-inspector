@@ -88,7 +88,7 @@ function dataImportVm(copyToClipboard) {
       vm.dataError("");
       let header = data.shift().map(makeColumn);
       updateResult(null); // Two updates, the first clears state from the scrolltable
-      updateResult({header: header, data: data});
+      updateResult({header, data});
     },
     invalidInput() {
       // We should try to allow imports to succeed even if our validation logic does not exactly match the one in Salesforce.
@@ -363,7 +363,7 @@ function dataImportVm(copyToClipboard) {
     if (!importTable) {
       importData({
         importTable: null,
-        counts: counts,
+        counts,
         taggedRows: null
       });
       return;

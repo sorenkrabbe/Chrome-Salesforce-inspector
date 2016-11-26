@@ -11,24 +11,24 @@ function Enumerable(iterable) {
 }
 Enumerable.prototype = {
   __proto__: function*(){}.prototype,
-  map: function*(f) {
+  *map(f) {
     for (let e of this) {
       yield f(e);
     }
   },
-  filter: function*(f) {
+  *filter(f) {
     for (let e of this) {
       if (f(e)) {
         yield e;
       }
     }
   },
-  flatMap: function*(f) {
+  *flatMap(f) {
     for (let e of this) {
       yield* f(e);
     }
   },
-  concat: function*(other) {
+  *concat(other) {
     yield* this;
     yield* other;
   },

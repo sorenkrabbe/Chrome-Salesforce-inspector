@@ -53,10 +53,10 @@ function initButton(inInspector) {
       if (e.source == popupEl.contentWindow && e.data.insextInitRequest) {
         popupEl.contentWindow.postMessage({
           insextInitResponse: true,
-          sfHost: sfHost,
+          sfHost,
           isDevConsole: !!document.querySelector("body.ApexCSIPage"),
           inAura: !!document.querySelector("#auraLoadingBox"),
-          inInspector: inInspector
+          inInspector
         }, "*");
         openPopup();
       }

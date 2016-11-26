@@ -141,11 +141,11 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       clearQueryHistory();
       vm.queryHistory([]);
     },
-    queryAutocompleteHandler: queryAutocompleteHandler,
+    queryAutocompleteHandler,
     autocompleteReload() {
       describeInfo.reloadAll();
     },
-    doExport: doExport,
+    doExport,
     canCopy() {
       return vm.exportResult().exportedData != null;
     },
@@ -158,7 +158,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     copyAsJson() {
       copyToClipboard(JSON.stringify(vm.exportResult().exportedData.records, null, "  "));
     },
-    stopExport: stopExport
+    stopExport
   };
 
   function spinFor(promise) {
@@ -333,14 +333,14 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       switch (sobjectStatus) {
         case "loading":
           vm.autocompleteResults({
-            sobjectName: sobjectName,
+            sobjectName,
             title: "Loading " + sobjectName + " metadata...",
             results: []
           });
           return;
         case "loadfailed":
           vm.autocompleteResults({
-            sobjectName: sobjectName,
+            sobjectName,
             title: "Loading " + sobjectName + " metadata failed.",
             results: [{value: "Retry", title: "Retry"}]
           });
@@ -348,14 +348,14 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
           return;
         case "notfound":
           vm.autocompleteResults({
-            sobjectName: sobjectName,
+            sobjectName,
             title: "Unknown object: " + sobjectName,
             results: []
           });
           return;
         default:
           vm.autocompleteResults({
-            sobjectName: sobjectName,
+            sobjectName,
             title: "Unexpected error for object: " + sobjectName + ": " + sobjectStatus,
             results: []
           });
@@ -419,7 +419,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
     if (!contextSobjectDescribes.some()) {
       if (sobjectStatuses.has("loading")) {
         vm.autocompleteResults({
-          sobjectName: sobjectName,
+          sobjectName,
           title: "Loading " + sobjectStatuses.get("loading") + " metadata...",
           results: []
         });
@@ -427,7 +427,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       }
       if (sobjectStatuses.has("loadfailed")) {
         vm.autocompleteResults({
-          sobjectName: sobjectName,
+          sobjectName,
           title: "Loading " + sobjectStatuses.get("loadfailed") + " metadata failed.",
           results: [{value: "Retry", title: "Retry"}]
         });
@@ -436,7 +436,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       }
       if (sobjectStatuses.has("notfound")) {
         vm.autocompleteResults({
-          sobjectName: sobjectName,
+          sobjectName,
           title: "Unknown object: " + sobjectStatuses.get("notfound"),
           results: []
         });
@@ -444,14 +444,14 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       }
       if (sobjectStatuses.size > 0) {
         vm.autocompleteResults({
-          sobjectName: sobjectName,
+          sobjectName,
           title: "Unexpected error: " + sobjectStatus,
           results: []
         });
         return;
       }
       vm.autocompleteResults({
-        sobjectName: sobjectName,
+        sobjectName,
         title: "Unknown field: " + sobjectName + "." + contextPath,
         results: []
       });
@@ -463,12 +463,12 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       let contextValueFields = contextSobjectDescribes
         .flatMap(sobjectDescribe => sobjectDescribe.fields
           .filter(field => field.name.toLowerCase() == fieldName.toLowerCase())
-          .map(field => ({sobjectDescribe: sobjectDescribe, field: field}))
+          .map(field => ({sobjectDescribe, field}))
         )
         .toArray();
       if (contextValueFields.length == 0) {
         vm.autocompleteResults({
-          sobjectName: sobjectName,
+          sobjectName,
           title: "Unknown field: " + sobjectDescribe.name + "." + contextPath + fieldName,
           results: []
         });
@@ -479,7 +479,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
         // Since this performs a Salesforce API call, we ask the user to opt in by pressing Ctrl+Space
         if (contextValueFields.length > 1) {
           vm.autocompleteResults({
-            sobjectName: sobjectName,
+            sobjectName,
             title: "Multiple possible fields: " + fieldNames,
             results: []
           });
@@ -491,7 +491,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
         spinFor(askSalesforce("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
           .catch(err => {
             vm.autocompleteResults({
-              sobjectName: sobjectName,
+              sobjectName,
               title: "Error: " + ((err && err.askSalesforceError) || err),
               results: []
             });
@@ -503,7 +503,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
               return;
             }
             vm.autocompleteResults({
-              sobjectName: sobjectName,
+              sobjectName,
               title: fieldNames + " values:",
               results: new Enumerable(data.records)
                 .map(record => record[contextValueField.field.name])
@@ -514,7 +514,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
             });
           }));
         vm.autocompleteResults({
-          sobjectName: sobjectName,
+          sobjectName,
           title: "Loading " + fieldNames + " values...",
           results: []
         });
@@ -590,7 +590,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       .toArray()
       .sort(resultsSort);
       vm.autocompleteResults({
-        sobjectName: sobjectName,
+        sobjectName,
         title: fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"),
         results: ar
       });
@@ -610,7 +610,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
         return;
       }
       vm.autocompleteResults({
-        sobjectName: sobjectName,
+        sobjectName,
         title: contextSobjectDescribes.map(sobjectDescribe => sobjectDescribe.name).toArray().join(", ") + " fields:",
         results: contextSobjectDescribes
           .flatMap(sobjectDescribe => sobjectDescribe.fields)
@@ -759,7 +759,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
             isWorking: true,
             exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
             exportError: null,
-            exportedData: exportedData
+            exportedData
           });
           return pr;
         }
@@ -769,7 +769,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
             isWorking: false,
             exportStatus: data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.",
             exportError: null,
-            exportedData: exportedData
+            exportedData
           });
           return null;
         }
@@ -777,7 +777,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
           isWorking: false,
           exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s).",
           exportError: null,
-          exportedData: exportedData
+          exportedData
         });
         return null;
       }, err => {
@@ -790,7 +790,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
             isWorking: false,
             exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " record(s). Stopped by error.",
             exportError: null,
-            exportedData: exportedData
+            exportedData
           });
           return null;
         }
@@ -818,7 +818,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, copyToClipboard}) 
       isWorking: true,
       exportStatus: "Exporting...",
       exportError: null,
-      exportedData: exportedData
+      exportedData
     });
   }
 

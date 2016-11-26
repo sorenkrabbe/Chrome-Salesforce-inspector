@@ -54,12 +54,10 @@ function init(params) {
           resolve();
         });
       })
-        .then(() => {
-          return Promise.all([
-            askSalesforce("/services/data/v" + apiVersion + "/sobjects/").then(res => ({toolingApi: false, sobjects: res.sobjects})),
-            askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").then(res => ({toolingApi: true, sobjects: res.sobjects}))
-          ]);
-        })
+        .then(() => Promise.all([
+          askSalesforce("/services/data/v" + apiVersion + "/sobjects/").then(res => ({toolingApi: false, sobjects: res.sobjects})),
+          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").then(res => ({toolingApi: true, sobjects: res.sobjects}))
+        ]))
         .then(res => {
           this.setState({sobjectsLoading: false, sobjectsLists: res});
           this.refs.showAllDataBox.updateSelection(this.state.contextRecordId);
