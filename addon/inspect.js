@@ -221,7 +221,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       return vm.recordData && vm.recordData.Id;
     },
     viewLink() {
-      return vm.recordData && vm.recordData.Id && "https://" + sfHost + "/" + vm.recordData.Id;
+      if (vm.recordData && vm.recordData.Id) {
+        return "https://" + sfHost + "/" + vm.recordData.Id;
+      }
+      if (vm.objectData && vm.objectData.keyPrefix) {
+        return "https://" + sfHost + "/" + vm.objectData.keyPrefix + "/o";
+      }
+      return undefined;
     },
     openSetup() {
       let args = new URLSearchParams();
@@ -723,7 +729,7 @@ React.createElement("div", {},
       )
     ),
     React.createElement("span", {className: "object-actions"},
-      vm.canView() ? React.createElement("a", {href: vm.viewLink(), title: "View this record in Salesforce"}, "View") : null,
+      vm.viewLink() ? React.createElement("a", {href: vm.viewLink(), title: "View this record in Salesforce"}, "View") : null,
       " ",
       vm.objectName() ? React.createElement("a", {href: "about:blank", onClick: e => vm.showObjectMetadata(e, this.detailsFilterFocus)}, "More") : null,
       " ",
