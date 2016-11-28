@@ -112,8 +112,8 @@
     <button data-bind="click: doImport, disable: invalidInput() || isWorking() || importCounts().Queued == 0">Import</button>
     <button data-bind="enable: isWorking(), click: toggleProcessing, text: isWorking() && !isProcessingQueue() ? 'Resume queued' : 'Cancel queued'"></button>
     <button data-bind="enable: importCounts().Failed > 0, click: retryFailed" style="margin-right: 20px">Retry failed</button>
-    <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy import result to clipboard for pasting into Excel or similar">Copy Excel</button>
-    <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy import result to clipboard for saving as a CSV file">Copy CSV</button>
+    <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy import result to clipboard for pasting into Excel or similar">Copy (Excel format)</button>
+    <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy import result to clipboard for saving as a CSV file">Copy (CSV)</button>
   </div>
   <div data-bind="visible: showHelp">
     <p>Use for quick one-off data imports.</p>
