@@ -27,6 +27,12 @@
       <select data-bind="options: queryHistory, optionsCaption: 'Query history', optionsText: function(q) { return q.substring(0, 300); }, value: selectedHistoryEntry, event: {change: selectHistoryEntry}" class="query-history"></select>
       <a href="about:blank" data-bind="click: clearHistory" title="Clear query history" class="char-btn">X</a>
     </label>
+    <label>
+      <select data-bind="options: savedHistory, optionsCaption: 'Saved queries', optionsText: function(q) { return q.substring(0, 300); }, value: selectedSavedEntry, event: {change: selectSavedEntry}" class="query-history"></select>
+      <a href="about:blank" data-bind="click: addToHistory" title="Add query to saved history" class="char-btn">+</a>
+      <a href="about:blank" data-bind="click: removeFromHistory" title="Remove query from saved history" class="char-btn">X</a>
+      <a href="about:blank" data-bind="click: clearSavedHistory" title="Clear saved history" class="char-btn">XX</a>
+    </label>
     <a href="about:blank" id="export-help-btn" data-bind="click: toggleHelp">Export help</a>
     <textarea id="query" data-bind="style: {maxHeight: (winInnerHeight() - 200) + 'px'}"></textarea>
     <div class="autocomplete-box" data-bind="css: {expanded: expandAutocomplete}">
