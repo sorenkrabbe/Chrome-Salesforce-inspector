@@ -338,7 +338,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         return typeof fieldVm.fieldHelptext() != "undefined";
       },
       fieldHelptext() {
-        return fieldVm.fieldDescribe && fieldVm.fieldDescribe.inlineHelpText;
+        if (fieldVm.fieldDescribe) {
+          return fieldVm.fieldDescribe.inlineHelpText;
+        }
+        if (fieldVm.entityParticle) {
+          return fieldVm.entityParticle.InlineHelpText;
+        }
+        return undefined;
       },
       hasFieldDesc() {
         return typeof fieldVm.fieldDesc() != "undefined";
@@ -354,6 +360,15 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           : (fieldDescribe.type || "")
             + (fieldDescribe.length ? " (" + fieldDescribe.length + ")" : "")
             + (fieldDescribe.precision || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
+            + (fieldDescribe.autoNumber ? ", auto number" : "")
+            + (fieldDescribe.caseSensitive ? ", case sensitive" : "")
+            + (fieldDescribe.dependentPicklist ? ", dependent" : "")
+            + (fieldDescribe.encrypted ? ", encrypted" : "")
+            + (fieldDescribe.externalId ? ", external id" : "")
+            + (fieldDescribe.htmlFormatted ? ", html" : "")
+            + (!fieldDescribe.nillable ? ", required" : "")
+            + (fieldDescribe.restrictedPicklist ? ", restricted" : "")
+            + (fieldDescribe.unique ? ", unique" : "")
             + (fieldDescribe.calculated ? "*" : "");
         }
         let particle = fieldVm.entityParticle;
@@ -363,6 +378,14 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           : (particle.DataType || "")
             + (particle.Length ? " (" + particle.Length + ")" : "")
             + (particle.Precision || particle.Scale ? " (" + particle.Precision + ", " + particle.Scale + ")" : "")
+            + (particle.IsAutonumber ? ", auto number" : "")
+            + (particle.IsCaseSensitive ? ", case sensitive" : "")
+            + (particle.IsDependentPicklist ? ", dependent" : "")
+            + (particle.IsEncrypted ? ", encrypted" : "")
+            + (particle.IsIdLookup ? ", external id" : "")
+            + (particle.IsHtmlFormatted ? ", html" : "")
+            + (!particle.IsNillable ? ", required" : "")
+            + (particle.IsUnique ? ", unique" : "")
             + (particle.IsCalculated ? "*" : "");
         }
         return "(Unknown)";
@@ -1019,7 +1042,7 @@ React.createElement("div", {},
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
     spinFor(
       "querying tooling particles",
-      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsCalculated, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName + "'")),
+      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName + "'")),
       res => {
         for (let entityParticle of res.records) {
           fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
