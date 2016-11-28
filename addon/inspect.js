@@ -229,6 +229,20 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       }
       return undefined;
     },
+    exportLink() {
+      let objectName = vm.sobjectName;
+      if (vm.objectData && vm.objectData.name) {
+        objectName = vm.objectData.name;
+      }
+      if (!objectName) {
+        return undefined;
+      }
+      let query = "select Id from " + objectName;
+      if (vm.recordData && vm.recordData.Id) {
+        query += " where Id = '" + vm.recordData.Id + "'";
+      }
+      return dataExportUrl(query);
+    },
     openSetup() {
       let args = new URLSearchParams();
       args.set("host", sfHost);
@@ -640,12 +654,6 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         if (!vm.recordData || !vm.recordData.Id) {
           return "";
         }
-        function dataExportUrl(query) {
-          let args = new URLSearchParams();
-          args.set("host", sfHost);
-          args.set("query", query);
-          return "data-export.html?" + args;
-        }
         let relatedListInfo = childVm.relatedListInfo;
         if (relatedListInfo) {
           return dataExportUrl("select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + vm.recordData.Id + "'");
@@ -658,6 +666,13 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       }
     };
     return childVm;
+  }
+
+  function dataExportUrl(query) {
+    let args = new URLSearchParams();
+    args.set("host", sfHost);
+    args.set("query", query);
+    return "data-export.html?" + args;
   }
 
   function addProperties(map, object, prefix, ignore) {
@@ -752,6 +767,8 @@ React.createElement("div", {},
       )
     ),
     React.createElement("span", {className: "object-actions"},
+      vm.exportLink() ? React.createElement("a", {href: vm.exportLink(), title: "Export data from this object"}, "Export") : null,
+      " ",
       vm.viewLink() ? React.createElement("a", {href: vm.viewLink(), title: "View this record in Salesforce"}, "View") : null,
       " ",
       vm.objectName() ? React.createElement("a", {href: "about:blank", onClick: e => vm.showObjectMetadata(e, this.detailsFilterFocus)}, "More") : null,
