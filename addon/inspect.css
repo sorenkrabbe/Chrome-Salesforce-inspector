@@ -36,11 +36,23 @@ table {
   word-wrap: break-word;
   white-space: pre-wrap;
 }
-.value-blank {
+.value-text.value-is-object {
+  color: #990;
+}
+.value-text.value-is-number {
+  color: #909;
+}
+.value-text.value-is-boolean {
+  color: #900;
+}
+.value-text.value-is-boolean-true {
+  color: #099;
+}
+.value-text.value-is-blank {
   color: #aaa;
   font-style: italic;
 }
-.value-unknown {
+.value-text.value-is-unknown {
   color: #aaa;
   font-style: italic;
 }
@@ -64,6 +76,8 @@ th {
 }
 .field-value {
   text-align: right;
+}
+.field-value, .field-column {
   max-width: 200px; /* To handle long words. This is not actually 200px but scales with the table. Table layout magic. */
 }
 .field-value textarea {
@@ -88,9 +102,6 @@ th {
 }
 .field-type {
   text-align: right;
-  width: 11em;
-  min-width: 9em;
-  max-width: 9em;
 }
 .field-actions {
   text-align: right;
@@ -144,23 +155,11 @@ th[tabindex] {
 #fieldDetailsView td {
   white-space: pre;
 }
-#fieldDetailsView .isString {
-  color: #990;
-}
-#fieldDetailsView .isNumber {
-  color: #909;
-}
-#fieldDetailsView .isBoolean {
-  color: #099;
-}
 .filter-box {
   white-space: nowrap;
 }
 .filter-input {
   width: 20em;
-}
-h1 {
-  margin: 0 0 8px;
 }
 .error-message {
   font-size: 1.2em;
@@ -187,12 +186,35 @@ h1 {
   z-index: 1;
   align-items: center;
 }
-.column-toggles {
+.object-name {
   flex-grow: 1;
-  text-align: center;
+  flex-shrink: 1;
+  margin: 0 1em;
+  font-size: 1.4em;
 }
-.column-toggles label {
-  margin: 0 5px;
+.object-actions a, .object-actions button {
+  display: inline-block;
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 1em;
+}
+.column-button-outer {
+  position: relative;
+  display: inline-block;
+}
+.column-popup {
+  background: #ddd;
+  padding: 1em;
+  overflow: auto;
+  max-height: 500px;
+  position: absolute;
+  text-align: left;
+  right: 0;
+  white-space: nowrap;
+}
+.column-popup label {
+  display: block;
 }
 .body {
   padding: 3.8em 8px 8px;
