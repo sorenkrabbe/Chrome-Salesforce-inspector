@@ -594,7 +594,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
           case "object": return childVm.childObject();
           case "field": return childVm.childField();
           case "label": return childVm.childLabel();
-          default: "";
+          default: return "";
         }
       },
       visible() {
@@ -802,13 +802,13 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
     React.createElement("table", {},
       React.createElement("thead", {},
         React.createElement("tr", {},
-          React.createElement("th", {className: "field-name", tabIndex: 0, onClick: e => vm.sortFieldsBy("name")}, "Field API Name"),
-          vm.showFieldLabelColumn ? React.createElement("th", {className: "field-label", tabIndex: 0, onClick: e => vm.sortFieldsBy("label")}, "Label") : null,
-          vm.showFieldHelptextColumn ? React.createElement("th", {className: "field-column", tabIndex: 0, onClick: e => vm.sortFieldsBy("helptext")}, "Help text") : null,
-          vm.showFieldDescriptionColumn ? React.createElement("th", {className: "field-column", tabIndex: 0, onClick: e => vm.sortFieldsBy("desc")}, "Description") : null,
-          Array.from(vm.selectedColumns).map(col => React.createElement("th", {className: "field-column", key: col, tabIndex: 0, onClick: e => vm.sortFieldsBy(col)}, col)),
-          vm.showFieldValueColumn ? React.createElement("th", {className: "field-value", tabIndex: 0, onClick: e => vm.sortFieldsBy("dataValue")}, "Value") : null,
-          vm.showFieldTypeColumn ? React.createElement("th", {className: "field-type", tabIndex: 0, onClick: e => vm.sortFieldsBy("type")}, "Type") : null,
+          React.createElement("th", {className: "field-name", tabIndex: 0, onClick: () => vm.sortFieldsBy("name")}, "Field API Name"),
+          vm.showFieldLabelColumn ? React.createElement("th", {className: "field-label", tabIndex: 0, onClick: () => vm.sortFieldsBy("label")}, "Label") : null,
+          vm.showFieldHelptextColumn ? React.createElement("th", {className: "field-column", tabIndex: 0, onClick: () => vm.sortFieldsBy("helptext")}, "Help text") : null,
+          vm.showFieldDescriptionColumn ? React.createElement("th", {className: "field-column", tabIndex: 0, onClick: () => vm.sortFieldsBy("desc")}, "Description") : null,
+          Array.from(vm.selectedColumns).map(col => React.createElement("th", {className: "field-column", key: col, tabIndex: 0, onClick: () => vm.sortFieldsBy(col)}, col)),
+          vm.showFieldValueColumn ? React.createElement("th", {className: "field-value", tabIndex: 0, onClick: () => vm.sortFieldsBy("dataValue")}, "Value") : null,
+          vm.showFieldTypeColumn ? React.createElement("th", {className: "field-type", tabIndex: 0, onClick: () => vm.sortFieldsBy("type")}, "Type") : null,
           React.createElement("th", {className: "field-actions"}, "Actions")
         )
       ),
@@ -846,10 +846,10 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
     React.createElement("table", {},
       React.createElement("thead", {},
         React.createElement("tr", {},
-          React.createElement("th", {className: "child-name", tabIndex: 0, onClick: e => vm.sortChildsBy("name")}, "Relationship Name"),
-          React.createElement("th", {className: "child-object", tabIndex: 0, onClick: e => vm.sortChildsBy("object")}, "Child Object"),
-          React.createElement("th", {className: "child-field", tabIndex: 0, onClick: e => vm.sortChildsBy("field")}, "Field"),
-          React.createElement("th", {className: "child-label", tabIndex: 0, onClick: e => vm.sortChildsBy("label")}, "Label"),
+          React.createElement("th", {className: "child-name", tabIndex: 0, onClick: () => vm.sortChildsBy("name")}, "Relationship Name"),
+          React.createElement("th", {className: "child-object", tabIndex: 0, onClick: () => vm.sortChildsBy("object")}, "Child Object"),
+          React.createElement("th", {className: "child-field", tabIndex: 0, onClick: () => vm.sortChildsBy("field")}, "Field"),
+          React.createElement("th", {className: "child-label", tabIndex: 0, onClick: () => vm.sortChildsBy("label")}, "Label"),
           React.createElement("th", {className: "child-actions"}, "Actions")
         )
       ),
@@ -914,7 +914,7 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
       props.value === undefined ? "(Unknown)"
         : props.value === null ? "(Blank)"
         : "" + props.value
-    )
+    );
   ReactDOM.render(React.createElement(App, {}), document.getElementById("root"));
 
   function setRecordData(recordDataPromise) {

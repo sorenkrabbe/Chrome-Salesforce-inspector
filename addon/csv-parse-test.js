@@ -4,11 +4,11 @@
 /* exported session sfHost */
 /* global csvParse */
 /* exported csvParseTest */
+/* eslint quotes: ["error", "single", {"avoidEscape": true}] */
 /* eslint-enable no-unused-vars */
-"use strict";
+'use strict';
 function* csvParseTest() { // eslint-disable-line require-yield
-  console.log("TEST csvParse");
-  /* eslint quotes: ["error", "single"] */
+  console.log('TEST csvParse');
   // Quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d', ',')); // without quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a","b"\n"c","d"', ',')); // with quotes
