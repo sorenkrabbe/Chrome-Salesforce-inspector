@@ -176,7 +176,7 @@ function renderCell(rt, cell, td) {
         pop.appendChild(aView);
       }
       function closer(ev) {
-        if (ev != e) {
+        if (ev != e && ev.target.closest(".pop-menu") != pop) {
           removeEventListener("click", closer);
           td.removeChild(pop);
         }
