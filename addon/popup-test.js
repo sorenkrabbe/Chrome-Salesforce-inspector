@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-/* global assertEquals assertNotEquals assert async anonApex isUnitTest */
+/* global assertEquals assertThrows assertNotEquals assert async anonApex isUnitTest */
 /* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
 /* exported session sfHost */
 /* global getRecordId */

@@ -1,8 +1,8 @@
 /* eslint-disable no-unused-vars */
-/* exported assertEquals assertNotEquals assert async anonApex isUnitTest */
+/* exported assertEquals assertThrows assertNotEquals assert async anonApex isUnitTest */
 /* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
 /* exported session sfHost */
-/* global popupTest dataImportTest dataExportTest */
+/* global popupTest csvParseTest dataImportTest dataExportTest */
 /* eslint-enable no-unused-vars */
 "use strict";
 function assertEquals(expected, actual) {
@@ -13,6 +13,26 @@ function assertEquals(expected, actual) {
     console.error(msg);
     throw msg;
   }
+}
+
+function assertThrows(expected, fn) {
+  let strExpected = JSON.stringify(expected);
+  let res;
+  try {
+    res = fn();
+  } catch (actual) {
+    let strActual = JSON.stringify(actual);
+    if (strExpected !== strActual) {
+      let msg = new Error("assertThrows failed: Expected " + strExpected + " but found " + strActual + ".");
+      console.error(msg);
+      throw msg;
+    }
+    return;
+  }
+  let strRes = JSON.stringify(res);
+  let msg = new Error("assertThrows failed: Expected thrown " + strExpected + " but found returned " + strRes + ".");
+  console.error(msg);
+  throw msg;
 }
 
 function assertNotEquals(expected, actual) {
@@ -60,6 +80,7 @@ addEventListener("load", () => {
       chrome.runtime.sendMessage({message: "getSession", sfHost}, resolve);
     });
     yield* popupTest();
+    yield* csvParseTest();
     yield* dataImportTest();
     yield* dataExportTest();
   }()).then(() => { console.log("Salesforce Inspector unit test finished"); }, e => { console.error("error", e); });
