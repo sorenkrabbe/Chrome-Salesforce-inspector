@@ -20,11 +20,14 @@ function* csvParseTest() { // eslint-disable-line require-yield
   // Line breaks
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d', ',')); // LF
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\r\nc,d', ',')); // CRLF
+  assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\rc,d', ',')); // CR
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a","b"\n"c","d"', ',')); // LF with quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a","b"\r\n"c","d"', ',')); // CRLF with quotes
+  assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a","b"\r"c","d"', ',')); // CR with quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d\n', ',')); // LF with line break at end of file
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\r\nc,d\r\n', ',')); // CRLF with line break at end of file
-  assertEquals([['a\na', 'bb'], ['c\r\nc', 'dd']], csvParse('"a\na","bb"\n"c\r\nc","dd"', ',')); // line break in quoted value
+  assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\rc,d\r', ',')); // CR with line break at end of file
+  assertEquals([['a\na', 'b\rb'], ['c\r\nc', 'dd']], csvParse('"a\na","b\rb"\n"c\r\nc","dd"', ',')); // line break in quoted value
   // separators
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d', ',')); // comma separated
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a\tb\nc\td', '\t')); // tab separated
