@@ -4,6 +4,7 @@ Salesforce inspector
 ===========================
 Chrome and Firefox extension to add a metadata layout on top of the standard Salesforce UI to improve the productivity and joy of Salesforce configuration, development, and integration work.
 
+[![Test Status](https://travis-ci.org/sorenkrabbe/Chrome-Salesforce-inspector.svg?branch=master)](https://travis-ci.org/sorenkrabbe/Chrome-Salesforce-inspector)
 
 Installation
 ------------
