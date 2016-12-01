@@ -197,7 +197,7 @@ th[tabindex] {
   border: 1px solid #ddd;
   padding: 6px 10px;
   border-radius: 3px;
-  font-size: 1em;
+  font: unset;
 }
 .column-button-outer {
   position: relative;
@@ -217,7 +217,7 @@ th[tabindex] {
   display: block;
 }
 .body {
-  padding: 3.8em 8px 8px;
+  padding: 4.3em 8px 8px;
 }
 @keyframes spin {
   100% {
