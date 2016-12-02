@@ -74,13 +74,10 @@ th {
 .field-name {
   white-space: nowrap;
 }
-.field-value {
-  text-align: right;
-}
-.field-value, .field-column {
+.field-column {
   max-width: 200px; /* To handle long words. This is not actually 200px but scales with the table. Table layout magic. */
 }
-.field-value textarea {
+.field-column textarea {
   width: calc(100% - 20px);
   resize: vertical;
 }
@@ -100,9 +97,6 @@ th {
 .undo-button[hidden] {
   display: none;
 }
-.field-type {
-  text-align: right;
-}
 .field-actions {
   text-align: right;
   white-space: nowrap;
@@ -111,6 +105,9 @@ th[tabindex] {
   text-decoration: underline;
   cursor: pointer;
   color: darkblue;
+}
+.column-filter-box {
+  width: 100%;
 }
 #fieldDetailsView {
   position: fixed;
@@ -157,6 +154,7 @@ th[tabindex] {
 }
 .filter-box {
   white-space: nowrap;
+  margin-right: 1em;
 }
 .filter-input {
   width: 20em;
