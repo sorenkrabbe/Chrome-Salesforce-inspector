@@ -323,7 +323,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       let search = (term, col) => {
         let s = this.sortKey(col);
         return s != null && ("" + s).toLowerCase().includes(term);
-      }
+      };
       if (vm.filteredColumns) {
         return Array.from(vm.filteredColumns[this.rowType].entries()).every(([col, terms]) =>
           split(terms).every(term => search(term, col))
