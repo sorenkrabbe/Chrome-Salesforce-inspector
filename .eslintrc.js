@@ -38,6 +38,7 @@ module.exports = {
     "no-new-object": "error",
     "no-tabs": "error",
     "no-trailing-spaces": "error",
+    "no-underscore-dangle": ["error", {"allowAfterThis": true, "allowAfterSuper": true}],
     "no-whitespace-before-property": "error",
     "object-curly-spacing": "error",
     "object-property-newline": ["error", {"allowMultiplePropertiesPerLine": true}],

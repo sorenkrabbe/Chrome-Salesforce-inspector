@@ -15,8 +15,6 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
 /* eslint-ensable indent */
   session = message;
 
-  let fieldRowList;
-  let childRowList;
   let sobjectInfoPromise;
   let sobjectDescribePromise;
   let recordDataPromise;
@@ -51,8 +49,14 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     },
     errorMessages: [],
     rowsFilter: "",
-    fieldRows: [],
-    childRows: [],
+    useAdvancedFilter: false,
+    fieldRows: null,
+    childRows: null,
+    toggleAdvancedFilter(e) {
+      e.preventDefault();
+      vm.useAdvancedFilter = !vm.useAdvancedFilter;
+      vm.didUpdate();
+    },
     onRowsFilterInput(e) {
       vm.rowsFilter = e.target.value;
       vm.didUpdate();
@@ -69,11 +73,11 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       vm.didUpdate();
     },
     sortFieldsBy(col) {
-      fieldRowList.sortRows(col);
+      vm.fieldRows.sortRows(col);
       vm.didUpdate();
     },
     sortChildsBy(col) {
-      childRowList.sortRows(col);
+      vm.childRows.sortRows(col);
       vm.didUpdate();
     },
     detailsFilter: "",
@@ -96,18 +100,10 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       showAllFieldMetadata(objectDescribe.name, props, null);
       vm.didUpdate(cb);
     },
-    detailsFilterClick(e, row, detailsFilterType) {
+    detailsFilterClick(e, row, detailsFilterList) {
       e.preventDefault();
       vm.closeDetailsBox();
-      let col = row.key;
-      let value = row.value == null ? "" : "" + row.value;
-      vm.selectedColumns[detailsFilterType].add(col);
-      if (value) {
-        if (!vm.filteredColumns) {
-          vm.filteredColumns = {fields: new Map(), childs: new Map()};
-        }
-        vm.filteredColumns[detailsFilterType].set(col, value);
-      }
+      detailsFilterList.showColumn(row.key, row.value);
       vm.didUpdate();
     },
     tableMouseDown() {
@@ -130,7 +126,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       return vm.objectData && vm.objectData.updateable && vm.recordData && vm.recordData.Id;
     },
     doEdit() {
-      for (let fieldRow of vm.fieldRows) {
+      for (let fieldRow of vm.fieldRows.rows) {
         if (fieldRow.canEdit()) {
           fieldRow.dataEditValue = fieldRow.dataStringValue();
         }
@@ -142,7 +138,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       let i = vm.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
       vm.errorMessages.splice(i, 1);
       let record = {};
-      vm.fieldRows.forEach(fieldRow => fieldRow.saveDataValue(record));
+      vm.fieldRows.rows.forEach(fieldRow => fieldRow.saveDataValue(record));
       let recordUrl = vm.objectData.urls.rowTemplate.replace("{ID}", vm.recordData.Id);
       spinFor(
         "saving record",
@@ -158,7 +154,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     cancelEdit() {
       let i = vm.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
       vm.errorMessages.splice(i, 1);
-      for (let fieldRow of vm.fieldRows) {
+      for (let fieldRow of vm.fieldRows.rows) {
         fieldRow.dataEditValue = null;
       }
       vm.isEditing = false;
@@ -196,125 +192,108 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       args.set("object", vm.objectName());
       return "open-object-setup.html?" + args;
     },
-    availableFieldColumns: null,
-    availableChildColumns: null,
-    selectedColumns: {
-      fields: new Set(["name", "label", "type"]),
-      childs: new Set(["name", "object", "field", "label"])
-    },
-    filteredColumns: null,
-    onAvailableFieldColumnsClick(e) {
-      e.preventDefault();
-      if (vm.availableFieldColumns) {
-        vm.availableFieldColumns = null;
-        vm.didUpdate();
-        return;
-      }
-      let cols = new Set();
-      for (let fieldRow of vm.fieldRows) {
-        for (let prop in fieldRow.fieldProperties()) {
-          cols.add(prop);
-        }
-      }
-      vm.availableFieldColumns = Array.from(cols);
-      vm.didUpdate();
-    },
-    onAvailableChildColumnsClick(e) {
-      e.preventDefault();
-      if (vm.availableChildColumns) {
-        vm.availableChildColumns = null;
-        vm.didUpdate();
-        return;
-      }
-      let cols = new Set();
-      for (let childRow of vm.childRows) {
-        for (let prop in childRow.childProperties()) {
-          cols.add(prop);
-        }
-      }
-      vm.availableChildColumns = Array.from(cols);
-      vm.didUpdate();
-    },
-    onShowFieldColumnChange(e, col) {
-      if (col == "desc" && vm.fetchFieldDescriptions) {
-        vm.fetchFieldDescriptions = false;
-        vm.fieldRows.forEach(fieldRow => fieldRow.showFieldDescription());
-      }
-      if (e.target.checked) {
-        vm.selectedColumns.fields.add(col);
-      } else {
-        vm.selectedColumns.fields.delete(col);
-        if (vm.filteredColumns) {
-          vm.filteredColumns.fields.delete(col);
-        }
-      }
-      vm.didUpdate();
-    },
-    onShowChildColumnChange(e, col) {
-      if (e.target.checked) {
-        vm.selectedColumns.childs.add(col);
-      } else {
-        vm.selectedColumns.childs.delete(col);
-        if (vm.filteredColumns) {
-          vm.filteredColumns.childs.delete(col);
-        }
-      }
-      vm.didUpdate();
-    },
-    toggleAdvancedFilter(e) {
-      e.preventDefault();
-      if (vm.filteredColumns) {
-        vm.filteredColumns = null;
-      } else {
-        vm.filteredColumns = {fields: new Map(), childs: new Map()};
-      }
-      vm.didUpdate();
-    },
-    onColumnFilterInput(e, type, col) {
-      let val = e.target.value;
-      if (val) {
-        vm.filteredColumns[type].set(col, val);
-      } else {
-        vm.filteredColumns[type].delete(col);
-      }
-      vm.didUpdate();
-    },
   };
 
-  function RowList(rows, constructor) {
-    let map = new Map();
-    let sortCol = "name";
-    let sortDir = 1;
-    let reactKey = 0;
-    let list = {
-      getRow(name) {
-        if (!name) { // related lists may not have a name
-          let row = new constructor(name, reactKey++);
-          rows.push(row);
-          return row;
-        }
-        let row = map.get(name);
-        if (!row) {
-          row = new constructor(name, reactKey++);
-          rows.push(row);
-          map.set(name, row);
-        }
+  class RowList {
+    constructor(rowConstructor) {
+      this._rowConstructor = rowConstructor;
+      this._map = new Map();
+      this._sortCol = "name";
+      this._sortDir = 1;
+      this._nextReactKey = 0;
+      this.rows = [];
+      this.filteredColumns = new Map();
+      this.availableColumns = null;
+    }
+    getRow(name) {
+      if (!name) { // related lists may not have a name
+        let row = new this._rowConstructor(name, this._nextReactKey++, this);
+        this.rows.push(row);
         return row;
-      },
-      sortRows(col) {
-        sortDir = col == sortCol ? -sortDir : 1;
-        sortCol = col;
-        list.resortRows();
-      },
-      resortRows() {
-        let s = v =>
-          v === undefined ? "\uFFFD"
-          : v == null ? ""
-          : String(v).trim();
-        rows.sort((a, b) => sortDir * s(a.sortKey(sortCol)).localeCompare(s(b.sortKey(sortCol))));
       }
-    };
-    return list;
+      let row = this._map.get(name);
+      if (!row) {
+        row = new this._rowConstructor(name, this._nextReactKey++, this);
+        this.rows.push(row);
+        this._map.set(name, row);
+      }
+      return row;
+    }
+    sortRows(col) {
+      this._sortDir = col == this._sortCol ? -this._sortDir : 1;
+      this._sortCol = col;
+      this.resortRows();
+    }
+    resortRows() {
+      let s = v =>
+        v === undefined ? "\uFFFD"
+        : v == null ? ""
+        : String(v).trim();
+      this.rows.sort((a, b) => this._sortDir * s(a.sortKey(this._sortCol)).localeCompare(s(b.sortKey(this._sortCol))));
+    }
+    onColumnFilterInput(e, col) {
+      let val = e.target.value;
+      if (val) {
+        this.filteredColumns.set(col, val);
+      } else {
+        this.filteredColumns.delete(col);
+      }
+      vm.didUpdate();
+    }
+    onShowColumnChange(e, col) {
+      if (e.target.checked) {
+        this.selectedColumns.add(col);
+      } else {
+        this.selectedColumns.delete(col);
+        this.filteredColumns.delete(col);
+      }
+      vm.didUpdate();
+    }
+    onAvailableColumnsClick(e) {
+      e.preventDefault();
+      if (this.availableColumns) {
+        this.availableColumns = null;
+        vm.didUpdate();
+        return;
+      }
+      let cols = new Set();
+      for (let row of this.rows) {
+        for (let prop in row.rowProperties()) {
+          cols.add(prop);
+        }
+      }
+      this.availableColumns = Array.from(cols);
+      vm.didUpdate();
+    }
+    showColumn(col, filterValue) {
+      let value = filterValue == null ? "" : "" + filterValue;
+      this.selectedColumns.add(col);
+      if (value) {
+        vm.useAdvancedFilter = true;
+        this.filteredColumns.set(col, value);
+      }
+    }
+  }
+
+  class FieldRowList extends RowList {
+    constructor() {
+      super(FieldRow);
+      this.selectedColumns = new Set(["name", "label", "type"]);
+    }
+    onShowColumnChange(e, col) {
+      if (col == "desc" && vm.fetchFieldDescriptions) {
+        vm.fetchFieldDescriptions = false;
+        this.rows.forEach(fieldRow => fieldRow.showFieldDescription());
+      }
+      super.onShowColumnChange(e, col);
+    }
+  }
+
+  class ChildRowList extends RowList {
+    constructor() {
+      super(ChildRow);
+      this.selectedColumns = new Set(["name", "object", "field", "label"]);
+    }
   }
 
   class TableRow {
@@ -324,22 +303,22 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         let s = this.sortKey(col);
         return s != null && ("" + s).toLowerCase().includes(term);
       };
-      if (vm.filteredColumns) {
-        return Array.from(vm.filteredColumns[this.rowType].entries()).every(([col, terms]) =>
+      if (vm.useAdvancedFilter) {
+        return Array.from(this.rowList.filteredColumns.entries()).every(([col, terms]) =>
           split(terms).every(term => search(term, col))
         );
       } else {
         return split(vm.rowsFilter).every(term =>
-          !term || Array.from(vm.selectedColumns[this.rowType]).some(col => search(term, col))
+          !term || Array.from(this.rowList.selectedColumns).some(col => search(term, col))
         );
       }
     }
   }
 
   class FieldRow extends TableRow {
-    constructor(fieldName, reactKey) {
+    constructor(fieldName, reactKey, rowList) {
       super();
-      this.rowType = "fields";
+      this.rowList = rowList;
       this.fieldName = fieldName;
       this.reactKey = reactKey;
       this.fieldDescribe = undefined;
@@ -350,7 +329,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       this.entityParticle = undefined;
       this.fieldParticleMetadata = undefined;
     }
-    fieldProperties() {
+    rowProperties() {
       let props = {};
       if (typeof this.dataTypedValue != "undefined") {
         addProperties(props, {dataValue: this.dataTypedValue}, "", {});
@@ -527,7 +506,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     }
     openDetails(e, cb) {
       e.preventDefault();
-      showAllFieldMetadata(this.fieldName, this.fieldProperties(), this.rowType);
+      showAllFieldMetadata(this.fieldName, this.rowProperties(), this.rowList);
       vm.didUpdate(cb);
     }
     showRecordIdUrl() {
@@ -550,7 +529,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         case "desc": return this.fieldDesc();
         case "value": return this.dataTypedValue;
         case "type": return this.fieldTypeDesc();
-        default: return this.fieldProperties()[col];
+        default: return this.rowProperties()[col];
       }
     }
     showFieldDescription() {
@@ -570,15 +549,15 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
   }
 
   class ChildRow extends TableRow {
-    constructor(childName, reactKey) {
+    constructor(childName, reactKey, rowList) {
       super();
-      this.rowType = "childs";
+      this.rowList = rowList;
       this.childName = childName;
       this.reactKey = reactKey;
       this.childDescribe = undefined;
       this.relatedListInfo = undefined;
     }
-    childProperties() {
+    rowProperties() {
       let props = {};
       if (this.childDescribe) {
         addProperties(props, this.childDescribe, "child.", {});
@@ -620,12 +599,12 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         case "object": return this.childObject();
         case "field": return this.childField();
         case "label": return this.childLabel();
-        default: return this.childProperties()[col];
+        default: return this.rowProperties()[col];
       }
     }
     openDetails(e, cb) {
       e.preventDefault();
-      showAllFieldMetadata(this.childName, this.childProperties(), this.rowType);
+      showAllFieldMetadata(this.childName, this.rowProperties(), this.rowList);
       vm.didUpdate(cb);
     }
     showChildObjectUrl() {
@@ -673,8 +652,8 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     }
   }
 
-  fieldRowList = new RowList(vm.fieldRows, FieldRow);
-  childRowList = new RowList(vm.childRows, ChildRow);
+  vm.fieldRows = new FieldRowList();
+  vm.childRows = new ChildRowList();
 
   function dataExportUrl(query) {
     let args = new URLSearchParams();
@@ -695,7 +674,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
       }
     }
   }
-  function showAllFieldMetadata(name, allFieldMetadata, detailsFilterType) {
+  function showAllFieldMetadata(name, allFieldMetadata, detailsFilterList) {
     let fieldDetailVms = [];
     for (let key in allFieldMetadata) {
       let value = allFieldMetadata[key];
@@ -709,7 +688,7 @@ chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
         }
       });
     }
-    vm.detailsBox = {rows: fieldDetailVms, name, detailsFilterType};
+    vm.detailsBox = {rows: fieldDetailVms, name, detailsFilterList};
   }
 
   class App extends React.Component {
@@ -745,18 +724,18 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
       ),
       " Salesforce Home"
     ),
-    vm.filteredColumns ? null : React.createElement("span", {className: "filter-box"},
+    vm.useAdvancedFilter ? null : React.createElement("span", {className: "filter-box"},
       React.createElement("input", {className: "filter-input", placeholder: "Filter", value: vm.rowsFilter, onInput: vm.onRowsFilterInput, ref: "rowsFilter"}),
       React.createElement("a", {href: "about:blank", className: "char-btn", onClick: e => vm.clearAndFocusFilter(e, this.refs.rowsFilter)}, "X")
     ),
-    React.createElement("a", {href: "about:blank", onClick: vm.toggleAdvancedFilter}, vm.filteredColumns ? "Simple filter" : "Advanced filter"),
+    React.createElement("a", {href: "about:blank", onClick: vm.toggleAdvancedFilter}, vm.useAdvancedFilter ? "Simple filter" : "Advanced filter"),
     React.createElement("h1", {className: "object-name"},
       React.createElement("span", {className: "quick-select"}, vm.objectName()),
       " ",
       vm.recordHeading()
     ),
     React.createElement("span", {className: "object-actions"},
-      !vm.isEditing ? React.createElement("button", {title: "Inline edit the values of this record", disabled: !vm.canEdit() || !vm.selectedColumns.fields.has("value"), onClick: vm.doEdit}, "Edit") : null,
+      !vm.isEditing ? React.createElement("button", {title: "Inline edit the values of this record", disabled: !vm.canEdit() || !vm.fieldRows.selectedColumns.has("value"), onClick: vm.doEdit}, "Edit") : null,
       " ",
       vm.isEditing ? React.createElement("button", {title: "Inline edit the values of this record", onClick: vm.doSave}, "Save") : null,
       " ",
@@ -771,49 +750,49 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
       vm.objectName() ? React.createElement("a", {href: vm.openSetup()}, "Setup") : null,
       " ",
       React.createElement("span", {className: "column-button-outer"},
-        React.createElement("a", {href: "about:blank", onClick: vm.onAvailableFieldColumnsClick},
+        React.createElement("a", {href: "about:blank", onClick: e => vm.fieldRows.onAvailableColumnsClick(e)},
           "Field columns"
         ),
-        vm.availableFieldColumns ? React.createElement("div", {className: "column-popup"},
+        vm.fieldRows.availableColumns ? React.createElement("div", {className: "column-popup"},
           React.createElement("label", {},
             React.createElement("input", {type: "checkbox", checked: true, disabled: true}),
             " Field API Name"
           ),
           React.createElement("label", {},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.fields.has("label"), onChange: e => vm.onShowFieldColumnChange(e, "label")}),
+            React.createElement("input", {type: "checkbox", checked: vm.fieldRows.selectedColumns.has("label"), onChange: e => vm.fieldRows.onShowColumnChange(e, "label")}),
             " Label"
           ),
           React.createElement("label", {},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.fields.has("type"), onChange: e => vm.onShowFieldColumnChange(e, "type")}),
+            React.createElement("input", {type: "checkbox", checked: vm.fieldRows.selectedColumns.has("type"), onChange: e => vm.fieldRows.onShowColumnChange(e, "type")}),
             " Type"
           ),
           React.createElement("label", {},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.fields.has("value"), onChange: e => vm.onShowFieldColumnChange(e, "value"), disabled: !vm.canView()}),
+            React.createElement("input", {type: "checkbox", checked: vm.fieldRows.selectedColumns.has("value"), onChange: e => vm.fieldRows.onShowColumnChange(e, "value"), disabled: !vm.canView()}),
             " Value"
           ),
           React.createElement("label", {},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.fields.has("helptext"), onChange: e => vm.onShowFieldColumnChange(e, "helptext")}),
+            React.createElement("input", {type: "checkbox", checked: vm.fieldRows.selectedColumns.has("helptext"), onChange: e => vm.fieldRows.onShowColumnChange(e, "helptext")}),
             " Help text"
           ),
           React.createElement("label", {},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.fields.has("desc"), onChange: e => vm.onShowFieldColumnChange(e, "desc"), disabled: !vm.hasEntityParticles}),
+            React.createElement("input", {type: "checkbox", checked: vm.fieldRows.selectedColumns.has("desc"), onChange: e => vm.fieldRows.onShowColumnChange(e, "desc"), disabled: !vm.hasEntityParticles}),
             " Description"
           ),
           React.createElement("hr", {}),
-          vm.availableFieldColumns.map(col => React.createElement("label", {key: col},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.fields.has(col), onChange: e => vm.onShowFieldColumnChange(e, col)}),
+          vm.fieldRows.availableColumns.map(col => React.createElement("label", {key: col},
+            React.createElement("input", {type: "checkbox", checked: vm.fieldRows.selectedColumns.has(col), onChange: e => vm.fieldRows.onShowColumnChange(e, col)}),
             col
           ))
         ) : null
       ),
       " ",
       React.createElement("span", {className: "column-button-outer"},
-        React.createElement("a", {href: "about:blank", onClick: vm.onAvailableChildColumnsClick},
+        React.createElement("a", {href: "about:blank", onClick: e => vm.childRows.onAvailableColumnsClick(e)},
           "Relationship columns"
         ),
-        vm.availableChildColumns ? React.createElement("div", {className: "column-popup"},
+        vm.childRows.availableColumns ? React.createElement("div", {className: "column-popup"},
           ["name", "object", "field", "label"].map(col => React.createElement("label", {key: col},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.childs.has(col), onChange: e => vm.onShowChildColumnChange(e, col)}),
+            React.createElement("input", {type: "checkbox", checked: vm.childRows.selectedColumns.has(col), onChange: e => vm.childRows.onShowColumnChange(e, col)}),
             col == "name" ? "Relationship Name"
               : col == "object" ? "Child Object"
               : col == "field" ? "Field"
@@ -821,20 +800,20 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
               : col
           )),
           React.createElement("hr", {}),
-          vm.availableChildColumns.map(col => React.createElement("label", {key: col},
-            React.createElement("input", {type: "checkbox", checked: vm.selectedColumns.childs.has(col), onChange: e => vm.onShowChildColumnChange(e, col)}),
+          vm.childRows.availableColumns.map(col => React.createElement("label", {key: col},
+            React.createElement("input", {type: "checkbox", checked: vm.childRows.selectedColumns.has(col), onChange: e => vm.childRows.onShowColumnChange(e, col)}),
             col
           ))
         ) : null
       )
     )
   ),
-  React.createElement("div", {className: "body " + (vm.selectedColumns.fields.size < 2 && vm.selectedColumns.childs.size < 2 ? "empty " : "")},
+  React.createElement("div", {className: "body " + (vm.fieldRows.selectedColumns.size < 2 && vm.childRows.selectedColumns.size < 2 ? "empty " : "")},
     React.createElement("div", {hidden: vm.errorMessages.length == 0, className: "error-message"}, vm.errorMessages.map((data, index) => React.createElement("div", {key: index}, data))),
     React.createElement("table", {},
       React.createElement("thead", {},
         React.createElement("tr", {},
-          Array.from(vm.selectedColumns.fields).map(col =>
+          Array.from(vm.fieldRows.selectedColumns).map(col =>
             React.createElement("th",
               {
                 className:
@@ -856,8 +835,8 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
           ),
           React.createElement("th", {className: "field-actions"}, "Actions")
         ),
-        vm.filteredColumns ? React.createElement("tr", {},
-          Array.from(vm.selectedColumns.fields).map(col =>
+        vm.useAdvancedFilter ? React.createElement("tr", {},
+          Array.from(vm.fieldRows.selectedColumns).map(col =>
             React.createElement("th",
               {
                 className:
@@ -866,15 +845,15 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
                   : "field-column",
                 key: col
               },
-              React.createElement("input", {placeholder: "Filter", className: "column-filter-box", value: vm.filteredColumns.fields.get(col) || "", onInput: e => vm.onColumnFilterInput(e, "fields", col)})
+              React.createElement("input", {placeholder: "Filter", className: "column-filter-box", value: vm.fieldRows.filteredColumns.get(col) || "", onInput: e => vm.fieldRows.onColumnFilterInput(e, col)})
             )
           ),
           React.createElement("th", {className: "field-actions"})
         ) : null
       ),
-      React.createElement("tbody", {}, vm.fieldRows.map(row =>
+      React.createElement("tbody", {}, vm.fieldRows.rows.map(row =>
         React.createElement("tr", {className: (row.fieldIsCalculated() ? "fieldCalculated " : "") + (row.fieldIsHidden() ? "fieldHidden " : ""), hidden: !row.visible(), title: row.summary(), key: row.reactKey},
-          Array.from(vm.selectedColumns.fields).map(col =>
+          Array.from(vm.fieldRows.selectedColumns).map(col =>
             React.createElement("td",
               {
                 className:
@@ -905,7 +884,7 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
     React.createElement("table", {},
       React.createElement("thead", {},
         React.createElement("tr", {},
-          Array.from(vm.selectedColumns.childs).map(col =>
+          Array.from(vm.childRows.selectedColumns).map(col =>
             React.createElement("th", {className: "child-column", tabIndex: 0, onClick: () => vm.sortChildsBy(col), key: col},
               col == "name" ? "Relationship Name"
               : col == "object" ? "Child Object"
@@ -916,18 +895,18 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
           ),
           React.createElement("th", {className: "child-actions"}, "Actions")
         ),
-        vm.filteredColumns ? React.createElement("tr", {},
-          Array.from(vm.selectedColumns.childs).map(col =>
+        vm.useAdvancedFilter ? React.createElement("tr", {},
+          Array.from(vm.childRows.selectedColumns).map(col =>
             React.createElement("th", {className: "child-column", key: col},
-              React.createElement("input", {placeholder: "Filter", className: "column-filter-box", value: vm.filteredColumns.childs.get(col) || "", onInput: e => vm.onColumnFilterInput(e, "childs", col)})
+              React.createElement("input", {placeholder: "Filter", className: "column-filter-box", value: vm.childRows.filteredColumns.get(col) || "", onInput: e => vm.childRows.onColumnFilterInput(e, col)})
             )
           ),
           React.createElement("th", {className: "child-actions"})
         ) : null
       ),
-      React.createElement("tbody", {}, vm.childRows.map(row =>
+      React.createElement("tbody", {}, vm.childRows.rows.map(row =>
         React.createElement("tr", {hidden: !row.visible(), key: row.reactKey},
-          Array.from(vm.selectedColumns.childs).map(col =>
+          Array.from(vm.childRows.selectedColumns).map(col =>
             React.createElement("td", {className: "child-column quick-select", key: col},
               col == "object"
                 ? React.createElement("a", {href: row.showChildObjectUrl()}, row.childObject())
@@ -957,7 +936,7 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
             React.createElement("tbody", {}, vm.detailsBox.rows.map(row =>
               React.createElement("tr", {hidden: !row.visible(), key: row.key},
                 React.createElement("td", {},
-                  React.createElement("a", {href: "about:blank", onClick: e => vm.detailsFilterClick(e, row, vm.detailsBox.detailsFilterType), hidden: !vm.detailsBox.detailsFilterType, title: "Show fields with this property"}, "🔍"),
+                  React.createElement("a", {href: "about:blank", onClick: e => vm.detailsFilterClick(e, row, vm.detailsBox.detailsFilterList), hidden: !vm.detailsBox.detailsFilterList, title: "Show fields with this property"}, "🔍"),
                   " ",
                   React.createElement("span", {className: "quick-select"}, row.key)
                 ),
@@ -996,12 +975,12 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
     spinFor("retrieving record", recordDataPromise, res => {
       for (let name in res) {
         if (name != "attributes") {
-          fieldRowList.getRow(name).dataTypedValue = res[name];
+          vm.fieldRows.getRow(name).dataTypedValue = res[name];
         }
       }
-      fieldRowList.resortRows();
+      vm.fieldRows.resortRows();
       vm.recordData = res;
-      vm.selectedColumns.fields.add("value");
+      vm.fieldRows.selectedColumns.add("value");
       spinFor(
         "describing layout",
         sobjectDescribePromise.then(sobjectDescribe => {
@@ -1018,7 +997,7 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
                   row.layoutItems.forEach((item, itemIndex) => {
                     item.layoutComponents.forEach((component, componentIndex) => {
                       if (component.type == "Field") {
-                        fieldRowList.getRow(component.value)[layoutType.property] = {
+                        vm.fieldRows.getRow(component.value)[layoutType.property] = {
                           indexes: {
                             shownOnLayout: true,
                             sectionIndex,
@@ -1037,15 +1016,15 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
                 });
               });
             }
-            fieldRowList.resortRows();
+            vm.fieldRows.resortRows();
             layoutDescribe.relatedLists.forEach((child, childIndex) => {
-              childRowList.getRow(child.name).relatedListInfo = {
+              vm.childRows.getRow(child.name).relatedListInfo = {
                 shownOnLayout: true,
                 relatedListIndex: childIndex,
                 relatedList: child
               };
             });
-            childRowList.resortRows();
+            vm.childRows.resortRows();
             vm.layoutInfo = layoutDescribe;
           }
           vm.didUpdate();
@@ -1055,13 +1034,13 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
     });
   }
   function clearRecordData() {
-    for (let fieldRow of vm.fieldRows) {
+    for (let fieldRow of vm.fieldRows.rows) {
       fieldRow.dataTypedValue = undefined;
       fieldRow.dataEditValue = null;
       fieldRow.detailLayoutInfo = undefined;
       fieldRow.editLayoutInfo = undefined;
     }
-    for (let childRow of vm.childRows) {
+    for (let childRow of vm.childRows.rows) {
       childRow.relatedListInfo = undefined;
     }
     vm.isEditing = false;
@@ -1141,13 +1120,13 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
       // Display the retrieved object data
       vm.objectData = sobjectDescribe;
       for (let fieldDescribe of sobjectDescribe.fields) {
-        fieldRowList.getRow(fieldDescribe.name).fieldDescribe = fieldDescribe;
+        vm.fieldRows.getRow(fieldDescribe.name).fieldDescribe = fieldDescribe;
       }
-      fieldRowList.resortRows();
+      vm.fieldRows.resortRows();
       for (let childDescribe of sobjectDescribe.childRelationships) {
-        childRowList.getRow(childDescribe.relationshipName).childDescribe = childDescribe;
+        vm.childRows.getRow(childDescribe.relationshipName).childDescribe = childDescribe;
       }
-      childRowList.resortRows();
+      vm.childRows.resortRows();
       vm.didUpdate();
     });
 
@@ -1166,10 +1145,10 @@ React.createElement("div", {onClick: vm.tableClick, onMouseMove: vm.tableMouseMo
       askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + vm.sobjectName + "'")),
       res => {
         for (let entityParticle of res.records) {
-          fieldRowList.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
+          vm.fieldRows.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
         }
         vm.hasEntityParticles = true;
-        fieldRowList.resortRows();
+        vm.fieldRows.resortRows();
         vm.didUpdate();
       }
     );
