@@ -9,7 +9,7 @@
 class Model {
   constructor() {
     this.reactCallback = null;
-    this.sfLink = "https =//" + sfHost;
+    this.sfLink = "https://" + sfHost;
     this.spinnerCount = 0;
     this.sobjectDescribePromise = null;
     this.objectData = null;
@@ -145,6 +145,12 @@ class Model {
     }
     if (this.objectData && this.objectData.keyPrefix) {
       return "https://" + sfHost + "/" + this.objectData.keyPrefix + "/o";
+    }
+    return undefined;
+  }
+  editLayoutLink() {
+    if (this.layoutInfo && this.layoutInfo.id) {
+      return "https://" + sfHost + "//layouteditor/layoutEditor.apexp?type=" + this.sobjectName + "&lid=" + this.layoutInfo.id;
     }
     return undefined;
   }
@@ -904,6 +910,8 @@ class App extends React.Component {
             vm.exportLink() ? h("a", {href: vm.exportLink(), title: "Export data from this object"}, "Export") : null,
             " ",
             vm.viewLink() ? h("a", {href: vm.viewLink(), title: "View this record in Salesforce"}, "View") : null,
+            " ",
+            vm.editLayoutLink() ? h("a", {href: vm.editLayoutLink(), title: "Open the page layout editor"}, "Edit layout") : null,
             " ",
             vm.objectName() ? h("a", {href: "about:blank", onClick: this.onShowObjectMetadata}, "More") : null,
             " ",
