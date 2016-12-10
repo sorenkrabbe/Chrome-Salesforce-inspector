@@ -10,12 +10,18 @@
 // auraLoadingBox = Lightning / Salesforce1
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
+  console.log("Salesforce Inspector: Loading button");
   chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, message => {
     sfHost = message;
+    console.log("Salesforce Inspector: sfHost=" + sfHost);
     if (sfHost) {
       initButton(false);
+    } else {
+      console.log("Salesforce Inspector: No session found for host " + location.href);
     }
   });
+} else {
+  console.log("Salesforce Inspector: Button not loading");
 }
 
 function initButton(inInspector) {
