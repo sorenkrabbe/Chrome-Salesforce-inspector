@@ -10,7 +10,7 @@
 // auraLoadingBox = Lightning / Salesforce1
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
-  console.log("Salesforce Inspector: Loading button");
+  console.log("Salesforce Inspector: Loading button for " + location.href);
   chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, message => {
     sfHost = message;
     console.log("Salesforce Inspector: sfHost=" + sfHost);
@@ -21,7 +21,7 @@ if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) 
     }
   });
 } else {
-  console.log("Salesforce Inspector: Button not loading");
+  console.log("Salesforce Inspector: Button not loading for " + location.href);
 }
 
 function initButton(inInspector) {
