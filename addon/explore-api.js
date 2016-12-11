@@ -231,7 +231,8 @@ function apiExploreVm(args, popupWin) {
         ["Organization name", userInfo.querySelector("Body organizationName").textContent],
         ["Extract time", new Date().toISOString()]
       ], "\t") + "\r\n\r\n";
-      textViews.push({name: "Rows: " + tView.name, value: csvSignature + csvSerialize(table, "\t"), table: table});
+      textViews.push({name: "Rows: " + tView.name + " (for copying to Excel)", value: csvSignature + csvSerialize(table, "\t")});
+      textViews.push({name: "Rows: " + tView.name + " (for viewing)", table: table});
     }
     vm.textViews(textViews);
     // Don't update selectedTextView. No radio button will be selected, leaving the text area blank.
