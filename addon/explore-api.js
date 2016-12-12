@@ -312,7 +312,7 @@ class ApiExploreVm {
       });
     }).catch(err => {
       console.error(err);
-      this.apiResponse({textViews: [{name: "Error", value: (err && err.responseXML &&  new XMLSerializer().serializeToString(err.responseXML)) || err}]});
+      this.apiResponse({textViews: [{name: "Error", value: (err && err.responseXML && new XMLSerializer().serializeToString(err.responseXML)) || err}]});
     }));
   }
 }

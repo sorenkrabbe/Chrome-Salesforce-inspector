@@ -313,8 +313,8 @@ function init(params) {
             React.createElement("div", {title: "API name", className: "data-element"}, this.state.selectedValue.sobject.name),
             React.createElement("div", {title: "Label", className: "data-element"}, this.state.selectedValue.sobject.label),
             React.createElement("div", {title: "ID key prefix", className: "data-element"}, this.state.selectedValue.sobject.keyPrefix),
-            this.state.selectedValue.recordId && this.state.selectedValue.recordId.startsWith("0Af") ?
-              React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Check Deploy Status") : null,
+            this.state.selectedValue.recordId && this.state.selectedValue.recordId.startsWith("0Af")
+              ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Check Deploy Status") : null,
             React.createElement("a", {ref: "showAllDataBtn", href: this.getAllDataUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Show ", React.createElement("u", {}, "a"), "ll data")
           ) : null
         )
