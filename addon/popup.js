@@ -57,11 +57,22 @@ function init(params) {
         });
       })
         .then(() => Promise.all([
-          askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/"),
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent("select QualifiedApiName, Label, KeyPrefix from EntityDefinition"))
+          askSalesforce("/services/data/v" + apiVersion + "/sobjects/").catch(err => {
+            console.error("list sobjects", err);
+            return {sobjects: []};
+          }),
+          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").catch(err => {
+            console.error("list tooling sobjects", err);
+            return {sobjects: []};
+          }),
+          askSalesforce("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent("select QualifiedApiName, Label, KeyPrefix from EntityDefinition")).catch(err => {
+            console.error("list entity definitions", err);
+            // TODO better handle EXCEEDED_ID_LIMIT: EntityDefinition does not support queryMore(), use LIMIT to restrict the results to a single batch
+            return {records: []};
+          })
         ]))
         .then(([dataDescribe, toolingDescribe, entityParticles]) => {
+          // TODO progressively display data as each of the three responses becomes available
           let dataObjects = dataDescribe.sobjects;
           let toolingObjects = toolingDescribe.sobjects;
           let knownObjects = new Set([
@@ -508,9 +519,11 @@ function init(params) {
     componentDidUpdate(prevProps, prevState) {
       if (this.state.itemHeight == 1) {
         let anItem = this.refs.scrollBox.querySelector(".autocomplete-item");
-        let itemHeight = anItem.offsetHeight;
-        if (itemHeight > 0) {
-          this.setState({itemHeight});
+        if (anItem) {
+          let itemHeight = anItem.offsetHeight;
+          if (itemHeight > 0) {
+            this.setState({itemHeight});
+          }
         }
         return;
       }
