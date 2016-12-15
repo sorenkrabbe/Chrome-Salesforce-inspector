@@ -30,7 +30,7 @@ function init(params) {
     constructor(props) {
       super(props);
       this.state = {
-        sobjectsLists: null,
+        sobjectsList: null,
         sobjectsLoading: true,
         detailsShown: false,
         detailsLoading: false,
@@ -57,47 +57,64 @@ function init(params) {
         });
       })
         .then(() => Promise.all([
+          // Get objects the user can access from the regular API
           askSalesforce("/services/data/v" + apiVersion + "/sobjects/").catch(err => {
             console.error("list sobjects", err);
             return {sobjects: []};
           }),
+          // Get objects the user can access from the tooling API
           askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").catch(err => {
             console.error("list tooling sobjects", err);
             return {sobjects: []};
           }),
+          // Get all objects, even the ones the user cannot access from any API
+          // These records are less interesting than the ones the user has access to, but still interesting since we can get information about them using the tooling API
           askSalesforce("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent("select QualifiedApiName, Label, KeyPrefix from EntityDefinition")).catch(err => {
             console.error("list entity definitions", err);
             // TODO better handle EXCEEDED_ID_LIMIT: EntityDefinition does not support queryMore(), use LIMIT to restrict the results to a single batch
             return {records: []};
           })
         ]))
-        .then(([dataDescribe, toolingDescribe, entityParticles]) => {
+        .then(([dataDescribe, toolingDescribe, entityDefinitions]) => {
           // TODO progressively display data as each of the three responses becomes available
-          let dataObjects = dataDescribe.sobjects;
-          let toolingObjects = toolingDescribe.sobjects;
-          let knownObjects = new Set([
-            ...dataObjects.map(obj => obj.name),
-            ...toolingObjects.map(obj => obj.name)
-          ]);
-          // unknownObjects are sobjects the user does not have read access to.
-          // We don't know if they belong to the tooling API or not, so we don't know the URL we need to retrieve or describe them,
-          // but we would not be allowed to retrieve or describe them anyway, since we don't have read access to them.
-          // We can however use the Tooling API on them, so they are still relevant to show.
-          let unknownObjects = entityParticles.records
-            .filter(r => !knownObjects.has(r.QualifiedApiName))
-            .map(r => ({
-              name: r.QualifiedApiName || "",
-              label: r.Label || "",
-              keyPrefix: r.KeyPrefix
-            }));
-          let sobjectsLists = [
-            {toolingApi: false, sobjects: dataObjects},
-            {toolingApi: true, sobjects: toolingObjects},
-            {toolingApi: null, sobjects: unknownObjects}
-          ];
+          let entityMap = new Map();
+          function addEntity({name, label, keyPrefix}) {
+            let entity = entityMap.get(name);
+            if (entity) {
+              if (!entity.label) {
+                entity.label = label || "";
+              }
+              if (!entity.keyPrefix) {
+                entity.keyPrefix = keyPrefix;
+              }
+            } else {
+              entity = {
+                regularApi: false,
+                toolingApi: false,
+                name: name,
+                label: label || "",
+                keyPrefix: keyPrefix
+              };
+              entityMap.set(name, entity);
+            }
+            return entity;
+          }
+          for (let sobject of dataDescribe.sobjects) {
+            addEntity(sobject).regularApi = true;
+          }
+          for (let sobject of toolingDescribe.sobjects) {
+            addEntity(sobject).toolingApi = true;
+          }
+          for (let entityDefinition of entityDefinitions.records) {
+            addEntity({
+              name: entityDefinition.QualifiedApiName,
+              label: entityDefinition.Label,
+              keyPrefix: entityDefinition.KeyPrefix
+            });
+          }
           this.setState({
             sobjectsLoading: false,
-            sobjectsLists
+            sobjectsList: Array.from(entityMap.values())
           });
           this.refs.showAllDataBox.updateSelection(this.state.contextRecordId);
         })
@@ -194,7 +211,7 @@ function init(params) {
               },
               "Show field ", React.createElement("u", {}, "m"), "etadata"
             ),
-            React.createElement(AllDataBox, {ref: "showAllDataBox", isDevConsole: this.props.isDevConsole, sobjectsLoading: this.state.sobjectsLoading, sobjectsLists: this.state.sobjectsLists, contextRecordId: this.state.contextRecordId}),
+            React.createElement(AllDataBox, {ref: "showAllDataBox", isDevConsole: this.props.isDevConsole, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
             React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
             React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
             React.createElement("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Org ", React.createElement("u", {}, "L"), "imits"),
@@ -229,15 +246,8 @@ function init(params) {
       let queryKeyPrefix = query.substring(0, 3);
       let recordId = null;
       let sobject = null;
-      let toolingApi = null;
-      if (this.props.sobjectsLists) {
-        for (let api of this.props.sobjectsLists) {
-          sobject = api.sobjects.find(sobject => sobject.keyPrefix == queryKeyPrefix || sobject.name.toLowerCase() == query.toLowerCase());
-          if (sobject) {
-            toolingApi = api.toolingApi;
-            break;
-          }
-        }
+      if (this.props.sobjectsList) {
+        sobject = this.props.sobjectsList.find(sobject => sobject.keyPrefix == queryKeyPrefix || sobject.name.toLowerCase() == query.toLowerCase());
       }
       if (!sobject) {
         return null;
@@ -245,41 +255,35 @@ function init(params) {
       if (sobject.keyPrefix == queryKeyPrefix && query.length >= 15) {
         recordId = query;
       }
-      return {recordId, sobject, toolingApi};
+      return {recordId, sobject};
     }
     getMatches(query) {
-      if (!this.props.sobjectsLists) {
+      if (!this.props.sobjectsList) {
         return [];
       }
       let queryKeyPrefix = query.substring(0, 3);
-      let res = [];
-      for (let api of this.props.sobjectsLists) {
-        res = res.concat(
-          api.sobjects
-            .filter(sobject => sobject.name.toLowerCase().includes(query.toLowerCase()) || sobject.label.toLowerCase().includes(query.toLowerCase()) || sobject.keyPrefix == queryKeyPrefix)
-            .map(sobject => ({
-              recordId: null,
-              sobject,
-              toolingApi: api.toolingApi,
-              // TO-DO: merge with the sortRank function in data-export
-              relevance: (sobject.keyPrefix == queryKeyPrefix ? 2
-                : sobject.name.toLowerCase() == query.toLowerCase() ? 3
-                : sobject.label.toLowerCase() == query.toLowerCase() ? 4
-                : sobject.name.toLowerCase().startsWith(query.toLowerCase()) ? 5
-                : sobject.label.toLowerCase().startsWith(query.toLowerCase()) ? 6
-                : sobject.name.toLowerCase().includes("__" + query.toLowerCase()) ? 7
-                : sobject.name.toLowerCase().includes("_" + query.toLowerCase()) ? 8
-                : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
-                : 10) + (api.toolingApi == null ? 20 : 0)
-            }))
-        );
-      }
+      let res = this.props.sobjectsList
+        .filter(sobject => sobject.name.toLowerCase().includes(query.toLowerCase()) || sobject.label.toLowerCase().includes(query.toLowerCase()) || sobject.keyPrefix == queryKeyPrefix)
+        .map(sobject => ({
+          recordId: null,
+          sobject,
+          // TO-DO: merge with the sortRank function in data-export
+          relevance: (sobject.keyPrefix == queryKeyPrefix ? 2
+            : sobject.name.toLowerCase() == query.toLowerCase() ? 3
+            : sobject.label.toLowerCase() == query.toLowerCase() ? 4
+            : sobject.name.toLowerCase().startsWith(query.toLowerCase()) ? 5
+            : sobject.label.toLowerCase().startsWith(query.toLowerCase()) ? 6
+            : sobject.name.toLowerCase().includes("__" + query.toLowerCase()) ? 7
+            : sobject.name.toLowerCase().includes("_" + query.toLowerCase()) ? 8
+            : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
+            : 10) + (sobject.regularApi || sobject.toolingApi ? 0 : 20)
+        }));
       query = query || this.props.contextRecordId || "";
       queryKeyPrefix = query.substring(0, 3);
-      for (let api of this.props.sobjectsLists) {
-        let objectForId = api.sobjects.find(sobject => sobject.keyPrefix == queryKeyPrefix);
-        if (objectForId && query.length >= 15) {
-          res.unshift({recordId: query, sobject: objectForId, toolingApi: api.toolingApi, relevance: 1});
+      if (query.length >= 15) {
+        let objectsForId = this.props.sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
+        for (let sobject of objectsForId) {
+          res.unshift({recordId: query, sobject, relevance: 1});
         }
       }
       res.sort((a, b) => a.relevance - b.relevance || a.sobject.name.localeCompare(b.sobject.name));
@@ -289,23 +293,33 @@ function init(params) {
       this.setState({selectedValue: value});
     }
     clickAllDataBtn() {
+      this.refs.allDataSelection.clickAllDataBtn();
+    }
+    render() {
+      return (
+        React.createElement("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
+          React.createElement(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList: this.props.sobjectsList, getMatches: this.getMatches}),
+          this.state.selectedValue ? React.createElement(AllDataSelection, {ref: "allDataSelection", selectedValue: this.state.selectedValue, isDevConsole: this.props.isDevConsole}) : null
+        )
+      );
+    }
+  }
+  class AllDataSelection extends React.PureComponent {
+    clickAllDataBtn() {
       this.refs.showAllDataBtn.click();
     }
-    getAllDataUrl() {
-      if (this.state.selectedValue) {
+    getAllDataUrl(toolingApi) {
+      if (this.props.selectedValue) {
         let args = new URLSearchParams();
         args.set("host", sfHost);
-        // We could instead pass the record ID or sobject name in the "q" parameter,
-        // and let inspect.html find the relevant objectType+useToolingApi+recordUrl.
-        // We don't do that to save time making global describe calls, since we already know the global describe results here.
-        args.set("objectType", this.state.selectedValue.sobject.name);
-        if (this.state.selectedValue.toolingApi) {
+        args.set("objectType", this.props.selectedValue.sobject.name);
+        if (toolingApi) {
           args.set("useToolingApi", "1");
         }
-        if (this.state.selectedValue.recordId && this.state.selectedValue.sobject.urls && this.state.selectedValue.sobject.urls.rowTemplate) {
-          args.set("recordUrl", this.state.selectedValue.sobject.urls.rowTemplate.replace("{ID}", this.state.selectedValue.recordId));
+        if (this.props.selectedValue.recordId) {
+          args.set("recordId", this.props.selectedValue.recordId);
         } else {
-          args.set("recordUrl", "");
+          args.set("recordId", "");
         }
         return "inspect.html?" + args;
       } else {
@@ -315,24 +329,45 @@ function init(params) {
     getDeployStatusUrl() {
       let args = new URLSearchParams();
       args.set("host", sfHost);
-      args.set("checkDeployStatus", this.state.selectedValue.recordId);
+      args.set("checkDeployStatus", this.props.selectedValue.recordId);
       return "explore-api.html?" + args;
     }
     render() {
+      let {regularApi, toolingApi} = this.props.selectedValue.sobject;
+      // Show buttons for the available APIs.
+      let buttons = [];
+      if (regularApi) {
+        buttons.push("regularApi");
+      }
+      if (toolingApi) {
+        buttons.push("toolingApi");
+      }
+      if (buttons.length == 0) {
+        // If none of the APIs are available, show a button for the regular API, which will partly fail, but still show some useful metadata from the tooling API.
+        buttons.push("noApi");
+      }
       return (
-        React.createElement("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
-          React.createElement(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsLists: this.props.sobjectsLists, getMatches: this.getMatches}),
-          this.state.selectedValue ? React.createElement("div", {className: "all-data-box-inner"},
-            React.createElement("div", {title: "Record ID", className: "data-element"}, this.state.selectedValue.recordId),
-            this.state.selectedValue.toolingApi === true ? React.createElement("div", {title: "API", className: "data-element"}, "Tooling API") : null,
-            this.state.selectedValue.toolingApi === null ? React.createElement("div", {title: "API", className: "data-element"}, "Unknown API") : null,
-            React.createElement("div", {title: "API name", className: "data-element"}, this.state.selectedValue.sobject.name),
-            React.createElement("div", {title: "Label", className: "data-element"}, this.state.selectedValue.sobject.label),
-            React.createElement("div", {title: "ID key prefix", className: "data-element"}, this.state.selectedValue.sobject.keyPrefix),
-            this.state.selectedValue.recordId && this.state.selectedValue.recordId.startsWith("0Af")
-              ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Check Deploy Status") : null,
-            React.createElement("a", {ref: "showAllDataBtn", href: this.getAllDataUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Show ", React.createElement("u", {}, "a"), "ll data")
-          ) : null
+        React.createElement("div", {className: "all-data-box-inner"},
+          React.createElement("div", {title: "Record ID", className: "data-element"}, this.props.selectedValue.recordId),
+          React.createElement("div", {title: "API name", className: "data-element"}, this.props.selectedValue.sobject.name),
+          React.createElement("div", {title: "Label", className: "data-element"}, this.props.selectedValue.sobject.label),
+          React.createElement("div", {title: "ID key prefix", className: "data-element"}, this.props.selectedValue.sobject.keyPrefix),
+          this.props.selectedValue.recordId && this.props.selectedValue.recordId.startsWith("0Af")
+            ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Check Deploy Status") : null,
+          buttons.map((button, index) => React.createElement("a",
+            {
+              key: button,
+              // If buttons for both APIs are shown, the keyboard shortcut should open the first button.
+              ref: index == 0 ? "showAllDataBtn" : null,
+              href: this.getAllDataUrl(button == "toolingApi"),
+              target: this.props.isDevConsole ? "_blank" : "_top",
+              className: "base-button"
+            },
+            index == 0 ? React.createElement("span", {}, "Show ", React.createElement("u", {}, "a"), "ll data") : "Show all data",
+            button == "regularApi" ? ""
+              : button == "toolingApi" ? " (Tooling API)"
+              : " (Not readable)"
+          ))
         )
       );
     }
@@ -391,7 +426,7 @@ function init(params) {
               updateInput: this.updateAllDataInput,
               matchingResults: this.props.getMatches(this.state.inspectQuery)
                 .map(value => ({
-                  key: value.recordId + "#" + value.sobject.name + "#" + value.toolingApi,
+                  key: value.recordId + "#" + value.sobject.name,
                   value,
                   element: [
                     React.createElement("div", {className: "autocomplete-item-main", key: "main"},
@@ -400,8 +435,7 @@ function init(params) {
                         start: value.sobject.name.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
                         length: this.state.inspectQuery.length
                       }),
-                      value.toolingApi === true ? " (Tooling API)" : null,
-                      value.toolingApi === null ? " (Unknown API)" : null
+                      value.sobject.regularApi || value.sobject.toolingApi ? "" : " (Not readable)"
                     ),
                     React.createElement("div", {className: "autocomplete-item-sub", key: "sub"},
                       React.createElement(MarkSubstring, {

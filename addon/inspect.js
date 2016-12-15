@@ -285,10 +285,12 @@ class Model {
       sobjectInfoPromise = Promise.resolve().then(() => {
         this.sobjectName = args.get("objectType");
         this.sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (args.has("useToolingApi") ? "tooling/" : "") + "sobjects/" + args.get("objectType") + "/describe/");
-        if (!args.get("recordUrl")) {
-          recordDataPromise = null; // No record url
-        } else {
+        if (args.get("recordUrl")) {
           recordDataPromise = askSalesforce(args.get("recordUrl"));
+        } else if (args.get("recordId")) {
+          recordDataPromise = askSalesforce("/services/data/v" + apiVersion + "/" + (args.has("useToolingApi") ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/" + args.get("recordId"));
+        } else {
+          recordDataPromise = null; // No record url
         }
         this.didUpdate();
       });
