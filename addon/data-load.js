@@ -202,7 +202,8 @@ function renderCell(rt, cell, td) {
         if (rt.isTooling) {
           args.set("useToolingApi", "1");
         }
-        args.set("recordUrl", cell.attributes.url);
+        let recordId = cell.attributes.url.replace(/.*\//, "");
+        args.set("recordId", recordId);
         return "inspect.html?" + args;
       },
       () => {

@@ -318,8 +318,6 @@ function init(params) {
         }
         if (this.props.selectedValue.recordId) {
           args.set("recordId", this.props.selectedValue.recordId);
-        } else {
-          args.set("recordId", "");
         }
         return "inspect.html?" + args;
       } else {

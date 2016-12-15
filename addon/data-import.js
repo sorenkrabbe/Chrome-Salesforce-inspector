@@ -327,7 +327,6 @@ function dataImportVm(copyToClipboard) {
       if (vm.useToolingApi()) {
         args.set("useToolingApi", "1");
       }
-      args.set("recordUrl", "");
       return "inspect.html?" + args;
     },
     doImport() {

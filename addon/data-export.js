@@ -136,7 +136,6 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
       if (vm.queryTooling()) {
         args.set("useToolingApi", "1");
       }
-      args.set("recordUrl", "");
       return "inspect.html?" + args;
     },
     selectHistoryEntry() {
