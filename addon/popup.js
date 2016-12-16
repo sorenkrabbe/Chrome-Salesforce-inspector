@@ -93,6 +93,10 @@ function init(params) {
         e.preventDefault();
         this.setState({showAdvanced: true});
       }
+      if (e.key == "l") {
+        e.preventDefault();
+        this.refs.limitsBtn.click();
+      }
     }
     onDetailsClick() {
       let self = this;
@@ -155,6 +159,7 @@ function init(params) {
             React.createElement(AllDataBox, {ref: "showAllDataBox", isDevConsole: this.props.isDevConsole, sobjectsLoading: this.state.sobjectsLoading, sobjectsLists: this.state.sobjectsLists, contextRecordId: this.state.contextRecordId}),
             React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
             React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
+            React.createElement("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Org ", React.createElement("u", {}, "L"), "imits"),
             React.createElement("a", {href: "#", onClick: this.onShowAdvancedClick, className: "button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", React.createElement("u", {}, "o"), "re"),
             React.createElement("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", React.createElement("u", {}, "x"), "plore API")
           ),
