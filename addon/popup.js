@@ -57,14 +57,52 @@ function init(params) {
         });
       })
         .then(() => Promise.all([
-          askSalesforce("/services/data/v" + apiVersion + "/sobjects/").then(res => ({toolingApi: false, sobjects: res.sobjects})),
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").then(res => ({toolingApi: true, sobjects: res.sobjects}))
+          askSalesforce("/services/data/v" + apiVersion + "/sobjects/").catch(err => {
+            console.error("list sobjects", err);
+            return {sobjects: []};
+          }),
+          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").catch(err => {
+            console.error("list tooling sobjects", err);
+            return {sobjects: []};
+          }),
+          askSalesforce("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent("select QualifiedApiName, Label, KeyPrefix from EntityDefinition")).catch(err => {
+            console.error("list entity definitions", err);
+            // TODO better handle EXCEEDED_ID_LIMIT: EntityDefinition does not support queryMore(), use LIMIT to restrict the results to a single batch
+            return {records: []};
+          })
         ]))
-        .then(res => {
-          this.setState({sobjectsLoading: false, sobjectsLists: res});
+        .then(([dataDescribe, toolingDescribe, entityParticles]) => {
+          // TODO progressively display data as each of the three responses becomes available
+          let dataObjects = dataDescribe.sobjects;
+          let toolingObjects = toolingDescribe.sobjects;
+          let knownObjects = new Set([
+            ...dataObjects.map(obj => obj.name),
+            ...toolingObjects.map(obj => obj.name)
+          ]);
+          // unknownObjects are sobjects the user does not have read access to.
+          // We don't know if they belong to the tooling API or not, so we don't know the URL we need to retrieve or describe them,
+          // but we would not be allowed to retrieve or describe them anyway, since we don't have read access to them.
+          // We can however use the Tooling API on them, so they are still relevant to show.
+          let unknownObjects = entityParticles.records
+            .filter(r => !knownObjects.has(r.QualifiedApiName))
+            .map(r => ({
+              name: r.QualifiedApiName || "",
+              label: r.Label || "",
+              keyPrefix: r.KeyPrefix
+            }));
+          let sobjectsLists = [
+            {toolingApi: false, sobjects: dataObjects},
+            {toolingApi: true, sobjects: toolingObjects},
+            {toolingApi: null, sobjects: unknownObjects}
+          ];
+          this.setState({
+            sobjectsLoading: false,
+            sobjectsLists
+          });
           this.refs.showAllDataBox.updateSelection(this.state.contextRecordId);
         })
-        .catch(() => {
+        .catch(e => {
+          console.error(e);
           this.setState({sobjectsLoading: false});
         });
     }
@@ -160,7 +198,7 @@ function init(params) {
             React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
             React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
             React.createElement("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Org ", React.createElement("u", {}, "L"), "imits"),
-            React.createElement("a", {href: "#", onClick: this.onShowAdvancedClick, className: "button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", React.createElement("u", {}, "o"), "re"),
+            React.createElement("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", React.createElement("u", {}, "o"), "re"),
             React.createElement("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", React.createElement("u", {}, "x"), "plore API")
           ),
           React.createElement("div", {className: "footer"},
@@ -224,7 +262,7 @@ function init(params) {
               sobject,
               toolingApi: api.toolingApi,
               // TO-DO: merge with the sortRank function in data-export
-              relevance: sobject.keyPrefix == queryKeyPrefix ? 2
+              relevance: (sobject.keyPrefix == queryKeyPrefix ? 2
                 : sobject.name.toLowerCase() == query.toLowerCase() ? 3
                 : sobject.label.toLowerCase() == query.toLowerCase() ? 4
                 : sobject.name.toLowerCase().startsWith(query.toLowerCase()) ? 5
@@ -232,7 +270,7 @@ function init(params) {
                 : sobject.name.toLowerCase().includes("__" + query.toLowerCase()) ? 7
                 : sobject.name.toLowerCase().includes("_" + query.toLowerCase()) ? 8
                 : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
-                : 10
+                : 10) + (api.toolingApi == null ? 20 : 0)
             }))
         );
       }
@@ -264,7 +302,7 @@ function init(params) {
         if (this.state.selectedValue.toolingApi) {
           args.set("useToolingApi", "1");
         }
-        if (this.state.selectedValue.recordId) {
+        if (this.state.selectedValue.recordId && this.state.selectedValue.sobject.urls && this.state.selectedValue.sobject.urls.rowTemplate) {
           args.set("recordUrl", this.state.selectedValue.sobject.urls.rowTemplate.replace("{ID}", this.state.selectedValue.recordId));
         } else {
           args.set("recordUrl", "");
@@ -274,16 +312,25 @@ function init(params) {
         return undefined;
       }
     }
+    getDeployStatusUrl() {
+      let args = new URLSearchParams();
+      args.set("host", sfHost);
+      args.set("checkDeployStatus", this.state.selectedValue.recordId);
+      return "explore-api.html?" + args;
+    }
     render() {
       return (
         React.createElement("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
           React.createElement(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsLists: this.props.sobjectsLists, getMatches: this.getMatches}),
           this.state.selectedValue ? React.createElement("div", {className: "all-data-box-inner"},
             React.createElement("div", {title: "Record ID", className: "data-element"}, this.state.selectedValue.recordId),
-            this.state.selectedValue.toolingApi ? React.createElement("div", {title: "API", className: "data-element"}, "Tooling API") : null,
+            this.state.selectedValue.toolingApi === true ? React.createElement("div", {title: "API", className: "data-element"}, "Tooling API") : null,
+            this.state.selectedValue.toolingApi === null ? React.createElement("div", {title: "API", className: "data-element"}, "Unknown API") : null,
             React.createElement("div", {title: "API name", className: "data-element"}, this.state.selectedValue.sobject.name),
             React.createElement("div", {title: "Label", className: "data-element"}, this.state.selectedValue.sobject.label),
             React.createElement("div", {title: "ID key prefix", className: "data-element"}, this.state.selectedValue.sobject.keyPrefix),
+            this.state.selectedValue.recordId && this.state.selectedValue.recordId.startsWith("0Af")
+              ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Check Deploy Status") : null,
             React.createElement("a", {ref: "showAllDataBtn", href: this.getAllDataUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Show ", React.createElement("u", {}, "a"), "ll data")
           ) : null
         )
@@ -353,7 +400,8 @@ function init(params) {
                         start: value.sobject.name.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
                         length: this.state.inspectQuery.length
                       }),
-                      value.toolingApi ? " (Tooling API)" : null
+                      value.toolingApi === true ? " (Tooling API)" : null,
+                      value.toolingApi === null ? " (Unknown API)" : null
                     ),
                     React.createElement("div", {className: "autocomplete-item-sub", key: "sub"},
                       React.createElement(MarkSubstring, {
@@ -394,19 +442,23 @@ function init(params) {
       super(props);
       this.state = {
         showResults: false,
-        selectedIndex: 0,
-        resultsMouseIsDown: false
+        selectedIndex: 0, // Index of the selected autocomplete item.
+        scrollToSelectedIndex: 0, // Changed whenever selectedIndex is updated (even if updated to a value it already had). Used to scroll to the selected item.
+        scrollTopIndex: 0, // Index of the first autocomplete item that is visible according to the current scroll position.
+        itemHeight: 1, // The height of each autocomplete item. All items should have the same height. Measured on first render. 1 means not measured.
+        resultsMouseIsDown: false // Hide the autocomplete popup when the input field looses focus, except when clicking one of the autocomplete items.
       };
       this.onResultsMouseDown = this.onResultsMouseDown.bind(this);
       this.onResultsMouseUp = this.onResultsMouseUp.bind(this);
       this.onResultClick = this.onResultClick.bind(this);
       this.onResultMouseEnter = this.onResultMouseEnter.bind(this);
+      this.onScroll = this.onScroll.bind(this);
     }
     handleInput() {
-      this.setState({showResults: true, selectedIndex: 0});
+      this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
     }
     handleFocus() {
-      this.setState({showResults: true, selectedIndex: 0});
+      this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
     }
     handleBlur() {
       this.setState({showResults: false});
@@ -436,7 +488,7 @@ function init(params) {
       if (selectionMove != 0) {
         e.preventDefault();
         if (!this.state.showResults) {
-          this.setState({showResults: true, selectedIndex: 0});
+          this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
           return;
         }
         let index = this.state.selectedIndex + selectionMove;
@@ -447,7 +499,7 @@ function init(params) {
         if (index > length - 1) {
           index = 0;
         }
-        this.setState({selectedIndex: index});
+        this.setState({selectedIndex: index, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
       }
     }
     onResultsMouseDown() {
@@ -461,11 +513,27 @@ function init(params) {
       this.setState({showResults: false, selectedIndex: 0});
     }
     onResultMouseEnter(index) {
-      this.setState({selectedIndex: index});
+      this.setState({selectedIndex: index, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
+    }
+    onScroll() {
+      let scrollTopIndex = Math.floor(this.refs.scrollBox.scrollTop / this.state.itemHeight);
+      if (scrollTopIndex != this.state.scrollTopIndex) {
+        this.setState({scrollTopIndex});
+      }
     }
     componentDidUpdate(prevProps, prevState) {
+      if (this.state.itemHeight == 1) {
+        let anItem = this.refs.scrollBox.querySelector(".autocomplete-item");
+        if (anItem) {
+          let itemHeight = anItem.offsetHeight;
+          if (itemHeight > 0) {
+            this.setState({itemHeight});
+          }
+        }
+        return;
+      }
       let sel = this.refs.selectedItem;
-      if (this.state.selectedIndex != prevState.selectedIndex && sel && sel.offsetParent) {
+      if (this.state.scrollToSelectedIndex != prevState.scrollToSelectedIndex && sel && sel.offsetParent) {
         if (sel.offsetTop < sel.offsetParent.scrollTop) {
           sel.scrollIntoView(true);
         } else if (sel.offsetTop + sel.offsetHeight > sel.offsetParent.scrollTop + sel.offsetParent.offsetHeight) {
@@ -474,17 +542,31 @@ function init(params) {
       }
     }
     render() {
+      // For better performance only render the visible autocomplete items + at least one invisible item above and below (if they exist)
+      const RENDERED_ITEMS_COUNT = 11;
+      let firstIndex = 0;
+      let lastIndex = this.props.matchingResults.length - 1;
+      let firstRenderedIndex = Math.max(0, this.state.scrollTopIndex - 2);
+      let lastRenderedIndex = Math.min(lastIndex, firstRenderedIndex + RENDERED_ITEMS_COUNT);
+      let topSpace = (firstRenderedIndex - firstIndex) * this.state.itemHeight;
+      let bottomSpace = (lastIndex - lastRenderedIndex) * this.state.itemHeight;
+      let topSelected = (this.state.selectedIndex - firstIndex) * this.state.itemHeight;
       return (
         React.createElement("div", {className: "autocomplete-container", style: {display: (this.state.showResults && this.props.matchingResults.length > 0) || this.state.resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
-          React.createElement("div", {className: "autocomplete"}, this.props.matchingResults.map(({key, value, element}, index) =>
-            React.createElement("a", {
-              key,
-              ref: this.state.selectedIndex == index ? "selectedItem" : null,
-              className: "autocomplete-item " + (this.state.selectedIndex == index ? "selected" : ""),
-              onClick: () => this.onResultClick(value),
-              onMouseEnter: () => this.onResultMouseEnter(index)
-            }, element)
-          ))
+          React.createElement("div", {className: "autocomplete", onScroll: this.onScroll, ref: "scrollBox"},
+            React.createElement("div", {ref: "selectedItem", style: {position: "absolute", top: topSelected + "px", height: this.state.itemHeight + "px"}}),
+            React.createElement("div", {style: {height: topSpace + "px"}}),
+            this.props.matchingResults.slice(firstRenderedIndex, lastRenderedIndex + 1)
+              .map(({key, value, element}, index) =>
+                React.createElement("a", {
+                  key,
+                  className: "autocomplete-item " + (this.state.selectedIndex == index + firstRenderedIndex ? "selected" : ""),
+                  onClick: () => this.onResultClick(value),
+                  onMouseEnter: () => this.onResultMouseEnter(index + firstRenderedIndex)
+                }, element)
+              ),
+            React.createElement("div", {style: {height: bottomSpace + "px"}})
+          )
         )
       );
     }

@@ -17,6 +17,7 @@ function* popupTest() { // eslint-disable-line require-yield
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://na1.salesforce.com/001i0000007BlV0/e?retURL=xyz"))); // classic record edit page
   assertEquals("005i0000000Eths", getRecordId(new URL("https://na1.salesforce.com/_ui/core/userprofile/UserProfilePage?u=005i0000000Eths&tab=sfdc.ProfilePlatformFeed"))); // user profile page
   assertEquals("005i0000000Eths", getRecordId(new URL("https://na1.salesforce.com/005i0000000Eths?noredirect=1&isUserEntityOverride=1"))); // user detail page
+  assertEquals("0Afi000000STGOj", getRecordId(new URL("https://na1.salesforce.com/changemgmt/monitorDeploymentsDetails.apexp?retURL=/changemgmt/monitorDeployment.apexp&asyncId=0Afi000000STGOj")));
   assertEquals(null, getRecordId(new URL("https://na1.salesforce.com/home/home.jsp"))); // no ID
   assertEquals(null, getRecordId(new URL("https://na1.salesforce.com/foofoofoofoofoo"))); // 15 character non-ID
   assertEquals("001", getRecordId(new URL("https://na1.salesforce.com/001/o"))); // record home

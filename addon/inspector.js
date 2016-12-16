@@ -22,7 +22,7 @@ function askSalesforce(url, progressHandler, options) {
     xhr.open(options.method || "GET", "https://" + session.hostname + url, true);
     xhr.setRequestHeader("Authorization", "OAuth " + session.key);
     xhr.setRequestHeader("Accept", "application/json");
-    if (options.body) {
+    if (options.body || options.bodyText) {
       xhr.setRequestHeader("Content-Type", "application/json");
     }
     xhr.responseType = "json";
@@ -52,7 +52,7 @@ function askSalesforce(url, progressHandler, options) {
         }
       }
     };
-    xhr.send(JSON.stringify(options.body));
+    xhr.send(JSON.stringify(options.body) || options.bodyText);
   });
 }
 
