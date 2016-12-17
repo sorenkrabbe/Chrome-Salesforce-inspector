@@ -50,68 +50,71 @@ function init(params) {
       }
     }
     loadSobjects() {
-      new Promise(resolve => {
-        chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-          session = message;
-          resolve();
+      let entityMap = new Map();
+
+      function addEntity({name, label, keyPrefix}) {
+        label = label || ""; // Avoid null exceptions if the object does not have a label (some don't). All objects have a name. Not needed for keyPrefix since we only do equality comparisons on those.
+        let entity = entityMap.get(name);
+        if (entity) {
+          if (!entity.label) { // Doesn't seem to be needed, but if we have to do it for keyPrefix, we can just as well do it for label.
+            entity.label = label;
+          }
+          if (!entity.keyPrefix) { // For some objects the keyPrefix is only available in some of the APIs.
+            entity.keyPrefix = keyPrefix;
+          }
+        } else {
+          entity = {
+            availableApis: [],
+            name,
+            label,
+            keyPrefix
+          };
+          entityMap.set(name, entity);
+        }
+        return entity;
+      }
+
+      function getObjects(url, api) {
+        return askSalesforce(url).then(describe => {
+          for (let sobject of describe.sobjects) {
+            addEntity(sobject).availableApis.push(api);
+          }
+        }).catch(err => {
+          console.error("list " + api + " sobjects", err);
         });
-      })
-        .then(() => Promise.all([
-          // Get objects the user can access from the regular API
-          askSalesforce("/services/data/v" + apiVersion + "/sobjects/").catch(err => {
-            console.error("list sobjects", err);
-            return {sobjects: []};
-          }),
-          // Get objects the user can access from the tooling API
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/").catch(err => {
-            console.error("list tooling sobjects", err);
-            return {sobjects: []};
-          }),
-          // Get all objects, even the ones the user cannot access from any API
-          // These records are less interesting than the ones the user has access to, but still interesting since we can get information about them using the tooling API
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent("select QualifiedApiName, Label, KeyPrefix from EntityDefinition")).catch(err => {
-            console.error("list entity definitions", err);
-            // TODO better handle EXCEEDED_ID_LIMIT: EntityDefinition does not support queryMore(), use LIMIT to restrict the results to a single batch
-            return {records: []};
-          })
-        ]))
-        .then(([dataDescribe, toolingDescribe, entityDefinitions]) => {
-          // TODO progressively display data as each of the three responses becomes available
-          let entityMap = new Map();
-          function addEntity({name, label, keyPrefix}) {
-            let entity = entityMap.get(name);
-            if (entity) {
-              if (!entity.label) {
-                entity.label = label || "";
-              }
-              if (!entity.keyPrefix) {
-                entity.keyPrefix = keyPrefix;
-              }
-            } else {
-              entity = {
-                regularApi: false,
-                toolingApi: false,
-                name: name,
-                label: label || "",
-                keyPrefix: keyPrefix
-              };
-              entityMap.set(name, entity);
-            }
-            return entity;
-          }
-          for (let sobject of dataDescribe.sobjects) {
-            addEntity(sobject).regularApi = true;
-          }
-          for (let sobject of toolingDescribe.sobjects) {
-            addEntity(sobject).toolingApi = true;
-          }
-          for (let entityDefinition of entityDefinitions.records) {
+      }
+
+      function getEntityDefinitions(bucket) {
+        let query = "select QualifiedApiName, Label, KeyPrefix from EntityDefinition" + bucket;
+        return askSalesforce("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent(query)).then(res => {
+          for (let record of res.records) {
             addEntity({
-              name: entityDefinition.QualifiedApiName,
-              label: entityDefinition.Label,
-              keyPrefix: entityDefinition.KeyPrefix
+              name: record.QualifiedApiName,
+              label: record.Label,
+              keyPrefix: record.KeyPrefix
             });
           }
+        }).catch(err => {
+          console.error("list entity definitions: " + bucket, err);
+        });
+      }
+
+      Promise.all([
+        // Get objects the user can access from the regular API
+        getObjects("/services/data/v" + apiVersion + "/sobjects/", "regularApi"),
+        // Get objects the user can access from the tooling API
+        getObjects("/services/data/v" + apiVersion + "/tooling/sobjects/", "toolingApi"),
+        // Get all objects, even the ones the user cannot access from any API
+        // These records are less interesting than the ones the user has access to, but still interesting since we can get information about them using the tooling API
+        // If there are too many records, we get "EXCEEDED_ID_LIMIT: EntityDefinition does not support queryMore(), use LIMIT to restrict the results to a single batch"
+        // We cannot use limit and offset to work around it, since EntityDefinition does not support those according to the documentation, and they seem to work in a querky way in practice.
+        // Tried to use http://salesforce.stackexchange.com/a/22643, but "order by x" uses AaBbCc as sort order, while "where x > ..." uses sort order ABCabc, so it does not work on text fields, and there is no unique numerical field we can sort by.
+        // Here we split the query into a somewhat arbitrary set of fixed buckets, and hope none of the buckets exceed 2000 records.
+        getEntityDefinitions(" where QualifiedApiName < 'M' limit 2000"),
+        getEntityDefinitions(" where QualifiedApiName >= 'M' limit 2000"),
+      ])
+        .then(() => {
+          // TODO progressively display data as each of the three responses becomes available
           this.setState({
             sobjectsLoading: false,
             sobjectsList: Array.from(entityMap.values())
@@ -276,7 +279,7 @@ function init(params) {
             : sobject.name.toLowerCase().includes("__" + query.toLowerCase()) ? 7
             : sobject.name.toLowerCase().includes("_" + query.toLowerCase()) ? 8
             : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
-            : 10) + (sobject.regularApi || sobject.toolingApi ? 0 : 20)
+            : 10) + (sobject.availableApis.length == 0 ? 20 : 0)
         }));
       query = query || this.props.contextRecordId || "";
       queryKeyPrefix = query.substring(0, 3);
@@ -331,15 +334,8 @@ function init(params) {
       return "explore-api.html?" + args;
     }
     render() {
-      let {regularApi, toolingApi} = this.props.selectedValue.sobject;
       // Show buttons for the available APIs.
-      let buttons = [];
-      if (regularApi) {
-        buttons.push("regularApi");
-      }
-      if (toolingApi) {
-        buttons.push("toolingApi");
-      }
+      let buttons = Array.from(this.props.selectedValue.sobject.availableApis);
       if (buttons.length == 0) {
         // If none of the APIs are available, show a button for the regular API, which will partly fail, but still show some useful metadata from the tooling API.
         buttons.push("noApi");
@@ -433,7 +429,7 @@ function init(params) {
                         start: value.sobject.name.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
                         length: this.state.inspectQuery.length
                       }),
-                      value.sobject.regularApi || value.sobject.toolingApi ? "" : " (Not readable)"
+                      value.sobject.availableApis.length == 0 ? " (Not readable)" : ""
                     ),
                     React.createElement("div", {className: "autocomplete-item-sub", key: "sub"},
                       React.createElement(MarkSubstring, {
@@ -603,11 +599,16 @@ function init(params) {
       );
     }
   }
-  ReactDOM.render(React.createElement(App, {
-    isDevConsole: params.isDevConsole,
-    inAura: params.inAura,
-    inInspector: params.inInspector,
-  }), document.getElementById("root"));
+  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
+    session = message;
+
+    ReactDOM.render(React.createElement(App, {
+      isDevConsole: params.isDevConsole,
+      inAura: params.inAura,
+      inInspector: params.inInspector,
+    }), document.getElementById("root"));
+
+  });
 }
 
 function getRecordId(href) {
