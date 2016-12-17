@@ -5,6 +5,9 @@
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
+
+let h = React.createElement;
+
 if (!this.isUnitTest) {
   parent.postMessage({insextInitRequest: true}, "*");
   addEventListener("message", function initResponseHandler(e) {
@@ -29,7 +32,7 @@ function init(params) {
   chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     session = message;
 
-    ReactDOM.render(React.createElement(App, {
+    ReactDOM.render(h(App, {
       isDevConsole: params.isDevConsole,
       inAura: params.inAura,
       inInspector: params.inInspector,
@@ -184,11 +187,11 @@ class App extends React.PureComponent {
   render() {
     let linkTarget = this.props.isDevConsole ? "_blank" : "_top";
     return (
-      React.createElement("div", {},
-        React.createElement("div", {className: "header"},
-          React.createElement("div", {className: "header-icon"},
-            React.createElement("svg", {viewBox: "0 0 24 24"},
-              React.createElement("path", {d: `
+      h("div", {},
+        h("div", {className: "header"},
+          h("div", {className: "header-icon"},
+            h("svg", {viewBox: "0 0 24 24"},
+              h("path", {d: `
                 M11 9c-.5 0-1-.5-1-1s.5-1 1-1 1 .5 1 1-.5 1-1 1z
                 m1 5.8c0 .2-.1.3-.3.3h-1.4c-.2 0-.3-.1-.3-.3v-4.6c0-.2.1-.3.3-.3h1.4c.2.0.3.1.3.3z
                 M11 3.8c-4 0-7.2 3.2-7.2 7.2s3.2 7.2 7.2 7.2s7.2-3.2 7.2-7.2s-3.2-7.2-7.2-7.2z
@@ -199,19 +202,19 @@ class App extends React.PureComponent {
           ),
           "Salesforce inspector"
         ),
-        React.createElement("div", {className: "main"},
-          React.createElement(ShowDetailsButton, {ref: "showDetailsBtn", contextRecordId: this.state.contextRecordId, sobjectsList: this.state.sobjectsList, inAura: this.props.inAura, isDevConsole: this.props.isDevConsole, inInspector: this.props.inInspector}),
-          React.createElement(AllDataBox, {ref: "showAllDataBox", linkTarget, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
-          React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
-          React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
-          React.createElement("a", {ref: "limitsBtn", href: "limits.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Org ", React.createElement("u", {}, "L"), "imits"),
-          React.createElement("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", React.createElement("u", {}, "o"), "re"),
-          React.createElement("a", {ref: "apiExploreBtn", href: "explore-api.html?" + this.props.hostArg, target: linkTarget, className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", React.createElement("u", {}, "x"), "plore API")
+        h("div", {className: "main"},
+          h(ShowDetailsButton, {ref: "showDetailsBtn", contextRecordId: this.state.contextRecordId, sobjectsList: this.state.sobjectsList, inAura: this.props.inAura, isDevConsole: this.props.isDevConsole, inInspector: this.props.inInspector}),
+          h(AllDataBox, {ref: "showAllDataBox", linkTarget, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
+          h("a", {ref: "dataExportBtn", href: "data-export.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
+          h("a", {ref: "dataImportBtn", href: "data-import.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
+          h("a", {ref: "limitsBtn", href: "limits.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
+          h("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", h("u", {}, "o"), "re"),
+          h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + this.props.hostArg, target: linkTarget, className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", h("u", {}, "x"), "plore API")
         ),
-        React.createElement("div", {className: "footer"},
-          React.createElement("div", {className: "meta"},
-            React.createElement("div", {className: "version"}, "(v" + this.props.addonVersion + ")"),
-            React.createElement("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
+        h("div", {className: "footer"},
+          h("div", {className: "meta"},
+            h("div", {className: "version"}, "(v" + this.props.addonVersion + ")"),
+            h("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
           )
         )
       )
@@ -253,7 +256,7 @@ class ShowDetailsButton extends React.PureComponent {
   }
   render() {
     return (
-      React.createElement("button",
+      h("button",
         {
           id: "showStdPageDetailsBtn",
           className: "button" + (this.state.detailsLoading ? " loading" : ""),
@@ -261,7 +264,7 @@ class ShowDetailsButton extends React.PureComponent {
           onClick: this.onDetailsClick,
           style: {display: this.props.isDevConsole || this.props.inInspector ? "none" : ""}
         },
-        "Show field ", React.createElement("u", {}, "m"), "etadata"
+        "Show field ", h("u", {}, "m"), "etadata"
       )
     );
   }
@@ -336,9 +339,9 @@ class AllDataBox extends React.PureComponent {
   }
   render() {
     return (
-      React.createElement("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
-        React.createElement(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList: this.props.sobjectsList, getMatches: this.getMatches}),
-        this.state.selectedValue ? React.createElement(AllDataSelection, {ref: "allDataSelection", selectedValue: this.state.selectedValue, linkTarget: this.props.linkTarget}) : null
+      h("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
+        h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList: this.props.sobjectsList, getMatches: this.getMatches}),
+        this.state.selectedValue ? h(AllDataSelection, {ref: "allDataSelection", selectedValue: this.state.selectedValue, linkTarget: this.props.linkTarget}) : null
       )
     );
   }
@@ -378,14 +381,14 @@ class AllDataSelection extends React.PureComponent {
       buttons.push("noApi");
     }
     return (
-      React.createElement("div", {className: "all-data-box-inner"},
-        React.createElement("div", {title: "Record ID", className: "data-element"}, this.props.selectedValue.recordId),
-        React.createElement("div", {title: "API name", className: "data-element"}, this.props.selectedValue.sobject.name),
-        React.createElement("div", {title: "Label", className: "data-element"}, this.props.selectedValue.sobject.label),
-        React.createElement("div", {title: "ID key prefix", className: "data-element"}, this.props.selectedValue.sobject.keyPrefix),
+      h("div", {className: "all-data-box-inner"},
+        h("div", {title: "Record ID", className: "data-element"}, this.props.selectedValue.recordId),
+        h("div", {title: "API name", className: "data-element"}, this.props.selectedValue.sobject.name),
+        h("div", {title: "Label", className: "data-element"}, this.props.selectedValue.sobject.label),
+        h("div", {title: "ID key prefix", className: "data-element"}, this.props.selectedValue.sobject.keyPrefix),
         this.props.selectedValue.recordId && this.props.selectedValue.recordId.startsWith("0Af")
-          ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.linkTarget, className: "base-button"}, "Check Deploy Status") : null,
-        buttons.map((button, index) => React.createElement("a",
+          ? h("a", {href: this.getDeployStatusUrl(), target: this.props.linkTarget, className: "base-button"}, "Check Deploy Status") : null,
+        buttons.map((button, index) => h("a",
           {
             key: button,
             // If buttons for both APIs are shown, the keyboard shortcut should open the first button.
@@ -394,7 +397,7 @@ class AllDataSelection extends React.PureComponent {
             target: this.props.linkTarget,
             className: "base-button"
           },
-          index == 0 ? React.createElement("span", {}, "Show ", React.createElement("u", {}, "a"), "ll data") : "Show all data",
+          index == 0 ? h("span", {}, "Show ", h("u", {}, "a"), "ll data") : "Show all data",
           button == "regularApi" ? ""
             : button == "toolingApi" ? " (Tooling API)"
             : " (Not readable)"
@@ -441,9 +444,9 @@ class AllDataSearch extends React.PureComponent {
   }
   render() {
     return (
-      React.createElement("div", {className: "input-with-dropdown"},
-        React.createElement("div", {},
-          React.createElement("input", {
+      h("div", {className: "input-with-dropdown"},
+        h("div", {},
+          h("input", {
             className: "all-data-input",
             ref: "showAllDataInp",
             placeholder: "Record id, id prefix or sObject name",
@@ -453,7 +456,7 @@ class AllDataSearch extends React.PureComponent {
             onKeyDown: this.onAllDataKeyDown,
             value: this.state.inspectQuery
           }),
-          React.createElement(Autocomplete, {
+          h(Autocomplete, {
             ref: "autoComplete",
             updateInput: this.updateAllDataInput,
             matchingResults: this.props.getMatches(this.state.inspectQuery)
@@ -461,22 +464,22 @@ class AllDataSearch extends React.PureComponent {
                 key: value.recordId + "#" + value.sobject.name,
                 value,
                 element: [
-                  React.createElement("div", {className: "autocomplete-item-main", key: "main"},
-                    value.recordId || React.createElement(MarkSubstring, {
+                  h("div", {className: "autocomplete-item-main", key: "main"},
+                    value.recordId || h(MarkSubstring, {
                       text: value.sobject.name,
                       start: value.sobject.name.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
                       length: this.state.inspectQuery.length
                     }),
                     value.sobject.availableApis.length == 0 ? " (Not readable)" : ""
                   ),
-                  React.createElement("div", {className: "autocomplete-item-sub", key: "sub"},
-                    React.createElement(MarkSubstring, {
+                  h("div", {className: "autocomplete-item-sub", key: "sub"},
+                    h(MarkSubstring, {
                       text: value.sobject.keyPrefix || "---",
                       start: value.sobject.keyPrefix == this.state.inspectQuery.substring(0, 3) ? 0 : -1,
                       length: 3
                     }),
                     " • ",
-                    React.createElement(MarkSubstring, {
+                    h(MarkSubstring, {
                       text: value.sobject.label,
                       start: value.sobject.label.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
                       length: this.state.inspectQuery.length
@@ -486,8 +489,8 @@ class AllDataSearch extends React.PureComponent {
               }))
           })
         ),
-        React.createElement("svg", {viewBox: "0 0 24 24", onClick: this.onAllDataArrowClick},
-          React.createElement("path", {d: "M3.8 6.5h16.4c.4 0 .8.6.4 1l-8 9.8c-.3.3-.9.3-1.2 0l-8-9.8c-.4-.4-.1-1 .4-1z"})
+        h("svg", {viewBox: "0 0 24 24", onClick: this.onAllDataArrowClick},
+          h("path", {d: "M3.8 6.5h16.4c.4 0 .8.6.4 1l-8 9.8c-.3.3-.9.3-1.2 0l-8-9.8c-.4-.4-.1-1 .4-1z"})
         )
       )
     );
@@ -496,11 +499,11 @@ class AllDataSearch extends React.PureComponent {
 
 function MarkSubstring({text, start, length}) {
   if (start == -1) {
-    return React.createElement("span", {}, text);
+    return h("span", {}, text);
   }
-  return React.createElement("span", {},
+  return h("span", {},
     text.substr(0, start),
-    React.createElement("mark", {}, text.substr(start, length)),
+    h("mark", {}, text.substr(start, length)),
     text.substr(start + length)
   );
 }
@@ -620,20 +623,20 @@ class Autocomplete extends React.PureComponent {
     let bottomSpace = (lastIndex - lastRenderedIndex) * this.state.itemHeight;
     let topSelected = (this.state.selectedIndex - firstIndex) * this.state.itemHeight;
     return (
-      React.createElement("div", {className: "autocomplete-container", style: {display: (this.state.showResults && this.props.matchingResults.length > 0) || this.state.resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
-        React.createElement("div", {className: "autocomplete", onScroll: this.onScroll, ref: "scrollBox"},
-          React.createElement("div", {ref: "selectedItem", style: {position: "absolute", top: topSelected + "px", height: this.state.itemHeight + "px"}}),
-          React.createElement("div", {style: {height: topSpace + "px"}}),
+      h("div", {className: "autocomplete-container", style: {display: (this.state.showResults && this.props.matchingResults.length > 0) || this.state.resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
+        h("div", {className: "autocomplete", onScroll: this.onScroll, ref: "scrollBox"},
+          h("div", {ref: "selectedItem", style: {position: "absolute", top: topSelected + "px", height: this.state.itemHeight + "px"}}),
+          h("div", {style: {height: topSpace + "px"}}),
           this.props.matchingResults.slice(firstRenderedIndex, lastRenderedIndex + 1)
             .map(({key, value, element}, index) =>
-              React.createElement("a", {
+              h("a", {
                 key,
                 className: "autocomplete-item " + (this.state.selectedIndex == index + firstRenderedIndex ? "selected" : ""),
                 onClick: () => this.onResultClick(value),
                 onMouseEnter: () => this.onResultMouseEnter(index + firstRenderedIndex)
               }, element)
             ),
-          React.createElement("div", {style: {height: bottomSpace + "px"}})
+          h("div", {style: {height: bottomSpace + "px"}})
         )
       )
     );
