@@ -182,6 +182,7 @@ class App extends React.PureComponent {
     removeEventListener("keydown", this.onShortcutKey);
   }
   render() {
+    let linkTarget = this.props.isDevConsole ? "_blank" : "_top";
     return (
       React.createElement("div", {},
         React.createElement("div", {className: "header"},
@@ -200,17 +201,17 @@ class App extends React.PureComponent {
         ),
         React.createElement("div", {className: "main"},
           React.createElement(ShowDetailsButton, {ref: "showDetailsBtn", contextRecordId: this.state.contextRecordId, sobjectsList: this.state.sobjectsList, inAura: this.props.inAura, isDevConsole: this.props.isDevConsole, inInspector: this.props.inInspector}),
-          React.createElement(AllDataBox, {ref: "showAllDataBox", isDevConsole: this.props.isDevConsole, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
-          React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
-          React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
-          React.createElement("a", {ref: "limitsBtn", href: "limits.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Org ", React.createElement("u", {}, "L"), "imits"),
+          React.createElement(AllDataBox, {ref: "showAllDataBox", linkTarget, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
+          React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
+          React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
+          React.createElement("a", {ref: "limitsBtn", href: "limits.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Org ", React.createElement("u", {}, "L"), "imits"),
           React.createElement("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", React.createElement("u", {}, "o"), "re"),
-          React.createElement("a", {ref: "apiExploreBtn", href: "explore-api.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", React.createElement("u", {}, "x"), "plore API")
+          React.createElement("a", {ref: "apiExploreBtn", href: "explore-api.html?" + this.props.hostArg, target: linkTarget, className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", React.createElement("u", {}, "x"), "plore API")
         ),
         React.createElement("div", {className: "footer"},
           React.createElement("div", {className: "meta"},
             React.createElement("div", {className: "version"}, "(v" + this.props.addonVersion + ")"),
-            React.createElement("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: this.props.isDevConsole ? "_blank" : "_top"}, "About")
+            React.createElement("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
           )
         )
       )
@@ -337,7 +338,7 @@ class AllDataBox extends React.PureComponent {
     return (
       React.createElement("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
         React.createElement(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList: this.props.sobjectsList, getMatches: this.getMatches}),
-        this.state.selectedValue ? React.createElement(AllDataSelection, {ref: "allDataSelection", selectedValue: this.state.selectedValue, isDevConsole: this.props.isDevConsole}) : null
+        this.state.selectedValue ? React.createElement(AllDataSelection, {ref: "allDataSelection", selectedValue: this.state.selectedValue, linkTarget: this.props.linkTarget}) : null
       )
     );
   }
@@ -383,14 +384,14 @@ class AllDataSelection extends React.PureComponent {
         React.createElement("div", {title: "Label", className: "data-element"}, this.props.selectedValue.sobject.label),
         React.createElement("div", {title: "ID key prefix", className: "data-element"}, this.props.selectedValue.sobject.keyPrefix),
         this.props.selectedValue.recordId && this.props.selectedValue.recordId.startsWith("0Af")
-          ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Check Deploy Status") : null,
+          ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.linkTarget, className: "base-button"}, "Check Deploy Status") : null,
         buttons.map((button, index) => React.createElement("a",
           {
             key: button,
             // If buttons for both APIs are shown, the keyboard shortcut should open the first button.
             ref: index == 0 ? "showAllDataBtn" : null,
             href: this.getAllDataUrl(button == "toolingApi"),
-            target: this.props.isDevConsole ? "_blank" : "_top",
+            target: this.props.linkTarget,
             className: "base-button"
           },
           index == 0 ? React.createElement("span", {}, "Show ", React.createElement("u", {}, "a"), "ll data") : "Show all data",
