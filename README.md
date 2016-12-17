@@ -40,7 +40,7 @@ Unit tests
 
 1. Install Node.js with npm
 2. `npm install`
-3. `npm test`
+3. `npm run eslint`
 
 Release
 -------
