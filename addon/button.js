@@ -64,6 +64,8 @@ function initButton(inInspector) {
           inAura: !!document.querySelector("#auraLoadingBox"),
           inInspector
         }, "*");
+      }
+      if (e.source == popupEl.contentWindow && e.data.insextLoaded) {
         openPopup();
       }
       if (e.source == popupEl.contentWindow && e.data.insextClosePopup) {
