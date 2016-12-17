@@ -51,7 +51,7 @@ SOURCE_VERSION_NUMBER=$(jq '.version' addon/manifest.json | tr -d '"');
 ONLINE_VERSION_NUMBER=$(curl \
      -H "Authorization: Bearer $CHROME_ACCESS_TOKEN" \
      -H "x-goog-api-version: 2" \
-     -X GET -s \
+     -X GET -L -s \
      https://chrome.google.com/webstore/detail/$CHROME_APP_ID|sed -n 's/.*<meta itemprop="version" content="\([^"]*\)" \/>.*/\1/p')
 
 if [[ $SOURCE_VERSION_NUMBER == $ONLINE_VERSION_NUMBER ]]
