@@ -631,11 +631,12 @@ class Autocomplete extends React.PureComponent {
       return;
     }
     let sel = this.refs.selectedItem;
+    let marginTop = 5;
     if (this.state.scrollToSelectedIndex != prevState.scrollToSelectedIndex && sel && sel.offsetParent) {
-      if (sel.offsetTop < sel.offsetParent.scrollTop) {
-        sel.scrollIntoView(true);
-      } else if (sel.offsetTop + sel.offsetHeight > sel.offsetParent.scrollTop + sel.offsetParent.offsetHeight) {
-        sel.scrollIntoView(false);
+      if (sel.offsetTop + marginTop < sel.offsetParent.scrollTop) {
+        sel.offsetParent.scrollTop = sel.offsetTop + marginTop;
+      } else if (sel.offsetTop + marginTop + sel.offsetHeight > sel.offsetParent.scrollTop + sel.offsetParent.offsetHeight) {
+        sel.offsetParent.scrollTop = sel.offsetTop + marginTop + sel.offsetHeight - sel.offsetParent.offsetHeight;
       }
     }
   }
