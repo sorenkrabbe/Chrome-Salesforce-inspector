@@ -185,7 +185,20 @@ class App extends React.PureComponent {
     removeEventListener("keydown", this.onShortcutKey);
   }
   render() {
-    let linkTarget = this.props.isDevConsole ? "_blank" : "_top";
+    let {
+      isDevConsole,
+      inAura,
+      inInspector,
+      hostArg,
+      addonVersion,
+    } = this.props;
+    let {
+      sobjectsList,
+      sobjectsLoading,
+      contextRecordId,
+      showAdvanced,
+    } = this.state;
+    let linkTarget = isDevConsole ? "_blank" : "_top";
     return (
       h("div", {},
         h("div", {className: "header"},
@@ -203,17 +216,17 @@ class App extends React.PureComponent {
           "Salesforce inspector"
         ),
         h("div", {className: "main"},
-          h(ShowDetailsButton, {ref: "showDetailsBtn", contextRecordId: this.state.contextRecordId, sobjectsList: this.state.sobjectsList, inAura: this.props.inAura, isDevConsole: this.props.isDevConsole, inInspector: this.props.inInspector}),
-          h(AllDataBox, {ref: "showAllDataBox", linkTarget, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
-          h("a", {ref: "dataExportBtn", href: "data-export.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
-          h("a", {ref: "dataImportBtn", href: "data-import.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
-          h("a", {ref: "limitsBtn", href: "limits.html?" + this.props.hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
-          h("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", h("u", {}, "o"), "re"),
-          h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + this.props.hostArg, target: linkTarget, className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", h("u", {}, "x"), "plore API")
+          h(ShowDetailsButton, {ref: "showDetailsBtn", isDevConsole, inAura, inInspector, sobjectsList, contextRecordId}),
+          h(AllDataBox, {ref: "showAllDataBox", sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
+          h("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
+          h("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
+          h("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
+          h("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: showAdvanced ? "none" : ""}}, "M", h("u", {}, "o"), "re"),
+          h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button", style: {display: !showAdvanced ? "none" : ""}}, "E", h("u", {}, "x"), "plore API")
         ),
         h("div", {className: "footer"},
           h("div", {className: "meta"},
-            h("div", {className: "version"}, "(v" + this.props.addonVersion + ")"),
+            h("div", {className: "version"}, "(v" + addonVersion + ")"),
             h("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
           )
         )
@@ -232,12 +245,14 @@ class ShowDetailsButton extends React.PureComponent {
     this.onDetailsClick = this.onDetailsClick.bind(this);
   }
   onDetailsClick() {
+    let {inAura, sobjectsList, contextRecordId} = this.props;
+    let {detailsShown} = this.state;
     let self = this;
-    if (this.props.inAura || this.state.detailsShown || !this.props.contextRecordId || !this.props.sobjectsList) {
+    if (inAura || detailsShown || !contextRecordId || !sobjectsList) {
       return;
     }
-    let keyPrefix = this.props.contextRecordId.substring(0, 3);
-    let sobject = this.props.sobjectsList.find(sobject => sobject.keyPrefix == keyPrefix);
+    let keyPrefix = contextRecordId.substring(0, 3);
+    let sobject = sobjectsList.find(sobject => sobject.keyPrefix == keyPrefix);
     if (!sobject || sobject.availableApis.length == 0) {
       alert("Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + keyPrefix);
       return;
@@ -255,14 +270,16 @@ class ShowDetailsButton extends React.PureComponent {
     });
   }
   render() {
+    let {isDevConsole, inAura, inInspector, sobjectsList, contextRecordId} = this.props;
+    let {detailsLoading, detailsShown} = this.state;
     return (
       h("button",
         {
           id: "showStdPageDetailsBtn",
-          className: "button" + (this.state.detailsLoading ? " loading" : ""),
-          disabled: this.props.inAura || this.state.detailsShown || !this.props.contextRecordId || !this.props.sobjectsList,
+          className: "button" + (detailsLoading ? " loading" : ""),
+          disabled: inAura || detailsShown || !contextRecordId || !sobjectsList,
           onClick: this.onDetailsClick,
-          style: {display: this.props.isDevConsole || this.props.inInspector ? "none" : ""}
+          style: {display: isDevConsole || inInspector ? "none" : ""}
         },
         "Show field ", h("u", {}, "m"), "etadata"
       )
@@ -285,11 +302,12 @@ class AllDataBox extends React.PureComponent {
     this.setState({selectedValue: match});
   }
   getBestMatch(query) {
+    let {sobjectsList} = this.props;
     let queryKeyPrefix = query.substring(0, 3);
     let recordId = null;
     let sobject = null;
-    if (this.props.sobjectsList) {
-      sobject = this.props.sobjectsList.find(sobject => sobject.keyPrefix == queryKeyPrefix || sobject.name.toLowerCase() == query.toLowerCase());
+    if (sobjectsList) {
+      sobject = sobjectsList.find(sobject => sobject.keyPrefix == queryKeyPrefix || sobject.name.toLowerCase() == query.toLowerCase());
     }
     if (!sobject) {
       return null;
@@ -300,11 +318,12 @@ class AllDataBox extends React.PureComponent {
     return {recordId, sobject};
   }
   getMatches(query) {
-    if (!this.props.sobjectsList) {
+    let {sobjectsList, contextRecordId} = this.props;
+    if (!sobjectsList) {
       return [];
     }
     let queryKeyPrefix = query.substring(0, 3);
-    let res = this.props.sobjectsList
+    let res = sobjectsList
       .filter(sobject => sobject.name.toLowerCase().includes(query.toLowerCase()) || sobject.label.toLowerCase().includes(query.toLowerCase()) || sobject.keyPrefix == queryKeyPrefix)
       .map(sobject => ({
         recordId: null,
@@ -320,10 +339,10 @@ class AllDataBox extends React.PureComponent {
           : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
           : 10) + (sobject.availableApis.length == 0 ? 20 : 0)
       }));
-    query = query || this.props.contextRecordId || "";
+    query = query || contextRecordId || "";
     queryKeyPrefix = query.substring(0, 3);
     if (query.length >= 15) {
-      let objectsForId = this.props.sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
+      let objectsForId = sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
       for (let sobject of objectsForId) {
         res.unshift({recordId: query, sobject, relevance: 1});
       }
@@ -338,10 +357,12 @@ class AllDataBox extends React.PureComponent {
     this.refs.allDataSelection.clickAllDataBtn();
   }
   render() {
+    let {sobjectsList, sobjectsLoading, linkTarget} = this.props;
+    let {selectedValue} = this.state;
     return (
-      h("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
-        h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList: this.props.sobjectsList, getMatches: this.getMatches}),
-        this.state.selectedValue ? h(AllDataSelection, {ref: "allDataSelection", selectedValue: this.state.selectedValue, linkTarget: this.props.linkTarget}) : null
+      h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
+        h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches}),
+        selectedValue ? h(AllDataSelection, {ref: "allDataSelection", selectedValue, linkTarget}) : null
       )
     );
   }
@@ -352,15 +373,16 @@ class AllDataSelection extends React.PureComponent {
     this.refs.showAllDataBtn.click();
   }
   getAllDataUrl(toolingApi) {
-    if (this.props.selectedValue) {
+    let {selectedValue} = this.props;
+    if (selectedValue) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
-      args.set("objectType", this.props.selectedValue.sobject.name);
+      args.set("objectType", selectedValue.sobject.name);
       if (toolingApi) {
         args.set("useToolingApi", "1");
       }
-      if (this.props.selectedValue.recordId) {
-        args.set("recordId", this.props.selectedValue.recordId);
+      if (selectedValue.recordId) {
+        args.set("recordId", selectedValue.recordId);
       }
       return "inspect.html?" + args;
     } else {
@@ -368,33 +390,35 @@ class AllDataSelection extends React.PureComponent {
     }
   }
   getDeployStatusUrl() {
+    let {selectedValue} = this.props;
     let args = new URLSearchParams();
     args.set("host", sfHost);
-    args.set("checkDeployStatus", this.props.selectedValue.recordId);
+    args.set("checkDeployStatus", selectedValue.recordId);
     return "explore-api.html?" + args;
   }
   render() {
+    let {selectedValue, linkTarget} = this.props;
     // Show buttons for the available APIs.
-    let buttons = Array.from(this.props.selectedValue.sobject.availableApis);
+    let buttons = Array.from(selectedValue.sobject.availableApis);
     if (buttons.length == 0) {
       // If none of the APIs are available, show a button for the regular API, which will partly fail, but still show some useful metadata from the tooling API.
       buttons.push("noApi");
     }
     return (
       h("div", {className: "all-data-box-inner"},
-        h("div", {title: "Record ID", className: "data-element"}, this.props.selectedValue.recordId),
-        h("div", {title: "API name", className: "data-element"}, this.props.selectedValue.sobject.name),
-        h("div", {title: "Label", className: "data-element"}, this.props.selectedValue.sobject.label),
-        h("div", {title: "ID key prefix", className: "data-element"}, this.props.selectedValue.sobject.keyPrefix),
-        this.props.selectedValue.recordId && this.props.selectedValue.recordId.startsWith("0Af")
-          ? h("a", {href: this.getDeployStatusUrl(), target: this.props.linkTarget, className: "base-button"}, "Check Deploy Status") : null,
+        h("div", {title: "Record ID", className: "data-element"}, selectedValue.recordId),
+        h("div", {title: "API name", className: "data-element"}, selectedValue.sobject.name),
+        h("div", {title: "Label", className: "data-element"}, selectedValue.sobject.label),
+        h("div", {title: "ID key prefix", className: "data-element"}, selectedValue.sobject.keyPrefix),
+        selectedValue.recordId && selectedValue.recordId.startsWith("0Af")
+          ? h("a", {href: this.getDeployStatusUrl(), target: linkTarget, className: "base-button"}, "Check Deploy Status") : null,
         buttons.map((button, index) => h("a",
           {
             key: button,
             // If buttons for both APIs are shown, the keyboard shortcut should open the first button.
             ref: index == 0 ? "showAllDataBtn" : null,
             href: this.getAllDataUrl(button == "toolingApi"),
-            target: this.props.linkTarget,
+            target: linkTarget,
             className: "base-button"
           },
           index == 0 ? h("span", {}, "Show ", h("u", {}, "a"), "ll data") : "Show all data",
@@ -443,6 +467,7 @@ class AllDataSearch extends React.PureComponent {
     this.refs.showAllDataInp.focus();
   }
   render() {
+    let {inspectQuery} = this.state;
     return (
       h("div", {className: "input-with-dropdown"},
         h("div", {},
@@ -454,12 +479,12 @@ class AllDataSearch extends React.PureComponent {
             onFocus: this.onAllDataFocus,
             onBlur: this.onAllDataBlur,
             onKeyDown: this.onAllDataKeyDown,
-            value: this.state.inspectQuery
+            value: inspectQuery
           }),
           h(Autocomplete, {
             ref: "autoComplete",
             updateInput: this.updateAllDataInput,
-            matchingResults: this.props.getMatches(this.state.inspectQuery)
+            matchingResults: this.props.getMatches(inspectQuery)
               .map(value => ({
                 key: value.recordId + "#" + value.sobject.name,
                 value,
@@ -467,22 +492,22 @@ class AllDataSearch extends React.PureComponent {
                   h("div", {className: "autocomplete-item-main", key: "main"},
                     value.recordId || h(MarkSubstring, {
                       text: value.sobject.name,
-                      start: value.sobject.name.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
-                      length: this.state.inspectQuery.length
+                      start: value.sobject.name.toLowerCase().indexOf(inspectQuery.toLowerCase()),
+                      length: inspectQuery.length
                     }),
                     value.sobject.availableApis.length == 0 ? " (Not readable)" : ""
                   ),
                   h("div", {className: "autocomplete-item-sub", key: "sub"},
                     h(MarkSubstring, {
                       text: value.sobject.keyPrefix || "---",
-                      start: value.sobject.keyPrefix == this.state.inspectQuery.substring(0, 3) ? 0 : -1,
+                      start: value.sobject.keyPrefix == inspectQuery.substring(0, 3) ? 0 : -1,
                       length: 3
                     }),
                     " • ",
                     h(MarkSubstring, {
                       text: value.sobject.label,
-                      start: value.sobject.label.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
-                      length: this.state.inspectQuery.length
+                      start: value.sobject.label.toLowerCase().indexOf(inspectQuery.toLowerCase()),
+                      length: inspectQuery.length
                     })
                   )
                 ]
@@ -535,10 +560,12 @@ class Autocomplete extends React.PureComponent {
     this.setState({showResults: false});
   }
   handleKeyDown(e) {
+    let {matchingResults} = this.props;
+    let {selectedIndex, showResults, scrollToSelectedIndex} = this.state;
     if (e.key == "Enter") {
-      if (this.state.selectedIndex < this.props.matchingResults.length) {
+      if (this.state.selectedIndex < matchingResults.length) {
         e.preventDefault();
-        let {value} = this.props.matchingResults[this.state.selectedIndex];
+        let {value} = matchingResults[selectedIndex];
         this.props.updateInput(value);
         this.setState({showResults: false, selectedIndex: 0});
       }
@@ -558,19 +585,19 @@ class Autocomplete extends React.PureComponent {
     }
     if (selectionMove != 0) {
       e.preventDefault();
-      if (!this.state.showResults) {
-        this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
+      if (!showResults) {
+        this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: scrollToSelectedIndex + 1});
         return;
       }
-      let index = this.state.selectedIndex + selectionMove;
-      let length = this.props.matchingResults.length;
+      let index = selectedIndex + selectionMove;
+      let length = matchingResults.length;
       if (index < 0) {
         index = length - 1;
       }
       if (index > length - 1) {
         index = 0;
       }
-      this.setState({selectedIndex: index, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
+      this.setState({selectedIndex: index, scrollToSelectedIndex: scrollToSelectedIndex + 1});
     }
   }
   onResultsMouseDown() {
@@ -613,25 +640,33 @@ class Autocomplete extends React.PureComponent {
     }
   }
   render() {
+    let {matchingResults} = this.props;
+    let {
+      showResults,
+      selectedIndex,
+      scrollTopIndex,
+      itemHeight,
+      resultsMouseIsDown,
+    } = this.state;
     // For better performance only render the visible autocomplete items + at least one invisible item above and below (if they exist)
     const RENDERED_ITEMS_COUNT = 11;
     let firstIndex = 0;
-    let lastIndex = this.props.matchingResults.length - 1;
-    let firstRenderedIndex = Math.max(0, this.state.scrollTopIndex - 2);
+    let lastIndex = matchingResults.length - 1;
+    let firstRenderedIndex = Math.max(0, scrollTopIndex - 2);
     let lastRenderedIndex = Math.min(lastIndex, firstRenderedIndex + RENDERED_ITEMS_COUNT);
-    let topSpace = (firstRenderedIndex - firstIndex) * this.state.itemHeight;
-    let bottomSpace = (lastIndex - lastRenderedIndex) * this.state.itemHeight;
-    let topSelected = (this.state.selectedIndex - firstIndex) * this.state.itemHeight;
+    let topSpace = (firstRenderedIndex - firstIndex) * itemHeight;
+    let bottomSpace = (lastIndex - lastRenderedIndex) * itemHeight;
+    let topSelected = (selectedIndex - firstIndex) * itemHeight;
     return (
-      h("div", {className: "autocomplete-container", style: {display: (this.state.showResults && this.props.matchingResults.length > 0) || this.state.resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
+      h("div", {className: "autocomplete-container", style: {display: (showResults && matchingResults.length > 0) || resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
         h("div", {className: "autocomplete", onScroll: this.onScroll, ref: "scrollBox"},
-          h("div", {ref: "selectedItem", style: {position: "absolute", top: topSelected + "px", height: this.state.itemHeight + "px"}}),
+          h("div", {ref: "selectedItem", style: {position: "absolute", top: topSelected + "px", height: itemHeight + "px"}}),
           h("div", {style: {height: topSpace + "px"}}),
-          this.props.matchingResults.slice(firstRenderedIndex, lastRenderedIndex + 1)
+          matchingResults.slice(firstRenderedIndex, lastRenderedIndex + 1)
             .map(({key, value, element}, index) =>
               h("a", {
                 key,
-                className: "autocomplete-item " + (this.state.selectedIndex == index + firstRenderedIndex ? "selected" : ""),
+                className: "autocomplete-item " + (selectedIndex == index + firstRenderedIndex ? "selected" : ""),
                 onClick: () => this.onResultClick(value),
                 onMouseEnter: () => this.onResultMouseEnter(index + firstRenderedIndex)
               }, element)
