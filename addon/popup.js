@@ -172,19 +172,25 @@ class App extends React.PureComponent {
   }
   onDetailsClick() {
     let self = this;
-    if (this.state.detailsShown || !this.state.contextRecordId) {
+    if (this.state.detailsShown || !this.state.contextRecordId || !this.state.sobjectsList) {
       return;
     }
+    let keyPrefix = this.state.contextRecordId.substring(0, 3);
+    let sobject = this.state.sobjectsList.find(sobject => sobject.keyPrefix == keyPrefix);
+    if (!sobject || sobject.availableApis.length == 0) {
+      alert("Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + keyPrefix);
+      return;
+    }
+    let tooling = !sobject.availableApis.includes("regularApi");
     this.setState({detailsShown: true, detailsLoading: true});
-    parent.postMessage({insextShowStdPageDetails: true, insextRecordId: this.state.contextRecordId}, "*");
-    addEventListener("message", function messageHandler(e) {
-      if (e.source == parent && e.data.insextShowStdPageDetails) {
-        removeEventListener("message", messageHandler);
-        self.setState({detailsShown: e.data.success, detailsLoading: false});
-        if (e.data.success) {
-          closePopup();
-        }
-      }
+    askSalesforce("/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + sobject.name + "/describe/").then(res => {
+      self.setState({detailsShown: true, detailsLoading: false});
+      parent.postMessage({insextShowStdPageDetails: true, insextData: res}, "*");
+      closePopup();
+    }).catch(error => {
+      self.setState({detailsShown: false, detailsLoading: false});
+      console.error(error);
+      alert(error);
     });
   }
   onShowAdvancedClick(e) {
@@ -223,7 +229,7 @@ class App extends React.PureComponent {
             {
               id: "showStdPageDetailsBtn",
               className: "button" + (this.state.detailsLoading ? " loading" : ""),
-              disabled: this.props.inAura || this.state.detailsShown || !this.state.contextRecordId,
+              disabled: this.props.inAura || this.state.detailsShown || !this.state.contextRecordId || !this.state.sobjectsList,
               onClick: this.onDetailsClick,
               style: {display: this.props.isDevConsole || this.props.inInspector ? "none" : ""}
             },

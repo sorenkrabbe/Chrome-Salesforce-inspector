@@ -1,10 +1,10 @@
 /* eslint-disable no-unused-vars */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
-/* exported session sfHost */
-/* exported initButton */
+/* exported initButton sfHost */
 /* global showStdPageDetails */
 /* eslint-enable no-unused-vars */
 "use strict";
+var sfHost; // eslint-disable-line no-var
+
 // sfdcBody = normal Salesforce page
 // ApexCSIPage = Developer Console
 // auraLoadingBox = Lightning / Salesforce1
@@ -43,6 +43,7 @@ function initButton(inInspector) {
   });
 
   function loadPopup() {
+    console.log("Salesforce Inspector: Load popup");
     btn.addEventListener("click", () => {
       if (!rootEl.classList.contains("insext-active")) {
         openPopup();
@@ -56,7 +57,11 @@ function initButton(inInspector) {
     popupEl.className = "insext-popup";
     popupEl.src = popupSrc;
     addEventListener("message", e => {
-      if (e.source == popupEl.contentWindow && e.data.insextInitRequest) {
+      if (e.source != popupEl.contentWindow) {
+        return;
+      }
+      if (e.data.insextInitRequest) {
+        console.log("Salesforce Inspector: Init popup");
         popupEl.contentWindow.postMessage({
           insextInitResponse: true,
           sfHost,
@@ -65,28 +70,19 @@ function initButton(inInspector) {
           inInspector
         }, "*");
       }
-      if (e.source == popupEl.contentWindow && e.data.insextLoaded) {
+      if (e.data.insextLoaded) {
         openPopup();
       }
-      if (e.source == popupEl.contentWindow && e.data.insextClosePopup) {
+      if (e.data.insextClosePopup) {
         closePopup();
       }
-      if (e.source == popupEl.contentWindow && e.data.insextShowStdPageDetails) {
-        showStdPageDetails(e.data.insextRecordId)
-          .then(
-            () => { // eslint-disable-line indent
-              popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: true}, "*");
-            },
-            error => { // eslint-disable-line indent
-              console.error(error);
-              popupEl.contentWindow.postMessage({insextShowStdPageDetails: true, success: false}, "*");
-              alert(error);
-            }
-          );
+      if (e.data.insextShowStdPageDetails) {
+        showStdPageDetails(e.data.insextData);
       }
     });
     rootEl.appendChild(popupEl);
     function openPopup() {
+      console.log("Salesforce Inspector: Open popup");
       popupEl.contentWindow.postMessage({insextUpdateRecordId: true, locationHref: location.href}, "*");
       rootEl.classList.add("insext-active");
       // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector

@@ -1,55 +1,25 @@
 /* eslint-disable no-unused-vars */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* global sfHost */
 /* exported session sfHost */
 /* exported showStdPageDetails */
 /* eslint-enable no-unused-vars */
 "use strict";
-function showStdPageDetails(recordId) {
+function showStdPageDetails(metadataResponse) {
   let fieldDetailsByLabel = new Map();
-  let metadataResponse = {};
-  return new Promise(resolve => {
-    chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-      if (message) {
-        // Using current hostname so the requests are not blocked in Firefox content scripts. Works on Visualforce domains but not on Lightning domains.
-        session = {key: message.key, hostname: location.hostname};
-      }
-      resolve();
-    });
-  })
-    .then(() =>
-      Promise
-        .all([
-          askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/")
-        ])
-    )
-    .then(responses => {
-      let currentObjKeyPrefix = recordId.substring(0, 3);
-      for (let generalMetadataResponse of responses) {
-        let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix);
-        if (sobject) {
-          return askSalesforce(sobject.urls.describe);
-        }
-      }
-      throw "Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + currentObjKeyPrefix;
-    })
-    .then(res => {
-      metadataResponse = res;
-      // Loop through all label elements, add event listeners
-      for (let fieldDetails of metadataResponse.fields) {
-        if (!fieldDetailsByLabel.has(fieldDetails.label)) {
-          fieldDetailsByLabel.set(fieldDetails.label, []);
-        }
-        fieldDetailsByLabel.get(fieldDetails.label).push(fieldDetails);
-      }
-      for (let labelEventElement of Array.from(document.querySelectorAll("td.labelCol, th.labelCol"))) {
-        if (labelEventElement.textContent.trim() != "") {
-          labelEventElement.addEventListener("mouseenter", softShowFieldDetails);
-          labelEventElement.addEventListener("click", makeFieldDetailsSticky);
-          labelEventElement.addEventListener("mouseleave", softHideFieldDetails);
-        }
-      }
-    });
+  // Loop through all label elements, add event listeners
+  for (let fieldDetails of metadataResponse.fields) {
+    if (!fieldDetailsByLabel.has(fieldDetails.label)) {
+      fieldDetailsByLabel.set(fieldDetails.label, []);
+    }
+    fieldDetailsByLabel.get(fieldDetails.label).push(fieldDetails);
+  }
+  for (let labelEventElement of Array.from(document.querySelectorAll("td.labelCol, th.labelCol"))) {
+    if (labelEventElement.textContent.trim() != "") {
+      labelEventElement.addEventListener("mouseenter", softShowFieldDetails);
+      labelEventElement.addEventListener("click", makeFieldDetailsSticky);
+      labelEventElement.addEventListener("mouseleave", softHideFieldDetails);
+    }
+  }
 
 
   function softShowFieldDetails(e) {
