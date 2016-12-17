@@ -33,9 +33,8 @@ function init(params) {
     session = message;
 
     ReactDOM.render(h(App, {
-      isDevConsole: params.isDevConsole,
-      inAura: params.inAura,
-      inInspector: params.inInspector,
+      forceTargetBlank: params.forceTargetBlank,
+      showDetailsSupported: params.showStdPageDetailsSupported,
       hostArg,
       addonVersion,
     }), document.getElementById("root"));
@@ -50,11 +49,9 @@ class App extends React.PureComponent {
       sobjectsList: null,
       sobjectsLoading: true,
       contextRecordId: null,
-      showAdvanced: false,
     };
     this.onUpdateRecordId = this.onUpdateRecordId.bind(this);
     this.onShortcutKey = this.onShortcutKey.bind(this);
-    this.onShowAdvancedClick = this.onShowAdvancedClick.bind(this);
   }
   onUpdateRecordId(e) {
     if (e.source == parent && e.data.insextUpdateRecordId) {
@@ -143,7 +140,7 @@ class App extends React.PureComponent {
   onShortcutKey(e) {
     if (e.key == "m") {
       e.preventDefault();
-      this.refs.showDetailsBtn.onDetailsClick();
+      this.refs.showAllDataBox.clickShowDetailsBtn();
     }
     if (e.key == "a") {
       e.preventDefault();
@@ -161,18 +158,10 @@ class App extends React.PureComponent {
       e.preventDefault();
       this.refs.apiExploreBtn.click();
     }
-    if (e.key == "o") {
-      e.preventDefault();
-      this.setState({showAdvanced: true});
-    }
     if (e.key == "l") {
       e.preventDefault();
       this.refs.limitsBtn.click();
     }
-  }
-  onShowAdvancedClick(e) {
-    e.preventDefault();
-    this.setState({showAdvanced: true});
   }
   componentDidMount() {
     addEventListener("message", this.onUpdateRecordId);
@@ -186,9 +175,8 @@ class App extends React.PureComponent {
   }
   render() {
     let {
-      isDevConsole,
-      inAura,
-      inInspector,
+      forceTargetBlank,
+      showDetailsSupported,
       hostArg,
       addonVersion,
     } = this.props;
@@ -196,9 +184,8 @@ class App extends React.PureComponent {
       sobjectsList,
       sobjectsLoading,
       contextRecordId,
-      showAdvanced,
     } = this.state;
-    let linkTarget = isDevConsole ? "_blank" : "_top";
+    let linkTarget = forceTargetBlank ? "_blank" : "_top";
     return (
       h("div", {},
         h("div", {className: "header"},
@@ -216,13 +203,14 @@ class App extends React.PureComponent {
           "Salesforce inspector"
         ),
         h("div", {className: "main"},
-          h(ShowDetailsButton, {ref: "showDetailsBtn", isDevConsole, inAura, inInspector, sobjectsList, contextRecordId}),
-          h(AllDataBox, {ref: "showAllDataBox", sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
-          h("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
-          h("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
-          h("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
-          h("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: showAdvanced ? "none" : ""}}, "M", h("u", {}, "o"), "re"),
-          h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button", style: {display: !showAdvanced ? "none" : ""}}, "E", h("u", {}, "x"), "plore API")
+          h(AllDataBox, {ref: "showAllDataBox", showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
+          h("div", {className: "global-box"},
+            h("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
+            h("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
+            h("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
+            // Advanded features should be put below this line, and the layout adjusted so they are below the fold
+            h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button"}, "E", h("u", {}, "x"), "plore API")
+          )
         ),
         h("div", {className: "footer"},
           h("div", {className: "meta"},
@@ -244,42 +232,39 @@ class ShowDetailsButton extends React.PureComponent {
     };
     this.onDetailsClick = this.onDetailsClick.bind(this);
   }
+  canShowDetails() {
+    let {showDetailsSupported, selectedValue, contextRecordId} = this.props;
+    return showDetailsSupported && contextRecordId && selectedValue.sobject.keyPrefix == contextRecordId.substring(0, 3) && selectedValue.sobject.availableApis.length > 0;
+  }
   onDetailsClick() {
-    let {inAura, sobjectsList, contextRecordId} = this.props;
+    let {selectedValue} = this.props;
     let {detailsShown} = this.state;
-    let self = this;
-    if (inAura || detailsShown || !contextRecordId || !sobjectsList) {
+    if (detailsShown || !this.canShowDetails()) {
       return;
     }
-    let keyPrefix = contextRecordId.substring(0, 3);
-    let sobject = sobjectsList.find(sobject => sobject.keyPrefix == keyPrefix);
-    if (!sobject || sobject.availableApis.length == 0) {
-      alert("Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + keyPrefix);
-      return;
-    }
-    let tooling = !sobject.availableApis.includes("regularApi");
+    let tooling = !selectedValue.sobject.availableApis.includes("regularApi");
+    let url = "/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + selectedValue.sobject.name + "/describe/";
     this.setState({detailsShown: true, detailsLoading: true});
-    askSalesforce("/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + sobject.name + "/describe/").then(res => {
-      self.setState({detailsShown: true, detailsLoading: false});
+    askSalesforce(url).then(res => {
+      this.setState({detailsShown: true, detailsLoading: false});
       parent.postMessage({insextShowStdPageDetails: true, insextData: res}, "*");
       closePopup();
     }).catch(error => {
-      self.setState({detailsShown: false, detailsLoading: false});
+      this.setState({detailsShown: false, detailsLoading: false});
       console.error(error);
       alert(error);
     });
   }
   render() {
-    let {isDevConsole, inAura, inInspector, sobjectsList, contextRecordId} = this.props;
     let {detailsLoading, detailsShown} = this.state;
     return (
       h("button",
         {
           id: "showStdPageDetailsBtn",
           className: "button" + (detailsLoading ? " loading" : ""),
-          disabled: inAura || detailsShown || !contextRecordId || !sobjectsList,
+          disabled: detailsShown,
           onClick: this.onDetailsClick,
-          style: {display: isDevConsole || inInspector ? "none" : ""}
+          style: {display: !this.canShowDetails() ? "none" : ""}
         },
         "Show field ", h("u", {}, "m"), "etadata"
       )
@@ -353,22 +338,34 @@ class AllDataBox extends React.PureComponent {
   onDataSelect(value) {
     this.setState({selectedValue: value});
   }
+  clickShowDetailsBtn() {
+    if (this.refs.allDataSelection) {
+      this.refs.allDataSelection.clickShowDetailsBtn();
+    }
+  }
   clickAllDataBtn() {
-    this.refs.allDataSelection.clickAllDataBtn();
+    if (this.refs.allDataSelection) {
+      this.refs.allDataSelection.clickAllDataBtn();
+    }
   }
   render() {
-    let {sobjectsList, sobjectsLoading, linkTarget} = this.props;
+    let {showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget} = this.props;
     let {selectedValue} = this.state;
     return (
       h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
         h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches}),
-        selectedValue ? h(AllDataSelection, {ref: "allDataSelection", selectedValue, linkTarget}) : null
+        selectedValue
+          ? h(AllDataSelection, {ref: "allDataSelection", showDetailsSupported, contextRecordId, selectedValue, linkTarget})
+          : h("div", {className: "all-data-box-inner empty"}, "No record to display")
       )
     );
   }
 }
 
 class AllDataSelection extends React.PureComponent {
+  clickShowDetailsBtn() {
+    this.refs.showDetailsBtn.onDetailsClick();
+  }
   clickAllDataBtn() {
     this.refs.showAllDataBtn.click();
   }
@@ -397,7 +394,7 @@ class AllDataSelection extends React.PureComponent {
     return "explore-api.html?" + args;
   }
   render() {
-    let {selectedValue, linkTarget} = this.props;
+    let {showDetailsSupported, contextRecordId, selectedValue, linkTarget} = this.props;
     // Show buttons for the available APIs.
     let buttons = Array.from(selectedValue.sobject.availableApis);
     if (buttons.length == 0) {
@@ -406,12 +403,15 @@ class AllDataSelection extends React.PureComponent {
     }
     return (
       h("div", {className: "all-data-box-inner"},
-        h("div", {title: "Record ID", className: "data-element"}, selectedValue.recordId),
-        h("div", {title: "API name", className: "data-element"}, selectedValue.sobject.name),
-        h("div", {title: "Label", className: "data-element"}, selectedValue.sobject.label),
-        h("div", {title: "ID key prefix", className: "data-element"}, selectedValue.sobject.keyPrefix),
+        h("div", {className: "all-data-box-data"},
+          h("div", {title: "Record ID", className: "data-element"}, selectedValue.recordId),
+          h("div", {title: "API name", className: "data-element"}, selectedValue.sobject.name),
+          h("div", {title: "Label", className: "data-element"}, selectedValue.sobject.label),
+          h("div", {title: "ID key prefix", className: "data-element"}, selectedValue.sobject.keyPrefix)
+        ),
+        h(ShowDetailsButton, {ref: "showDetailsBtn", showDetailsSupported, selectedValue, contextRecordId}),
         selectedValue.recordId && selectedValue.recordId.startsWith("0Af")
-          ? h("a", {href: this.getDeployStatusUrl(), target: linkTarget, className: "base-button"}, "Check Deploy Status") : null,
+          ? h("a", {href: this.getDeployStatusUrl(), target: linkTarget, className: "button"}, "Check Deploy Status") : null,
         buttons.map((button, index) => h("a",
           {
             key: button,
@@ -419,7 +419,7 @@ class AllDataSelection extends React.PureComponent {
             ref: index == 0 ? "showAllDataBtn" : null,
             href: this.getAllDataUrl(button == "toolingApi"),
             target: linkTarget,
-            className: "base-button"
+            className: "button"
           },
           index == 0 ? h("span", {}, "Show ", h("u", {}, "a"), "ll data") : "Show all data",
           button == "regularApi" ? ""
@@ -474,7 +474,7 @@ class AllDataSearch extends React.PureComponent {
           h("input", {
             className: "all-data-input",
             ref: "showAllDataInp",
-            placeholder: "Record id, id prefix or sObject name",
+            placeholder: "Record id, id prefix or object name",
             onInput: this.onAllDataInput,
             onFocus: this.onAllDataFocus,
             onBlur: this.onAllDataBlur,

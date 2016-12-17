@@ -65,9 +65,8 @@ function initButton(inInspector) {
         popupEl.contentWindow.postMessage({
           insextInitResponse: true,
           sfHost,
-          isDevConsole: !!document.querySelector("body.ApexCSIPage"),
-          inAura: !!document.querySelector("#auraLoadingBox"),
-          inInspector
+          forceTargetBlank: !!document.querySelector("body.ApexCSIPage"),
+          showStdPageDetailsSupported: !document.querySelector("#auraLoadingBox") && !inInspector,
         }, "*");
       }
       if (e.data.insextLoaded) {
