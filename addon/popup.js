@@ -46,14 +46,11 @@ class App extends React.PureComponent {
     this.state = {
       sobjectsList: null,
       sobjectsLoading: true,
-      detailsShown: false,
-      detailsLoading: false,
       contextRecordId: null,
       showAdvanced: false,
     };
     this.onUpdateRecordId = this.onUpdateRecordId.bind(this);
     this.onShortcutKey = this.onShortcutKey.bind(this);
-    this.onDetailsClick = this.onDetailsClick.bind(this);
     this.onShowAdvancedClick = this.onShowAdvancedClick.bind(this);
   }
   onUpdateRecordId(e) {
@@ -143,7 +140,7 @@ class App extends React.PureComponent {
   onShortcutKey(e) {
     if (e.key == "m") {
       e.preventDefault();
-      this.onDetailsClick();
+      this.refs.showDetailsBtn.onDetailsClick();
     }
     if (e.key == "a") {
       e.preventDefault();
@@ -169,29 +166,6 @@ class App extends React.PureComponent {
       e.preventDefault();
       this.refs.limitsBtn.click();
     }
-  }
-  onDetailsClick() {
-    let self = this;
-    if (this.state.detailsShown || !this.state.contextRecordId || !this.state.sobjectsList) {
-      return;
-    }
-    let keyPrefix = this.state.contextRecordId.substring(0, 3);
-    let sobject = this.state.sobjectsList.find(sobject => sobject.keyPrefix == keyPrefix);
-    if (!sobject || sobject.availableApis.length == 0) {
-      alert("Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + keyPrefix);
-      return;
-    }
-    let tooling = !sobject.availableApis.includes("regularApi");
-    this.setState({detailsShown: true, detailsLoading: true});
-    askSalesforce("/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + sobject.name + "/describe/").then(res => {
-      self.setState({detailsShown: true, detailsLoading: false});
-      parent.postMessage({insextShowStdPageDetails: true, insextData: res}, "*");
-      closePopup();
-    }).catch(error => {
-      self.setState({detailsShown: false, detailsLoading: false});
-      console.error(error);
-      alert(error);
-    });
   }
   onShowAdvancedClick(e) {
     e.preventDefault();
@@ -225,16 +199,7 @@ class App extends React.PureComponent {
           "Salesforce inspector"
         ),
         React.createElement("div", {className: "main"},
-          React.createElement("button",
-            {
-              id: "showStdPageDetailsBtn",
-              className: "button" + (this.state.detailsLoading ? " loading" : ""),
-              disabled: this.props.inAura || this.state.detailsShown || !this.state.contextRecordId || !this.state.sobjectsList,
-              onClick: this.onDetailsClick,
-              style: {display: this.props.isDevConsole || this.props.inInspector ? "none" : ""}
-            },
-            "Show field ", React.createElement("u", {}, "m"), "etadata"
-          ),
+          React.createElement(ShowDetailsButton, {ref: "showDetailsBtn", contextRecordId: this.state.contextRecordId, sobjectsList: this.state.sobjectsList, inAura: this.props.inAura, isDevConsole: this.props.isDevConsole, inInspector: this.props.inInspector}),
           React.createElement(AllDataBox, {ref: "showAllDataBox", isDevConsole: this.props.isDevConsole, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
           React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
           React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
@@ -248,6 +213,54 @@ class App extends React.PureComponent {
             React.createElement("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: this.props.isDevConsole ? "_blank" : "_top"}, "About")
           )
         )
+      )
+    );
+  }
+}
+
+class ShowDetailsButton extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.state = {
+      detailsLoading: false,
+      detailsShown: false,
+    };
+    this.onDetailsClick = this.onDetailsClick.bind(this);
+  }
+  onDetailsClick() {
+    let self = this;
+    if (this.props.inAura || this.state.detailsShown || !this.props.contextRecordId || !this.props.sobjectsList) {
+      return;
+    }
+    let keyPrefix = this.props.contextRecordId.substring(0, 3);
+    let sobject = this.props.sobjectsList.find(sobject => sobject.keyPrefix == keyPrefix);
+    if (!sobject || sobject.availableApis.length == 0) {
+      alert("Unknown salesforce object. Unable to identify current page's object type based on key prefix: " + keyPrefix);
+      return;
+    }
+    let tooling = !sobject.availableApis.includes("regularApi");
+    this.setState({detailsShown: true, detailsLoading: true});
+    askSalesforce("/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + sobject.name + "/describe/").then(res => {
+      self.setState({detailsShown: true, detailsLoading: false});
+      parent.postMessage({insextShowStdPageDetails: true, insextData: res}, "*");
+      closePopup();
+    }).catch(error => {
+      self.setState({detailsShown: false, detailsLoading: false});
+      console.error(error);
+      alert(error);
+    });
+  }
+  render() {
+    return (
+      React.createElement("button",
+        {
+          id: "showStdPageDetailsBtn",
+          className: "button" + (this.state.detailsLoading ? " loading" : ""),
+          disabled: this.props.inAura || this.state.detailsShown || !this.props.contextRecordId || !this.props.sobjectsList,
+          onClick: this.onDetailsClick,
+          style: {display: this.props.isDevConsole || this.props.inInspector ? "none" : ""}
+        },
+        "Show field ", React.createElement("u", {}, "m"), "etadata"
       )
     );
   }
