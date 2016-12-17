@@ -37,20 +37,20 @@ log_message "0) Starting release logic...";
 
 log_message "1) Prepare application app package";
 
-VERSION_NUMBER=$(jq '.version' version.json | tr -d '"');
+VERSION_NUMBER=$(jq '.version' addon/manifest.json | tr -d '"');
 
-log_message "1.1) Set version number in app files (version $VERSION_NUMBER)"
-sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/manifest.json
-sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/data/chromePopup.js
+# Now handled in runtime:
+# log_message "1.x) Set version number in app files (version $VERSION_NUMBER)"
+# sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/popup.js
 
-log_message "1.3) Tweak to match ENVIRONMENT_TYPE $ENVIRONMENT_TYPE"
+log_message "1.1) Tweak to match ENVIRONMENT_TYPE $ENVIRONMENT_TYPE"
 if [[ $ENVIRONMENT_TYPE == "BETA" ]]
 then
      jq -c '.name=.name+" BETA"' addon/manifest.json > addon/manifest.tmp.json && mv addon/manifest.tmp.json addon/manifest.json
 fi
 
-log_message "1.3) Create ZIP file"
-zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* version.json docs\* test\* \*.md \*.bak
+log_message "1.2) Create ZIP file (include chrome required files only)"
+zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* package.json docs\* test\* \*.md \*.bak
 
 log_message "2) Push to chrome web store"
 
