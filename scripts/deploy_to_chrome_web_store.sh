@@ -33,15 +33,40 @@ log_detail() {
 
 mkdir -p $WORKING_DIR
 
-log_message "0) Starting release logic...";
+log_message "0) Should release?";
+
+log_message "0.1) Auth with google (renew access token)"
+CHROME_ACCESS_TOKEN=$( \
+     curl "https://www.googleapis.com/oauth2/v3/token" \
+          -s -d "client_id=$CHROME_CLIENT_ID&client_secret=$CHROME_CLIENT_SECRET&refresh_token=$CHROME_REFRESH_TOKEN&grant_type=refresh_token" \
+     | jq '.access_token')
+if [[ $CHROME_ACCESS_TOKEN == null ]]
+then
+     log_error "0.1.1) Login to google failed!";
+     exit 1;
+fi
+
+log_message "0.2) Is source different"
+SOURCE_VERSION_NUMBER=$(jq '.version' addon/manifest.json | tr -d '"');
+ONLINE_VERSION_NUMBER=$(curl \
+     -H "Authorization: Bearer $CHROME_ACCESS_TOKEN" \
+     -H "x-goog-api-version: 2" \
+     -X GET -s \
+     https://chrome.google.com/webstore/detail/$CHROME_APP_ID|sed -n 's/.*<meta itemprop="version" content="\([^"]*\)" \/>.*/\1/p')
+
+if [[ $SOURCE_VERSION_NUMBER == $ONLINE_VERSION_NUMBER ]]
+then
+     log_message "0.2) -> No - source version number is same as online version number ($SOURCE_VERSION_NUMBER)";
+     exit 0
+fi
+
+log_message "0.2) -> Yes - source version \"$SOURCE_VERSION_NUMBER\" will be uploaded to replace online version \"$ONLINE_VERSION_NUMBER\"";
 
 log_message "1) Prepare application app package";
 
-VERSION_NUMBER=$(jq '.version' addon/manifest.json | tr -d '"');
-
 # Now handled in runtime:
-# log_message "1.x) Set version number in app files (version $VERSION_NUMBER)"
-# sed -i .bak -e "s/<!--##VERSION##-->/${VERSION_NUMBER}/g" addon/popup.js
+# log_message "1.x) Set version number in app files (version $SOURCE_VERSION_NUMBER)"
+# sed -i .bak -e "s/<!--##VERSION##-->/${SOURCE_VERSION_NUMBER}/g" addon/popup.js
 
 log_message "1.1) Tweak to match ENVIRONMENT_TYPE $ENVIRONMENT_TYPE"
 if [[ $ENVIRONMENT_TYPE == "BETA" ]]
@@ -50,20 +75,9 @@ then
 fi
 
 log_message "1.2) Create ZIP file (include chrome required files only)"
-zip -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* package.json docs\* test\* \*.md \*.bak
+zip -q -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* package.json docs\* test\* \*.md \*.bak
 
 log_message "2) Push to chrome web store"
-
-log_message "2.1) Auth with google (renew access token)"
-CHROME_ACCESS_TOKEN=$( \
-     curl "https://www.googleapis.com/oauth2/v3/token" \
-          -s -d "client_id=$CHROME_CLIENT_ID&client_secret=$CHROME_CLIENT_SECRET&refresh_token=$CHROME_REFRESH_TOKEN&grant_type=refresh_token" \
-     | jq '.access_token')
-if [[ $CHROME_ACCESS_TOKEN == null ]]
-then
-     log_error "2.1.1) Login to google failed!";
-     exit 1;
-fi
 
 log_message "2.2) Upload application to chrome web store"
 UPLOAD_RESULT=$(curl \

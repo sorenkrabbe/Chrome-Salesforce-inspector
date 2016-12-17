@@ -5,6 +5,9 @@
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
+
+let h = React.createElement;
+
 if (!this.isUnitTest) {
   parent.postMessage({insextInitRequest: true}, "*");
   addEventListener("message", function initResponseHandler(e) {
@@ -29,10 +32,9 @@ function init(params) {
   chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
     session = message;
 
-    ReactDOM.render(React.createElement(App, {
-      isDevConsole: params.isDevConsole,
-      inAura: params.inAura,
-      inInspector: params.inInspector,
+    ReactDOM.render(h(App, {
+      forceTargetBlank: params.forceTargetBlank,
+      showDetailsSupported: params.showStdPageDetailsSupported,
       hostArg,
       addonVersion,
     }), document.getElementById("root"));
@@ -46,15 +48,10 @@ class App extends React.PureComponent {
     this.state = {
       sobjectsList: null,
       sobjectsLoading: true,
-      detailsShown: false,
-      detailsLoading: false,
       contextRecordId: null,
-      showAdvanced: false,
     };
     this.onUpdateRecordId = this.onUpdateRecordId.bind(this);
     this.onShortcutKey = this.onShortcutKey.bind(this);
-    this.onDetailsClick = this.onDetailsClick.bind(this);
-    this.onShowAdvancedClick = this.onShowAdvancedClick.bind(this);
   }
   onUpdateRecordId(e) {
     if (e.source == parent && e.data.insextUpdateRecordId) {
@@ -143,7 +140,7 @@ class App extends React.PureComponent {
   onShortcutKey(e) {
     if (e.key == "m") {
       e.preventDefault();
-      this.onDetailsClick();
+      this.refs.showAllDataBox.clickShowDetailsBtn();
     }
     if (e.key == "a") {
       e.preventDefault();
@@ -161,39 +158,15 @@ class App extends React.PureComponent {
       e.preventDefault();
       this.refs.apiExploreBtn.click();
     }
-    if (e.key == "o") {
-      e.preventDefault();
-      this.setState({showAdvanced: true});
-    }
     if (e.key == "l") {
       e.preventDefault();
       this.refs.limitsBtn.click();
     }
   }
-  onDetailsClick() {
-    let self = this;
-    if (this.state.detailsShown || !this.state.contextRecordId) {
-      return;
-    }
-    this.setState({detailsShown: true, detailsLoading: true});
-    parent.postMessage({insextShowStdPageDetails: true, insextRecordId: this.state.contextRecordId}, "*");
-    addEventListener("message", function messageHandler(e) {
-      if (e.source == parent && e.data.insextShowStdPageDetails) {
-        removeEventListener("message", messageHandler);
-        self.setState({detailsShown: e.data.success, detailsLoading: false});
-        if (e.data.success) {
-          closePopup();
-        }
-      }
-    });
-  }
-  onShowAdvancedClick(e) {
-    e.preventDefault();
-    this.setState({showAdvanced: true});
-  }
   componentDidMount() {
     addEventListener("message", this.onUpdateRecordId);
     addEventListener("keydown", this.onShortcutKey);
+    parent.postMessage({insextLoaded: true}, "*");
     this.loadSobjects();
   }
   componentWillUnmount() {
@@ -201,12 +174,24 @@ class App extends React.PureComponent {
     removeEventListener("keydown", this.onShortcutKey);
   }
   render() {
+    let {
+      forceTargetBlank,
+      showDetailsSupported,
+      hostArg,
+      addonVersion,
+    } = this.props;
+    let {
+      sobjectsList,
+      sobjectsLoading,
+      contextRecordId,
+    } = this.state;
+    let linkTarget = forceTargetBlank ? "_blank" : "_top";
     return (
-      React.createElement("div", {},
-        React.createElement("div", {className: "header"},
-          React.createElement("div", {className: "header-icon"},
-            React.createElement("svg", {viewBox: "0 0 24 24"},
-              React.createElement("path", {d: `
+      h("div", {},
+        h("div", {className: "header"},
+          h("div", {className: "header-icon"},
+            h("svg", {viewBox: "0 0 24 24"},
+              h("path", {d: `
                 M11 9c-.5 0-1-.5-1-1s.5-1 1-1 1 .5 1 1-.5 1-1 1z
                 m1 5.8c0 .2-.1.3-.3.3h-1.4c-.2 0-.3-.1-.3-.3v-4.6c0-.2.1-.3.3-.3h1.4c.2.0.3.1.3.3z
                 M11 3.8c-4 0-7.2 3.2-7.2 7.2s3.2 7.2 7.2 7.2s7.2-3.2 7.2-7.2s-3.2-7.2-7.2-7.2z
@@ -217,30 +202,71 @@ class App extends React.PureComponent {
           ),
           "Salesforce inspector"
         ),
-        React.createElement("div", {className: "main"},
-          React.createElement("button",
-            {
-              id: "showStdPageDetailsBtn",
-              className: "button" + (this.state.detailsLoading ? " loading" : ""),
-              disabled: this.props.inAura || this.state.detailsShown || !this.state.contextRecordId,
-              onClick: this.onDetailsClick,
-              style: {display: this.props.isDevConsole || this.props.inInspector ? "none" : ""}
-            },
-            "Show field ", React.createElement("u", {}, "m"), "etadata"
-          ),
-          React.createElement(AllDataBox, {ref: "showAllDataBox", isDevConsole: this.props.isDevConsole, sobjectsLoading: this.state.sobjectsLoading, sobjectsList: this.state.sobjectsList, contextRecordId: this.state.contextRecordId}),
-          React.createElement("a", {ref: "dataExportBtn", href: "data-export.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "E"), "xport"),
-          React.createElement("a", {ref: "dataImportBtn", href: "data-import.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Data ", React.createElement("u", {}, "I"), "mport"),
-          React.createElement("a", {ref: "limitsBtn", href: "limits.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button"}, "Org ", React.createElement("u", {}, "L"), "imits"),
-          React.createElement("a", {href: "#", onClick: this.onShowAdvancedClick, className: "base-button", style: {display: this.state.showAdvanced ? "none" : ""}}, "M", React.createElement("u", {}, "o"), "re"),
-          React.createElement("a", {ref: "apiExploreBtn", href: "explore-api.html?" + this.props.hostArg, target: this.props.isDevConsole ? "_blank" : "_top", className: "button", style: {display: !this.state.showAdvanced ? "none" : ""}}, "E", React.createElement("u", {}, "x"), "plore API")
+        h("div", {className: "main"},
+          h(AllDataBox, {ref: "showAllDataBox", showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
+          h("div", {className: "global-box"},
+            h("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
+            h("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
+            h("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
+            // Advanded features should be put below this line, and the layout adjusted so they are below the fold
+            h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button"}, "E", h("u", {}, "x"), "plore API")
+          )
         ),
-        React.createElement("div", {className: "footer"},
-          React.createElement("div", {className: "meta"},
-            React.createElement("div", {className: "version"}, "(v" + this.props.addonVersion + ")"),
-            React.createElement("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: this.props.isDevConsole ? "_blank" : "_top"}, "About")
+        h("div", {className: "footer"},
+          h("div", {className: "meta"},
+            h("div", {className: "version"}, "(v" + addonVersion + ")"),
+            h("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
           )
         )
+      )
+    );
+  }
+}
+
+class ShowDetailsButton extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.state = {
+      detailsLoading: false,
+      detailsShown: false,
+    };
+    this.onDetailsClick = this.onDetailsClick.bind(this);
+  }
+  canShowDetails() {
+    let {showDetailsSupported, selectedValue, contextRecordId} = this.props;
+    return showDetailsSupported && contextRecordId && selectedValue.sobject.keyPrefix == contextRecordId.substring(0, 3) && selectedValue.sobject.availableApis.length > 0;
+  }
+  onDetailsClick() {
+    let {selectedValue} = this.props;
+    let {detailsShown} = this.state;
+    if (detailsShown || !this.canShowDetails()) {
+      return;
+    }
+    let tooling = !selectedValue.sobject.availableApis.includes("regularApi");
+    let url = "/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + selectedValue.sobject.name + "/describe/";
+    this.setState({detailsShown: true, detailsLoading: true});
+    askSalesforce(url).then(res => {
+      this.setState({detailsShown: true, detailsLoading: false});
+      parent.postMessage({insextShowStdPageDetails: true, insextData: res}, "*");
+      closePopup();
+    }).catch(error => {
+      this.setState({detailsShown: false, detailsLoading: false});
+      console.error(error);
+      alert(error);
+    });
+  }
+  render() {
+    let {detailsLoading, detailsShown} = this.state;
+    return (
+      h("button",
+        {
+          id: "showStdPageDetailsBtn",
+          className: "button" + (detailsLoading ? " loading" : ""),
+          disabled: detailsShown,
+          onClick: this.onDetailsClick,
+          style: {display: !this.canShowDetails() ? "none" : ""}
+        },
+        "Show field ", h("u", {}, "m"), "etadata"
       )
     );
   }
@@ -261,11 +287,12 @@ class AllDataBox extends React.PureComponent {
     this.setState({selectedValue: match});
   }
   getBestMatch(query) {
+    let {sobjectsList} = this.props;
     let queryKeyPrefix = query.substring(0, 3);
     let recordId = null;
     let sobject = null;
-    if (this.props.sobjectsList) {
-      sobject = this.props.sobjectsList.find(sobject => sobject.keyPrefix == queryKeyPrefix || sobject.name.toLowerCase() == query.toLowerCase());
+    if (sobjectsList) {
+      sobject = sobjectsList.find(sobject => sobject.keyPrefix == queryKeyPrefix || sobject.name.toLowerCase() == query.toLowerCase());
     }
     if (!sobject) {
       return null;
@@ -276,11 +303,12 @@ class AllDataBox extends React.PureComponent {
     return {recordId, sobject};
   }
   getMatches(query) {
-    if (!this.props.sobjectsList) {
+    let {sobjectsList, contextRecordId} = this.props;
+    if (!sobjectsList) {
       return [];
     }
     let queryKeyPrefix = query.substring(0, 3);
-    let res = this.props.sobjectsList
+    let res = sobjectsList
       .filter(sobject => sobject.name.toLowerCase().includes(query.toLowerCase()) || sobject.label.toLowerCase().includes(query.toLowerCase()) || sobject.keyPrefix == queryKeyPrefix)
       .map(sobject => ({
         recordId: null,
@@ -296,10 +324,10 @@ class AllDataBox extends React.PureComponent {
           : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
           : 10) + (sobject.availableApis.length == 0 ? 20 : 0)
       }));
-    query = query || this.props.contextRecordId || "";
+    query = query || contextRecordId || "";
     queryKeyPrefix = query.substring(0, 3);
     if (query.length >= 15) {
-      let objectsForId = this.props.sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
+      let objectsForId = sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
       for (let sobject of objectsForId) {
         res.unshift({recordId: query, sobject, relevance: 1});
       }
@@ -310,33 +338,48 @@ class AllDataBox extends React.PureComponent {
   onDataSelect(value) {
     this.setState({selectedValue: value});
   }
+  clickShowDetailsBtn() {
+    if (this.refs.allDataSelection) {
+      this.refs.allDataSelection.clickShowDetailsBtn();
+    }
+  }
   clickAllDataBtn() {
-    this.refs.allDataSelection.clickAllDataBtn();
+    if (this.refs.allDataSelection) {
+      this.refs.allDataSelection.clickAllDataBtn();
+    }
   }
   render() {
+    let {showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget} = this.props;
+    let {selectedValue} = this.state;
     return (
-      React.createElement("div", {className: "all-data-box " + (this.props.sobjectsLoading ? "loading " : "")},
-        React.createElement(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList: this.props.sobjectsList, getMatches: this.getMatches}),
-        this.state.selectedValue ? React.createElement(AllDataSelection, {ref: "allDataSelection", selectedValue: this.state.selectedValue, isDevConsole: this.props.isDevConsole}) : null
+      h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
+        h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches}),
+        selectedValue
+          ? h(AllDataSelection, {ref: "allDataSelection", showDetailsSupported, contextRecordId, selectedValue, linkTarget})
+          : h("div", {className: "all-data-box-inner empty"}, "No record to display")
       )
     );
   }
 }
 
 class AllDataSelection extends React.PureComponent {
+  clickShowDetailsBtn() {
+    this.refs.showDetailsBtn.onDetailsClick();
+  }
   clickAllDataBtn() {
     this.refs.showAllDataBtn.click();
   }
   getAllDataUrl(toolingApi) {
-    if (this.props.selectedValue) {
+    let {selectedValue} = this.props;
+    if (selectedValue) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
-      args.set("objectType", this.props.selectedValue.sobject.name);
+      args.set("objectType", selectedValue.sobject.name);
       if (toolingApi) {
         args.set("useToolingApi", "1");
       }
-      if (this.props.selectedValue.recordId) {
-        args.set("recordId", this.props.selectedValue.recordId);
+      if (selectedValue.recordId) {
+        args.set("recordId", selectedValue.recordId);
       }
       return "inspect.html?" + args;
     } else {
@@ -344,36 +387,41 @@ class AllDataSelection extends React.PureComponent {
     }
   }
   getDeployStatusUrl() {
+    let {selectedValue} = this.props;
     let args = new URLSearchParams();
     args.set("host", sfHost);
-    args.set("checkDeployStatus", this.props.selectedValue.recordId);
+    args.set("checkDeployStatus", selectedValue.recordId);
     return "explore-api.html?" + args;
   }
   render() {
+    let {showDetailsSupported, contextRecordId, selectedValue, linkTarget} = this.props;
     // Show buttons for the available APIs.
-    let buttons = Array.from(this.props.selectedValue.sobject.availableApis);
+    let buttons = Array.from(selectedValue.sobject.availableApis);
     if (buttons.length == 0) {
       // If none of the APIs are available, show a button for the regular API, which will partly fail, but still show some useful metadata from the tooling API.
       buttons.push("noApi");
     }
     return (
-      React.createElement("div", {className: "all-data-box-inner"},
-        React.createElement("div", {title: "Record ID", className: "data-element"}, this.props.selectedValue.recordId),
-        React.createElement("div", {title: "API name", className: "data-element"}, this.props.selectedValue.sobject.name),
-        React.createElement("div", {title: "Label", className: "data-element"}, this.props.selectedValue.sobject.label),
-        React.createElement("div", {title: "ID key prefix", className: "data-element"}, this.props.selectedValue.sobject.keyPrefix),
-        this.props.selectedValue.recordId && this.props.selectedValue.recordId.startsWith("0Af")
-          ? React.createElement("a", {href: this.getDeployStatusUrl(), target: this.props.isDevConsole ? "_blank" : "_top", className: "base-button"}, "Check Deploy Status") : null,
-        buttons.map((button, index) => React.createElement("a",
+      h("div", {className: "all-data-box-inner"},
+        h("div", {className: "all-data-box-data"},
+          h("div", {title: "Record ID", className: "data-element"}, selectedValue.recordId),
+          h("div", {title: "API name", className: "data-element"}, selectedValue.sobject.name),
+          h("div", {title: "Label", className: "data-element"}, selectedValue.sobject.label),
+          h("div", {title: "ID key prefix", className: "data-element"}, selectedValue.sobject.keyPrefix)
+        ),
+        h(ShowDetailsButton, {ref: "showDetailsBtn", showDetailsSupported, selectedValue, contextRecordId}),
+        selectedValue.recordId && selectedValue.recordId.startsWith("0Af")
+          ? h("a", {href: this.getDeployStatusUrl(), target: linkTarget, className: "button"}, "Check Deploy Status") : null,
+        buttons.map((button, index) => h("a",
           {
             key: button,
             // If buttons for both APIs are shown, the keyboard shortcut should open the first button.
             ref: index == 0 ? "showAllDataBtn" : null,
             href: this.getAllDataUrl(button == "toolingApi"),
-            target: this.props.isDevConsole ? "_blank" : "_top",
-            className: "base-button"
+            target: linkTarget,
+            className: "button"
           },
-          index == 0 ? React.createElement("span", {}, "Show ", React.createElement("u", {}, "a"), "ll data") : "Show all data",
+          index == 0 ? h("span", {}, "Show ", h("u", {}, "a"), "ll data") : "Show all data",
           button == "regularApi" ? ""
             : button == "toolingApi" ? " (Tooling API)"
             : " (Not readable)"
@@ -419,54 +467,55 @@ class AllDataSearch extends React.PureComponent {
     this.refs.showAllDataInp.focus();
   }
   render() {
+    let {inspectQuery} = this.state;
     return (
-      React.createElement("div", {className: "input-with-dropdown"},
-        React.createElement("div", {},
-          React.createElement("input", {
+      h("div", {className: "input-with-dropdown"},
+        h("div", {},
+          h("input", {
             className: "all-data-input",
             ref: "showAllDataInp",
-            placeholder: "Record id, id prefix or sObject name",
+            placeholder: "Record id, id prefix or object name",
             onInput: this.onAllDataInput,
             onFocus: this.onAllDataFocus,
             onBlur: this.onAllDataBlur,
             onKeyDown: this.onAllDataKeyDown,
-            value: this.state.inspectQuery
+            value: inspectQuery
           }),
-          React.createElement(Autocomplete, {
+          h(Autocomplete, {
             ref: "autoComplete",
             updateInput: this.updateAllDataInput,
-            matchingResults: this.props.getMatches(this.state.inspectQuery)
+            matchingResults: this.props.getMatches(inspectQuery)
               .map(value => ({
                 key: value.recordId + "#" + value.sobject.name,
                 value,
                 element: [
-                  React.createElement("div", {className: "autocomplete-item-main", key: "main"},
-                    value.recordId || React.createElement(MarkSubstring, {
+                  h("div", {className: "autocomplete-item-main", key: "main"},
+                    value.recordId || h(MarkSubstring, {
                       text: value.sobject.name,
-                      start: value.sobject.name.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
-                      length: this.state.inspectQuery.length
+                      start: value.sobject.name.toLowerCase().indexOf(inspectQuery.toLowerCase()),
+                      length: inspectQuery.length
                     }),
                     value.sobject.availableApis.length == 0 ? " (Not readable)" : ""
                   ),
-                  React.createElement("div", {className: "autocomplete-item-sub", key: "sub"},
-                    React.createElement(MarkSubstring, {
+                  h("div", {className: "autocomplete-item-sub", key: "sub"},
+                    h(MarkSubstring, {
                       text: value.sobject.keyPrefix || "---",
-                      start: value.sobject.keyPrefix == this.state.inspectQuery.substring(0, 3) ? 0 : -1,
+                      start: value.sobject.keyPrefix == inspectQuery.substring(0, 3) ? 0 : -1,
                       length: 3
                     }),
                     " • ",
-                    React.createElement(MarkSubstring, {
+                    h(MarkSubstring, {
                       text: value.sobject.label,
-                      start: value.sobject.label.toLowerCase().indexOf(this.state.inspectQuery.toLowerCase()),
-                      length: this.state.inspectQuery.length
+                      start: value.sobject.label.toLowerCase().indexOf(inspectQuery.toLowerCase()),
+                      length: inspectQuery.length
                     })
                   )
                 ]
               }))
           })
         ),
-        React.createElement("svg", {viewBox: "0 0 24 24", onClick: this.onAllDataArrowClick},
-          React.createElement("path", {d: "M3.8 6.5h16.4c.4 0 .8.6.4 1l-8 9.8c-.3.3-.9.3-1.2 0l-8-9.8c-.4-.4-.1-1 .4-1z"})
+        h("svg", {viewBox: "0 0 24 24", onClick: this.onAllDataArrowClick},
+          h("path", {d: "M3.8 6.5h16.4c.4 0 .8.6.4 1l-8 9.8c-.3.3-.9.3-1.2 0l-8-9.8c-.4-.4-.1-1 .4-1z"})
         )
       )
     );
@@ -475,11 +524,11 @@ class AllDataSearch extends React.PureComponent {
 
 function MarkSubstring({text, start, length}) {
   if (start == -1) {
-    return React.createElement("span", {}, text);
+    return h("span", {}, text);
   }
-  return React.createElement("span", {},
+  return h("span", {},
     text.substr(0, start),
-    React.createElement("mark", {}, text.substr(start, length)),
+    h("mark", {}, text.substr(start, length)),
     text.substr(start + length)
   );
 }
@@ -511,10 +560,12 @@ class Autocomplete extends React.PureComponent {
     this.setState({showResults: false});
   }
   handleKeyDown(e) {
+    let {matchingResults} = this.props;
+    let {selectedIndex, showResults, scrollToSelectedIndex} = this.state;
     if (e.key == "Enter") {
-      if (this.state.selectedIndex < this.props.matchingResults.length) {
+      if (this.state.selectedIndex < matchingResults.length) {
         e.preventDefault();
-        let {value} = this.props.matchingResults[this.state.selectedIndex];
+        let {value} = matchingResults[selectedIndex];
         this.props.updateInput(value);
         this.setState({showResults: false, selectedIndex: 0});
       }
@@ -534,19 +585,19 @@ class Autocomplete extends React.PureComponent {
     }
     if (selectionMove != 0) {
       e.preventDefault();
-      if (!this.state.showResults) {
-        this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
+      if (!showResults) {
+        this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: scrollToSelectedIndex + 1});
         return;
       }
-      let index = this.state.selectedIndex + selectionMove;
-      let length = this.props.matchingResults.length;
+      let index = selectedIndex + selectionMove;
+      let length = matchingResults.length;
       if (index < 0) {
         index = length - 1;
       }
       if (index > length - 1) {
         index = 0;
       }
-      this.setState({selectedIndex: index, scrollToSelectedIndex: this.state.scrollToSelectedIndex + 1});
+      this.setState({selectedIndex: index, scrollToSelectedIndex: scrollToSelectedIndex + 1});
     }
   }
   onResultsMouseDown() {
@@ -580,39 +631,48 @@ class Autocomplete extends React.PureComponent {
       return;
     }
     let sel = this.refs.selectedItem;
+    let marginTop = 5;
     if (this.state.scrollToSelectedIndex != prevState.scrollToSelectedIndex && sel && sel.offsetParent) {
-      if (sel.offsetTop < sel.offsetParent.scrollTop) {
-        sel.scrollIntoView(true);
-      } else if (sel.offsetTop + sel.offsetHeight > sel.offsetParent.scrollTop + sel.offsetParent.offsetHeight) {
-        sel.scrollIntoView(false);
+      if (sel.offsetTop + marginTop < sel.offsetParent.scrollTop) {
+        sel.offsetParent.scrollTop = sel.offsetTop + marginTop;
+      } else if (sel.offsetTop + marginTop + sel.offsetHeight > sel.offsetParent.scrollTop + sel.offsetParent.offsetHeight) {
+        sel.offsetParent.scrollTop = sel.offsetTop + marginTop + sel.offsetHeight - sel.offsetParent.offsetHeight;
       }
     }
   }
   render() {
+    let {matchingResults} = this.props;
+    let {
+      showResults,
+      selectedIndex,
+      scrollTopIndex,
+      itemHeight,
+      resultsMouseIsDown,
+    } = this.state;
     // For better performance only render the visible autocomplete items + at least one invisible item above and below (if they exist)
     const RENDERED_ITEMS_COUNT = 11;
     let firstIndex = 0;
-    let lastIndex = this.props.matchingResults.length - 1;
-    let firstRenderedIndex = Math.max(0, this.state.scrollTopIndex - 2);
+    let lastIndex = matchingResults.length - 1;
+    let firstRenderedIndex = Math.max(0, scrollTopIndex - 2);
     let lastRenderedIndex = Math.min(lastIndex, firstRenderedIndex + RENDERED_ITEMS_COUNT);
-    let topSpace = (firstRenderedIndex - firstIndex) * this.state.itemHeight;
-    let bottomSpace = (lastIndex - lastRenderedIndex) * this.state.itemHeight;
-    let topSelected = (this.state.selectedIndex - firstIndex) * this.state.itemHeight;
+    let topSpace = (firstRenderedIndex - firstIndex) * itemHeight;
+    let bottomSpace = (lastIndex - lastRenderedIndex) * itemHeight;
+    let topSelected = (selectedIndex - firstIndex) * itemHeight;
     return (
-      React.createElement("div", {className: "autocomplete-container", style: {display: (this.state.showResults && this.props.matchingResults.length > 0) || this.state.resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
-        React.createElement("div", {className: "autocomplete", onScroll: this.onScroll, ref: "scrollBox"},
-          React.createElement("div", {ref: "selectedItem", style: {position: "absolute", top: topSelected + "px", height: this.state.itemHeight + "px"}}),
-          React.createElement("div", {style: {height: topSpace + "px"}}),
-          this.props.matchingResults.slice(firstRenderedIndex, lastRenderedIndex + 1)
+      h("div", {className: "autocomplete-container", style: {display: (showResults && matchingResults.length > 0) || resultsMouseIsDown ? "" : "none"}, onMouseDown: this.onResultsMouseDown, onMouseUp: this.onResultsMouseUp},
+        h("div", {className: "autocomplete", onScroll: this.onScroll, ref: "scrollBox"},
+          h("div", {ref: "selectedItem", style: {position: "absolute", top: topSelected + "px", height: itemHeight + "px"}}),
+          h("div", {style: {height: topSpace + "px"}}),
+          matchingResults.slice(firstRenderedIndex, lastRenderedIndex + 1)
             .map(({key, value, element}, index) =>
-              React.createElement("a", {
+              h("a", {
                 key,
-                className: "autocomplete-item " + (this.state.selectedIndex == index + firstRenderedIndex ? "selected" : ""),
+                className: "autocomplete-item " + (selectedIndex == index + firstRenderedIndex ? "selected" : ""),
                 onClick: () => this.onResultClick(value),
                 onMouseEnter: () => this.onResultMouseEnter(index + firstRenderedIndex)
               }, element)
             ),
-          React.createElement("div", {style: {height: bottomSpace + "px"}})
+          h("div", {style: {height: bottomSpace + "px"}})
         )
       )
     );
