@@ -563,7 +563,11 @@ class Autocomplete extends React.PureComponent {
     let {matchingResults} = this.props;
     let {selectedIndex, showResults, scrollToSelectedIndex} = this.state;
     if (e.key == "Enter") {
-      if (this.state.selectedIndex < matchingResults.length) {
+      if (!showResults) {
+        this.setState({showResults: true, selectedIndex: 0, scrollToSelectedIndex: scrollToSelectedIndex + 1});
+        return;
+      }
+      if (selectedIndex < matchingResults.length) {
         e.preventDefault();
         let {value} = matchingResults[selectedIndex];
         this.props.updateInput(value);
