@@ -66,20 +66,25 @@ class Model {
       .catch(err => console.log("error handling failed", err));
   }
   recordHeading() {
+    let parts;
     if (this.recordData) {
-      return "(" + this.recordData.Name + " / " + this.recordData.Id + ")";
+      parts = [this.recordData.Name, this.recordData.Id];
+    } else if (this.objectData) {
+      parts = [this.objectData.label, this.objectData.keyPrefix];
+    } else {
+      parts = [];
     }
-    if (this.objectData) {
-      return "(" + this.objectData.label + " / " + this.objectData.keyPrefix + ")";
+    if (this.useToolingApi) {
+      parts.push("Tooling API");
     }
-    return "Loading all data...";
+    return "(" + parts.join(" / ") + ")";
   }
   objectName() {
     // Get with correct case if available, otherwise just return the input.
     return this.objectData ? this.objectData.name : this.sobjectName;
   }
   title() {
-    return (this.objectData ? "ALL DATA: " + this.objectData.name + " " : "") + this.recordHeading();
+    return "ALL DATA: " + this.objectName() + " " + this.recordHeading();
   }
   showDetailsBox(name, allFieldMetadata, detailsFilterList) {
     let self = this;
