@@ -250,7 +250,8 @@ function dataImportVm(copyToClipboard) {
       let data = importData().taggedRows.map(row => row.cells);
       return {
         table: [header, ...data],
-        isTooling: undefined, // Only used in data export
+        isTooling: vm.useToolingApi(),
+        describeInfo,
         rowVisibilities: [true, ...importData().taggedRows.map(row => vm.showStatus[row.status]())],
         colVisibilities: header.map(() => true)
       };

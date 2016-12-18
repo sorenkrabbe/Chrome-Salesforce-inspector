@@ -11,11 +11,14 @@ class Model {
     this.reactCallback = null;
     this.sfLink = "https://" + sfHost;
     this.spinnerCount = 0;
+    this.globalDescribe = null;
     this.sobjectDescribePromise = null;
     this.objectData = null;
     this.recordData = null;
     this.layoutInfo = null;
-    this.sobjectName = undefined;
+    this.sobjectName = null;
+    this.useToolingApi = null;
+    this.recordId = null;
     this.errorMessages = [];
     this.rowsFilter = "";
     this.useAdvancedFilter = false;
@@ -248,92 +251,49 @@ class Model {
     this.recordData = null;
     this.layoutInfo = null;
   }
-  startLoading(args) {
-    let sobjectInfoPromise;
-    let recordDataPromise;
-    if (args.has("q")) {
-      let recordId = args.get("q");
-      sobjectInfoPromise = Promise
-        .all([
-          askSalesforce("/services/data/v" + apiVersion + "/sobjects/"),
-          askSalesforce("/services/data/v" + apiVersion + "/tooling/sobjects/")
-        ])
-        .then(responses => {
-          let currentObjKeyPrefix = recordId.substring(0, 3);
-          for (let generalMetadataResponse of responses) {
-            let sobject = generalMetadataResponse.sobjects.find(sobject => sobject.keyPrefix == currentObjKeyPrefix || sobject.name.toLowerCase() == recordId.toLowerCase());
-            if (sobject) {
-              this.sobjectName = sobject.name;
-              this.sobjectDescribePromise = askSalesforce(sobject.urls.describe);
-              if (recordId.length < 15) {
-                recordDataPromise = null; // Just a prefix, don't attempt to load the record
-              } else if (sobject.name.toLowerCase() == recordId.toLowerCase()) {
-                recordDataPromise = null; // Not a record ID, don't attempt to load the record
-              } else if (!sobject.retrieveable) {
-                recordDataPromise = null;
-                this.errorMessages.push("This object does not support showing all data");
-              } else {
-                recordDataPromise = askSalesforce(sobject.urls.rowTemplate.replace("{ID}", recordId));
-              }
-              this.didUpdate();
-              return;
-            }
-          }
-          throw "Unknown salesforce object: " + recordId;
-        });
-    } else if (args.has("objectType")) {
-      sobjectInfoPromise = Promise.resolve().then(() => {
-        this.sobjectName = args.get("objectType");
-        this.sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (args.has("useToolingApi") ? "tooling/" : "") + "sobjects/" + args.get("objectType") + "/describe/");
-        if (args.get("recordId")) {
-          recordDataPromise = askSalesforce("/services/data/v" + apiVersion + "/" + (args.has("useToolingApi") ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/" + args.get("recordId"));
-        } else {
-          recordDataPromise = null; // No record
-        }
-        this.didUpdate();
-      });
-    } else {
-      sobjectInfoPromise = Promise.reject("unknown input for showAllData");
-    }
-    this.spinFor("describing global", sobjectInfoPromise, () => {
-
-      // Fetch object data using object describe call
-      this.spinFor("describing object", this.sobjectDescribePromise, sobjectDescribe => {
-        // Display the retrieved object data
-        this.objectData = sobjectDescribe;
-        for (let fieldDescribe of sobjectDescribe.fields) {
-          this.fieldRows.getRow(fieldDescribe.name).fieldDescribe = fieldDescribe;
-        }
-        this.fieldRows.resortRows();
-        for (let childDescribe of sobjectDescribe.childRelationships) {
-          this.childRows.getRow(childDescribe.relationshipName).childDescribe = childDescribe;
-        }
-        this.childRows.resortRows();
-      });
-
-      // Fetch record data using record retrieve call
-      if (recordDataPromise) {
-        this.setRecordData(recordDataPromise);
-      }
-
-      // Fetch fields using a Tooling API call, which returns fields not readable by the current user, but fails if the user does not have access to the Tooling API.
-      // The Tooling API is not very stable. It often gives "An unexpected error occurred. Please include this ErrorId if you contact support".
-      // We would like to query all meta-fields, to show them when the user clicks a field for more details.
-      // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
-      // Therefore qe query the minimum set of meta-fields needed by our main UI.
-      this.spinFor(
-        "querying tooling particles",
-        askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")),
-        res => {
-          for (let entityParticle of res.records) {
-            this.fieldRows.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
-          }
-          this.hasEntityParticles = true;
-          this.fieldRows.resortRows();
-        }
-      );
-
+  startLoading() {
+    this.spinFor("describing global", askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/"), globalDescribe => {
+      this.globalDescribe = globalDescribe;
+      this.didUpdate();
     });
+
+    this.sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/describe/");
+
+    // Fetch object data using object describe call
+    this.spinFor("describing object", this.sobjectDescribePromise, sobjectDescribe => {
+      // Display the retrieved object data
+      this.objectData = sobjectDescribe;
+      for (let fieldDescribe of sobjectDescribe.fields) {
+        this.fieldRows.getRow(fieldDescribe.name).fieldDescribe = fieldDescribe;
+      }
+      this.fieldRows.resortRows();
+      for (let childDescribe of sobjectDescribe.childRelationships) {
+        this.childRows.getRow(childDescribe.relationshipName).childDescribe = childDescribe;
+      }
+      this.childRows.resortRows();
+    });
+
+    // Fetch record data using record retrieve call
+    if (this.recordId) {
+      this.setRecordData(askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/" + this.recordId));
+    }
+
+    // Fetch fields using a Tooling API call, which returns fields not readable by the current user, but fails if the user does not have access to the Tooling API.
+    // The Tooling API is not very stable. It often gives "An unexpected error occurred. Please include this ErrorId if you contact support".
+    // We would like to query all meta-fields, to show them when the user clicks a field for more details.
+    // But, the more meta-fields we query, the more likely the query is to fail, and the meta-fields that cause failure vary depending on the entity we query, the org we are in, and the current Salesforce release.
+    // Therefore qe query the minimum set of meta-fields needed by our main UI.
+    this.spinFor(
+      "querying tooling particles",
+      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")),
+      res => {
+        for (let entityParticle of res.records) {
+          this.fieldRows.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
+        }
+        this.hasEntityParticles = true;
+        this.fieldRows.resortRows();
+      }
+    );
 
   }
 }
@@ -502,6 +462,7 @@ class FieldRow extends TableRow {
     this.editLayoutInfo = undefined;
     this.entityParticle = undefined;
     this.fieldParticleMetadata = undefined;
+    this.recordIdPop = null;
   }
   rowProperties() {
     let props = {};
@@ -669,16 +630,43 @@ class FieldRow extends TableRow {
     }
     return false;
   }
-  showRecordIdUrl() {
-    let args = new URLSearchParams();
-    args.set("host", sfHost);
-    args.set("q", this.dataTypedValue);
-    return "inspect.html?" + args;
+  idLink() {
+    return "https://" + sfHost + "/" + this.dataTypedValue;
+  }
+  toggleRecordIdPop() {
+    if (this.recordIdPop) {
+      this.recordIdPop = null;
+      return;
+    }
+    let recordId = this.dataTypedValue;
+    let keyPrefix = recordId.substring(0, 3);
+    let links;
+    if (this.rowList.model.globalDescribe) {
+      links = this.rowList.model.globalDescribe.sobjects
+        .filter(sobject => sobject.keyPrefix == keyPrefix)
+        .map(sobject => {
+          let args = new URLSearchParams();
+          args.set("host", sfHost);
+          args.set("objectType", sobject.name);
+          if (this.rowList.model.useToolingApi) {
+            args.set("useToolingApi", "1");
+          }
+          args.set("recordId", recordId);
+          return {href: "inspect.html?" + args, text: "Show all data (" + sobject.name + ")"};
+        });
+    } else {
+      links = [];
+    }
+    links.push({href: this.idLink(), text: "View in Salesforce"});
+    this.recordIdPop = links;
   }
   showReferenceUrl(type) {
     let args = new URLSearchParams();
     args.set("host", sfHost);
-    args.set("q", type);
+    args.set("objectType", type);
+    if (this.rowList.model.useToolingApi) {
+      args.set("useToolingApi", "1");
+    }
     return "inspect.html?" + args;
   }
   sortKey(col) {
@@ -765,7 +753,10 @@ class ChildRow extends TableRow {
     if (childDescribe) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
-      args.set("q", childDescribe.childSObject);
+      args.set("objectType", childDescribe.childSObject);
+      if (this.rowList.model.useToolingApi) {
+        args.set("useToolingApi", "1");
+      }
       return "inspect.html?" + args;
     }
     return "";
@@ -1093,6 +1084,7 @@ class FieldValueCell extends React.Component {
     this.onTryEdit = this.onTryEdit.bind(this);
     this.onDataEditValueInput = this.onDataEditValueInput.bind(this);
     this.onCancelEdit = this.onCancelEdit.bind(this);
+    this.onRecordIdClick = this.onRecordIdClick.bind(this);
   }
   onTryEdit(e) {
     if (this.props.row.tryEdit()) {
@@ -1109,19 +1101,29 @@ class FieldValueCell extends React.Component {
     this.props.row.dataEditValue = null;
     this.props.row.rowList.model.didUpdate();
   }
+  onRecordIdClick(e) {
+    e.preventDefault();
+    this.props.row.toggleRecordIdPop();
+    this.props.row.rowList.model.didUpdate();
+  }
   render() {
     let row = this.props.row;
     let col = this.props.col;
-    return h("td",
-      {
-        className: col.className,
-        onDoubleClick: this.onTryEdit
-      },
-      row.isId() && !row.isEditing() ? h("div", {className: "value-text quick-select"}, h("a", {href: row.showRecordIdUrl()}, row.dataStringValue())) : null,
-      row.isEditing() ? h("textarea", {value: row.dataEditValue, onChange: this.onDataEditValueInput}) : null,
-      row.isEditing() ? h("a", {href: "about:blank", onClick: this.onCancelEdit, className: "undo-button"}, "\u21B6") : null,
-      !row.isId() && !row.isEditing() ? h(TypedValue, {value: row.sortKey(col.name)}) : null
-    );
+    if (row.isEditing()) {
+      return h("td", {className: col.className},
+        h("textarea", {value: row.dataEditValue, onChange: this.onDataEditValueInput}),
+        h("a", {href: "about:blank", onClick: this.onCancelEdit, className: "undo-button"}, "\u21B6")
+      );
+    } else if (row.isId()) {
+      return h("td", {className: col.className, onDoubleClick: this.onTryEdit},
+        h("div", {className: "value-text quick-select"}, h("a", {href: row.idLink() /*used to show visited color*/, onClick: this.onRecordIdClick}, row.dataStringValue())),
+        row.recordIdPop == null ? null : h("div", {className: "pop-menu"}, row.recordIdPop.map(link => h("a", {key: link.href, href: link.href}, link.text)))
+      );
+    } else {
+      return h("td", {className: col.className, onDoubleClick: this.onTryEdit},
+        h(TypedValue, {value: row.sortKey(col.name)})
+      );
+    }
   }
 }
 
@@ -1269,7 +1271,10 @@ if (!this.isUnitTest) {
 
     let root = document.getElementById("root");
     let vm = new Model();
-    vm.startLoading(args);
+    vm.sobjectName = args.get("objectType");
+    vm.useToolingApi = args.has("useToolingApi");
+    vm.recordId = args.get("recordId");
+    vm.startLoading();
     vm.reactCallback = cb => {
       ReactDOM.render(h(App, {vm}), root, cb);
     };

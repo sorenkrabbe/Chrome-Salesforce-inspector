@@ -154,7 +154,7 @@ function copyToClipboard(value) {
 }
 
 function renderCell(rt, cell, td) {
-  function popLink(showAllUrl, getRecordId, label) {
+  function popLink(recordInfo, label) {
     let a = document.createElement("a");
     a.href = "about:blank";
     a.title = "Show all data";
@@ -163,13 +163,24 @@ function renderCell(rt, cell, td) {
       let pop = document.createElement("div");
       pop.className = "pop-menu";
       td.appendChild(pop);
-      let aShow = document.createElement("a");
-      aShow.href = showAllUrl();
-      aShow.textContent = "Show all data";
-      pop.appendChild(aShow);
-      let recordId = getRecordId();
+      let {objectTypes, recordId} = recordInfo();
+      for (let objectType of objectTypes) {
+        let aShow = document.createElement("a");
+        let args = new URLSearchParams();
+        args.set("host", sfHost);
+        args.set("objectType", objectType);
+        if (rt.isTooling) {
+          args.set("useToolingApi", "1");
+        }
+        if (recordId) {
+          args.set("recordId", recordId);
+        }
+        aShow.href = "inspect.html?" + args;
+        aShow.textContent = "Show all data";
+        pop.appendChild(aShow);
+      }
       // If the recordId ends with 0000000000AAA it is a dummy ID such as the ID for the master record type 012000000000000AAA
-      if (recordId && !recordId.endsWith("0000000000AAA")) {
+      if (recordId && isRecordId(recordId) && !recordId.endsWith("0000000000AAA")) {
         let aView = document.createElement("a");
         aView.href = "https://" + sfHost + "/" + recordId;
         aView.textContent = "View in Salesforce";
@@ -196,37 +207,29 @@ function renderCell(rt, cell, td) {
   if (typeof cell == "object" && cell != null && cell.attributes && cell.attributes.type) {
     popLink(
       () => {
-        let args = new URLSearchParams();
-        args.set("host", sfHost);
-        args.set("objectType", cell.attributes.type);
-        if (rt.isTooling) {
-          args.set("useToolingApi", "1");
+        let recordId = null;
+        if (cell.attributes.url) {
+          recordId = cell.attributes.url.replace(/.*\//, "");
         }
-        let recordId = cell.attributes.url.replace(/.*\//, "");
-        args.set("recordId", recordId);
-        return "inspect.html?" + args;
-      },
-      () => {
-        if (!cell.attributes.url) {
-          return false;
-        }
-        let recordId = cell.attributes.url.replace(/.*\//, "");
-        if (!isRecordId(recordId)) {
-          return false;
-        }
-        return recordId;
+        let objectTypes = [cell.attributes.type];
+        return {objectTypes, recordId};
       },
       cell.attributes.type
     );
   } else if (typeof cell == "string" && isRecordId(cell)) {
     popLink(
       () => {
-        let args = new URLSearchParams();
-        args.set("host", sfHost);
-        args.set("q", cell);
-        return "inspect.html?" + args;
+        let recordId = cell;
+        let {globalDescribe} = rt.describeInfo.describeGlobal(rt.isTooling);
+        let objectTypes;
+        if (globalDescribe) {
+          let keyPrefix = recordId.substring(0, 3);
+          objectTypes = globalDescribe.sobjects.filter(sobject => sobject.keyPrefix == keyPrefix).map(sobject => sobject.name);
+        } else {
+          objectTypes = [];
+        }
+        return {objectTypes, recordId};
       },
-      () => cell,
       cell
     );
   } else if (cell == null) {
@@ -271,6 +274,8 @@ interface Table {
   Cell[][] table; // a two-dimensional array of table rows and cells
   boolean[] rowVisibilities; // For each row, true if it is visible, or false if it is hidden
   boolean[] colVisibilities; // For each column, true if it is visible, or false if it is hidden
+  boolean isTooling;
+  DescribeInfo describeInfo;
 }
 void renderCell(Table table, Cell cell, DOMElement element); // Render cell within element
 interface Cell {

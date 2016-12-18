@@ -809,6 +809,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
   function doExport() {
     let exportedData = new RecordTable();
     exportedData.isTooling = vm.queryTooling();
+    exportedData.describeInfo = describeInfo;
     let query = queryInput.getValue();
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
     function batchHandler(batch) {

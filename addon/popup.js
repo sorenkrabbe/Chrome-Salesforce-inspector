@@ -63,7 +63,7 @@ class App extends React.PureComponent {
   loadSobjects() {
     let entityMap = new Map();
 
-    function addEntity({name, label, keyPrefix}) {
+    function addEntity({name, label, keyPrefix}, api) {
       label = label || ""; // Avoid null exceptions if the object does not have a label (some don't). All objects have a name. Not needed for keyPrefix since we only do equality comparisons on those.
       let entity = entityMap.get(name);
       if (entity) {
@@ -78,17 +78,23 @@ class App extends React.PureComponent {
           availableApis: [],
           name,
           label,
-          keyPrefix
+          keyPrefix,
+          availableKeyPrefix: null,
         };
         entityMap.set(name, entity);
       }
-      return entity;
+      if (api) {
+        entity.availableApis.push(api);
+        if (keyPrefix) {
+          entity.availableKeyPrefix = keyPrefix;
+        }
+      }
     }
 
     function getObjects(url, api) {
       return askSalesforce(url).then(describe => {
         for (let sobject of describe.sobjects) {
-          addEntity(sobject).availableApis.push(api);
+          addEntity(sobject, api);
         }
       }).catch(err => {
         console.error("list " + api + " sobjects", err);
@@ -103,7 +109,7 @@ class App extends React.PureComponent {
             name: record.QualifiedApiName,
             label: record.Label,
             keyPrefix: record.KeyPrefix
-          });
+          }, null);
         }
       }).catch(err => {
         console.error("list entity definitions: " + bucket, err);
@@ -282,21 +288,30 @@ class AllDataBox extends React.PureComponent {
     this.getMatches = this.getMatches.bind(this);
   }
   updateSelection(query) {
-    query = query || "";
     let match = this.getBestMatch(query);
     this.setState({selectedValue: match});
   }
   getBestMatch(query) {
     let {sobjectsList} = this.props;
+    // Find the best match based on the record id or object name from the page URL.
+    if (!query) {
+      return null;
+    }
+    if (!sobjectsList) {
+      return null;
+    }
+    let sobject = sobjectsList.find(sobject => sobject.name.toLowerCase() == query.toLowerCase());
     let queryKeyPrefix = query.substring(0, 3);
-    let recordId = null;
-    let sobject = null;
-    if (sobjectsList) {
-      sobject = sobjectsList.find(sobject => sobject.keyPrefix == queryKeyPrefix || sobject.name.toLowerCase() == query.toLowerCase());
+    if (!sobject) {
+      sobject = sobjectsList.find(sobject => sobject.availableKeyPrefix == queryKeyPrefix);
+    }
+    if (!sobject) {
+      sobject = sobjectsList.find(sobject => sobject.keyPrefix == queryKeyPrefix);
     }
     if (!sobject) {
       return null;
     }
+    let recordId = null;
     if (sobject.keyPrefix == queryKeyPrefix && query.length >= 15) {
       recordId = query;
     }
@@ -397,6 +412,7 @@ class AllDataSelection extends React.PureComponent {
     let {showDetailsSupported, contextRecordId, selectedValue, linkTarget} = this.props;
     // Show buttons for the available APIs.
     let buttons = Array.from(selectedValue.sobject.availableApis);
+    buttons.sort();
     if (buttons.length == 0) {
       // If none of the APIs are available, show a button for the regular API, which will partly fail, but still show some useful metadata from the tooling API.
       buttons.push("noApi");
