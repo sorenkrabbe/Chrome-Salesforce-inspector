@@ -1274,7 +1274,7 @@ class DetailsBox extends React.Component {
   }
 }
 
-if (!this.isUnitTest) {
+{
 
   let args = new URLSearchParams(location.search.slice(1));
   sfHost = args.get("host");

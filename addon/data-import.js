@@ -7,50 +7,53 @@
 /* global Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";
-if (!this.isUnitTest) {
+{
 
-/* eslint-disable indent */
-let args = new URLSearchParams(location.search.slice(1));
-sfHost = args.get("host");
-initButton(true);
-chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-/* eslint-enable indent */
-  session = message;
+  let args = new URLSearchParams(location.search.slice(1));
+  sfHost = args.get("host");
+  initButton(true);
+  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
+    session = message;
 
-  let vm = dataImportVm(copyToClipboard);
-  ko.applyBindings(vm, document.documentElement);
+    let vm = dataImportVm();
+    ko.applyBindings(vm, document.documentElement);
 
-  function unloadListener(e) {
-    // Ask the user for confirmation before leaving
-    e.returnValue = "The import will be stopped";
-  }
-  // We completely remove the listener when not needed (as opposed to just not setting returnValue in the listener),
-  // because having the listener disables BFCache in Firefox (even if the listener does nothing).
-  // Chrome does not have a BFCache.
-  ko.computed(vm.isWorking).subscribe(working => {
-    if (working) {
-      console.log("added listener");
-      addEventListener("beforeunload", unloadListener);
-    } else {
-      console.log("removed listener");
-      removeEventListener("beforeunload", unloadListener);
+    function unloadListener(e) {
+      // Ask the user for confirmation before leaving
+      e.returnValue = "The import will be stopped";
     }
+    // We completely remove the listener when not needed (as opposed to just not setting returnValue in the listener),
+    // because having the listener disables BFCache in Firefox (even if the listener does nothing).
+    // Chrome does not have a BFCache.
+    ko.computed(vm.isWorking).subscribe(working => {
+      if (working) {
+        console.log("added listener");
+        addEventListener("beforeunload", unloadListener);
+      } else {
+        console.log("removed listener");
+        removeEventListener("beforeunload", unloadListener);
+      }
+    });
+
+    let resize = ko.observable({});
+    addEventListener("resize", () => { resize({}); });
+
+    initScrollTable(
+      document.querySelector("#result-box"),
+      ko.computed(vm.importTableResult),
+      ko.computed(() => { resize(); vm.showHelp(); return {}; })
+    );
+
+    if (parent && parent.isUnitTest) { // for unit tests
+      window.testData = {vm};
+      parent.postMessage({insextTestLoaded: true}, "*");
+    }
+
   });
-
-  let resize = ko.observable({});
-  addEventListener("resize", () => { resize({}); });
-
-  initScrollTable(
-    document.querySelector("#result-box"),
-    ko.computed(vm.importTableResult),
-    ko.computed(() => { resize(); vm.showHelp(); return {}; })
-  );
-
-});
 
 }
 
-function dataImportVm(copyToClipboard) {
+function dataImportVm() {
 
   let importData = ko.observable();
   let consecutiveFailures = 0;

@@ -5,7 +5,7 @@
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
-if (!this.isUnitTest) {
+{
 
   let args = new URLSearchParams(location.search.slice(1));
   sfHost = args.get("host");

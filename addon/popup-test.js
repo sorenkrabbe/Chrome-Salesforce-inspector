@@ -1,13 +1,15 @@
 /* eslint-disable no-unused-vars */
-/* global assertEquals assertThrows assertNotEquals assert async anonApex isUnitTest */
+/* global test */
 /* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
 /* exported session sfHost */
-/* global getRecordId */
 /* exported popupTest */
 /* eslint-enable no-unused-vars */
 "use strict";
-function* popupTest() { // eslint-disable-line require-yield
+function* popupTest() {
   console.log("TEST popup");
+  let {assertEquals, loadPage} = test;
+  let page = yield loadPage("test-page.html");
+  let {getRecordId} = page[0];
   // Classic & Console
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://na1.salesforce.com/001i0000007BlV0"))); // classic record detail page
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://cs81.salesforce.com/001i0000007BlV0"))); // in sandbox

@@ -1,14 +1,15 @@
 /* eslint-disable no-unused-vars */
-/* global assertEquals assertThrows assertNotEquals assert async anonApex isUnitTest */
+/* global test */
 /* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
 /* exported session sfHost */
-/* global csvParse */
 /* exported csvParseTest */
 /* eslint quotes: ["error", "single", {"avoidEscape": true}] */
 /* eslint-enable no-unused-vars */
 'use strict';
-function* csvParseTest() { // eslint-disable-line require-yield
+function* csvParseTest() {
   console.log('TEST csvParse');
+  let {assertEquals, assertThrows, loadPage} = test;
+  let {csvParse} = yield loadPage('data-import.html');
   // Quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d', ',')); // without quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a","b"\n"c","d"', ',')); // with quotes

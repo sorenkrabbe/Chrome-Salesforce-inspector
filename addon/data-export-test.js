@@ -1,45 +1,31 @@
 /* eslint-disable no-unused-vars */
-/* global assertEquals assertThrows assertNotEquals assert async anonApex isUnitTest */
+/* global test */
 /* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
 /* exported session sfHost */
-/* global dataExportVm */
 /* exported dataExportTest */
 /* eslint-enable no-unused-vars */
 "use strict";
 function* dataExportTest() {
   console.log("TEST dataExportVm");
+  let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
 
-  let queryInput = {value: "", selectionStart: 0, selectionEnd: 0};
+  localStorage.removeItem("insextQueryHistory");
+  localStorage.removeItem("insextSavedQueryHistory");
+
+  let win = yield loadPage("data-export.html");
+  let {testData: {queryInput, queryAutocompleteEvent, vm}} = win;
+
   function setQuery(a, b, c) {
     queryInput.value = a + b + c;
     queryInput.selectionStart = a.length;
     queryInput.selectionEnd = a.length + b.length;
-    vm.queryAutocompleteHandler();
+    queryAutocompleteEvent();
   }
-  let queryInputVm = {
-    setValue(v) { queryInput.value = v; },
-    getValue() { return queryInput.value; },
-    getSelStart() { return queryInput.selectionStart; },
-    getSelEnd() { return queryInput.selectionEnd; },
-    insertText(text, selStart, selEnd) {
-      queryInput.value = queryInput.value.substring(0, selStart) + text + queryInput.value.substring(selEnd);
-      queryInput.selectionStart = queryInput.selectionEnd = selStart + text.length;
-    }
-  };
-
-  let queryHistory;
-  let queryHistoryStorage = {
-    get() { return queryHistory; },
-    set(v) { queryHistory = v; },
-    clear() { queryHistory = undefined; }
-  };
 
   let clipboardValue;
-  function copyToClipboard(value) {
+  win.copyToClipboard = value => {
     clipboardValue = value;
-  }
-
-  let vm = dataExportVm({args: new URLSearchParams(), queryInput: queryInputVm, queryHistoryStorage, copyToClipboard});
+  };
 
   function waitForSpinner() {
     return new Promise(resolve => {
@@ -533,33 +519,33 @@ function* dataExportTest() {
 
   // Query history
   assertEquals([
-    "select Name from ApexClass",
-    "select Id from Inspector_Test__c",
-    "select count() from Inspector_Test__c",
-    "select Id from Inspector_Test__c where name = 'no such name'",
-    "select Name, Lookup__r.Name from Inspector_Test__c order by Name",
-    "select Name, Checkbox__c, Number__c from Inspector_Test__c order by Name"
-  ], vm.queryHistory());
-  vm.selectedHistoryEntry(vm.queryHistory()[2]);
+    {query: "select Name from ApexClass", useToolingApi: true},
+    {query: "select Id from Inspector_Test__c", useToolingApi: false},
+    {query: "select count() from Inspector_Test__c", useToolingApi: false},
+    {query: "select Id from Inspector_Test__c where name = 'no such name'", useToolingApi: false},
+    {query: "select Name, Lookup__r.Name from Inspector_Test__c order by Name", useToolingApi: false},
+    {query: "select Name, Checkbox__c, Number__c from Inspector_Test__c order by Name", useToolingApi: false}
+  ], vm.queryHistory.list());
+  vm.selectedHistoryEntry(vm.queryHistory.list()[2]);
   vm.selectHistoryEntry();
   assertEquals("select count() from Inspector_Test__c", queryInput.value);
   vm.clearHistory();
-  assertEquals([], vm.queryHistory());
+  assertEquals([], vm.queryHistory.list());
 
   // Autocomplete load errors
-  let askOrig = askSalesforce;
+  let askOrig = win.askSalesforce;
   let askError = () => Promise.reject();
 
   // Autocomplete load errors for global describe
   setQuery("select Id from Acco", "", "");
-  askSalesforce = askError;
+  win.askSalesforce = askError;
   vm.autocompleteReload();
   assertEquals("Loading metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
   yield waitForSpinner();
   assertEquals("Loading metadata failed.", vm.autocompleteResults().title);
   assertEquals(1, vm.autocompleteResults().results.length);
-  askSalesforce = askOrig;
+  win.askSalesforce = askOrig;
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("Loading metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
@@ -567,14 +553,14 @@ function* dataExportTest() {
   assertEquals("Objects:", vm.autocompleteResults().title);
 
   // Autocomplete load errors for object describe
-  askSalesforce = askError;
+  win.askSalesforce = askError;
   setQuery("select Id", "", " from Account");
   assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
   yield waitForSpinner();
   assertEquals("Loading Account metadata failed.", vm.autocompleteResults().title);
   assertEquals(1, vm.autocompleteResults().results.length);
-  askSalesforce = askOrig;
+  win.askSalesforce = askOrig;
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
@@ -582,14 +568,14 @@ function* dataExportTest() {
   assertEquals("Account fields:", vm.autocompleteResults().title);
 
   // Autocomplete load errors for relationship object describe
-  askSalesforce = askError;
+  win.askSalesforce = askError;
   setQuery("select Id, OWNER.USERN", "", " from Account");
   assertEquals("Loading User metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
   yield waitForSpinner();
   assertEquals("Loading User metadata failed.", vm.autocompleteResults().title);
   assertEquals(1, vm.autocompleteResults().results.length);
-  askSalesforce = askOrig;
+  win.askSalesforce = askOrig;
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);

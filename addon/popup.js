@@ -8,7 +8,7 @@
 
 let h = React.createElement;
 
-if (!this.isUnitTest) {
+{
   parent.postMessage({insextInitRequest: true}, "*");
   addEventListener("message", function initResponseHandler(e) {
     if (e.source == parent && e.data.insextInitResponse) {

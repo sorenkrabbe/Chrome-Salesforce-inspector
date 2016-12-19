@@ -1,23 +1,14 @@
 /* eslint-disable no-unused-vars */
-/* global assertEquals assertThrows assertNotEquals assert async anonApex isUnitTest */
-/* global ko */
+/* global test */
 /* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
 /* exported session sfHost */
-/* global dataImportVm */
 /* exported dataImportTest */
 /* eslint-enable no-unused-vars */
 "use strict";
 function* dataImportTest() {
   console.log("TEST dataImportVm");
-
-  function copyToClipboard() {
-  }
-
-  let vm = dataImportVm(copyToClipboard);
-
-  // Simulate what applyBindings does
-  ko.computed(vm.idLookupList);
-  ko.computed(vm.columnList);
+  let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
+  let {testData: {vm}} = yield loadPage("data-import.html");
 
   function waitForSpinner() {
     return new Promise(resolve => {
@@ -73,6 +64,8 @@ function* dataImportTest() {
   assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
   assertEquals({
     table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    isTooling: false,
+    describeInfo: {},
     rowVisibilities: [true, true, true, true, true],
     colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.doImport();
@@ -81,6 +74,8 @@ function* dataImportTest() {
   assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
   assertEquals({
     table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    isTooling: false,
+    describeInfo: {},
     rowVisibilities: [true, true, true, true, true],
     colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.confirmPopupNo();
@@ -89,6 +84,8 @@ function* dataImportTest() {
   assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
   assertEquals({
     table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    isTooling: false,
+    describeInfo: {},
     rowVisibilities: [true, true, true, true, true],
     colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.doImport();
@@ -97,6 +94,8 @@ function* dataImportTest() {
   assertEquals({Queued: 4, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
   assertEquals({
     table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name"], ["test3", "false", "300.03", ""], ["test4", "false", "400.04", "test1"], ["test5", "true", "500.05", ""], ["test6", "true", "600.06", "notfound"]],
+    isTooling: false,
+    describeInfo: {},
     rowVisibilities: [true, true, true, true, true],
     colVisibilities: [true, true, true, true]}, vm.importTableResult());
   vm.confirmPopupYes();
@@ -105,6 +104,8 @@ function* dataImportTest() {
   assertEquals({Queued: 0, Processing: 4, Succeeded: 0, Failed: 0}, vm.importCounts());
   assertEquals({
     table: [["Name", "Checkbox__c", "Number__c", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"], ["test3", "false", "300.03", "", "Processing", "", "", ""], ["test4", "false", "400.04", "test1", "Processing", "", "", ""], ["test5", "true", "500.05", "", "Processing", "", "", ""], ["test6", "true", "600.06", "notfound", "Processing", "", "", ""]],
+    isTooling: false,
+    describeInfo: {},
     rowVisibilities: [true, true, true, true, true],
     colVisibilities: [true, true, true, true, true, true, true, true]}, vm.importTableResult());
   yield waitForSpinner();

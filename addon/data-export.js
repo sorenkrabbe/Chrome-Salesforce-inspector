@@ -6,103 +6,148 @@
 /* global Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";
-if (!this.isUnitTest) {
+{
 
-/* eslint-disable indent */
-let args = new URLSearchParams(location.search.slice(1));
-sfHost = args.get("host");
-initButton(true);
-chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-/* eslint-enable indent */
-  session = message;
+  let args = new URLSearchParams(location.search.slice(1));
+  sfHost = args.get("host");
+  initButton(true);
+  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
+    session = message;
 
-  let queryInput = document.querySelector("#query");
+    let queryInput = document.querySelector("#query");
 
-  let queryInputVm = {
-    setValue(v) { queryInput.value = v; },
-    getValue() { return queryInput.value; },
-    getSelStart() { return queryInput.selectionStart; },
-    getSelEnd() { return queryInput.selectionEnd; },
-    insertText(text, selStart, selEnd) {
-      queryInput.focus();
-      queryInput.setRangeText(text, selStart, selEnd, "end");
+    // TODO not needed anymore, since unit tests no longer uses mock queryInput
+    let queryInputVm = {
+      setValue(v) { queryInput.value = v; },
+      getValue() { return queryInput.value; },
+      getSelStart() { return queryInput.selectionStart; },
+      getSelEnd() { return queryInput.selectionEnd; },
+      insertText(text, selStart, selEnd) {
+        queryInput.focus();
+        queryInput.setRangeText(text, selStart, selEnd, "end");
+      }
+    };
+
+    let vm = dataExportVm({args, queryInput: queryInputVm});
+    ko.applyBindings(vm, document.documentElement);
+
+    function queryAutocompleteEvent() {
+      vm.queryAutocompleteHandler();
     }
-  };
+    queryInput.addEventListener("input", queryAutocompleteEvent);
+    queryInput.addEventListener("select", queryAutocompleteEvent);
+    // There is no event for when caret is moved without any selection or value change, so use keyup and mouseup for that.
+    queryInput.addEventListener("keyup", queryAutocompleteEvent);
+    queryInput.addEventListener("mouseup", queryAutocompleteEvent);
 
-  let queryHistoryStorage = {
-    get() { return localStorage.insextQueryHistory; },
-    set(v) { localStorage.insextQueryHistory = v; },
-    clear() { localStorage.removeItem("insextQueryHistory"); }
-  };
+    // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
+    // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown. Might be https://code.google.com/p/chromium/issues/detail?id=13891#c50
+    queryInput.addEventListener("keydown", e => {
+      if (e.which == 32 /* space */ && e.ctrlKey) {
+        e.preventDefault();
+        vm.queryAutocompleteHandler({ctrlSpace: true});
+      }
+    });
 
-  let savedHistoryStorage = {
-    get() { return localStorage.insextSavedQueryHistory; },
-    set(v) { localStorage.insextSavedQueryHistory = v; },
-    clear() { localStorage.removeItem("insextSavedQueryHistory"); }
-  };
+    initScrollTable(
+      document.querySelector("#result-table"),
+      ko.computed(() => vm.exportResult().exportedData),
+      ko.computed(() => vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth())
+    );
 
-  let vm = dataExportVm({args, queryInput: queryInputVm, queryHistoryStorage, savedHistoryStorage, copyToClipboard});
-  ko.applyBindings(vm, document.documentElement);
-
-  function queryAutocompleteEvent() {
-    vm.queryAutocompleteHandler();
-  }
-  queryInput.addEventListener("input", queryAutocompleteEvent);
-  queryInput.addEventListener("select", queryAutocompleteEvent);
-  // There is no event for when caret is moved without any selection or value change, so use keyup and mouseup for that.
-  queryInput.addEventListener("keyup", queryAutocompleteEvent);
-  queryInput.addEventListener("mouseup", queryAutocompleteEvent);
-
-  // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
-  // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown. Might be https://code.google.com/p/chromium/issues/detail?id=13891#c50
-  queryInput.addEventListener("keydown", e => {
-    if (e.which == 32 /* space */ && e.ctrlKey) {
-      e.preventDefault();
-      vm.queryAutocompleteHandler({ctrlSpace: true});
+    let resultBox = document.querySelector("#result-box");
+    function recalculateHeight() {
+      vm.resultBoxOffsetTop(resultBox.offsetTop);
     }
+    if (!window.webkitURL) {
+      // Firefox
+      // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
+      new MutationObserver(recalculateHeight).observe(queryInput, {attributes: true});
+    } else {
+      // Chrome
+      // Chrome does not fire a resize event and does not allow us to get notified when the browser changes the style.height attribute.
+      // Instead we listen to a few events which are often fired at the same time.
+      // This is not required in Firefox, and Mozilla reviewers don't like it for performance reasons, so we only do this in Chrome via browser detection.
+      queryInput.addEventListener("mousemove", recalculateHeight);
+      addEventListener("mouseup", recalculateHeight);
+    }
+    vm.showHelp.subscribe(recalculateHeight);
+    vm.autocompleteResults.subscribe(recalculateHeight);
+    vm.expandAutocomplete.subscribe(recalculateHeight);
+    function resize() {
+      vm.winInnerHeight(innerHeight);
+      vm.winInnerWidth(innerWidth);
+      recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
+    }
+    addEventListener("resize", resize);
+    resize();
+
+    if (parent && parent.isUnitTest) { // for unit tests
+      window.testData = {queryInput, queryAutocompleteEvent, vm};
+      parent.postMessage({insextTestLoaded: true}, "*");
+    }
+
   });
-
-  initScrollTable(
-    document.querySelector("#result-table"),
-    ko.computed(() => vm.exportResult().exportedData),
-    ko.computed(() => vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth())
-  );
-
-  let resultBox = document.querySelector("#result-box");
-  function recalculateHeight() {
-    vm.resultBoxOffsetTop(resultBox.offsetTop);
-  }
-  if (!window.webkitURL) {
-    // Firefox
-    // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
-    new MutationObserver(recalculateHeight).observe(queryInput, {attributes: true});
-  } else {
-    // Chrome
-    // Chrome does not fire a resize event and does not allow us to get notified when the browser changes the style.height attribute.
-    // Instead we listen to a few events which are often fired at the same time.
-    // This is not required in Firefox, and Mozilla reviewers don't like it for performance reasons, so we only do this in Chrome via browser detection.
-    queryInput.addEventListener("mousemove", recalculateHeight);
-    addEventListener("mouseup", recalculateHeight);
-  }
-  vm.showHelp.subscribe(recalculateHeight);
-  vm.autocompleteResults.subscribe(recalculateHeight);
-  vm.expandAutocomplete.subscribe(recalculateHeight);
-  function resize() {
-    vm.winInnerHeight(innerHeight);
-    vm.winInnerWidth(innerWidth);
-    recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
-  }
-  addEventListener("resize", resize);
-  resize();
-
-});
 
 }
 
-function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorage, copyToClipboard}) {
+function dataExportVm({args, queryInput}) {
 
   let describeInfo = new DescribeInfo(spinFor);
   describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
+
+  class QueryHistory {
+    constructor(storageKey, max) {
+      this.storageKey = storageKey;
+      this.max = max;
+      this.list = ko.observable(this._get());
+    }
+
+    _get() {
+      let history;
+      try {
+        history = JSON.parse(localStorage[this.storageKey]);
+      } catch (e) {
+        // empty
+      }
+      if (!Array.isArray(history)) {
+        history = [];
+      }
+      // A previous version stored just strings. Skip entries from that to avoid errors.
+      history = history.filter(e => typeof e == "object");
+      return history;
+    }
+
+    add(entry) {
+      let history = this._get();
+      let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
+      if (historyIndex > -1) {
+        history.splice(historyIndex, 1);
+      }
+      history.splice(0, 0, entry);
+      if (history.length > this.max) {
+        history.pop();
+      }
+      localStorage[this.storageKey] = JSON.stringify(history);
+      this.list(history);
+    }
+
+    remove(entry) {
+      let history = this._get();
+      let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
+      if (historyIndex > -1) {
+        history.splice(historyIndex, 1);
+      }
+      localStorage[this.storageKey] = JSON.stringify(history);
+      this.list(history);
+    }
+
+    clear() {
+      localStorage.removeItem(this.storageKey);
+      this.list([]);
+    }
+
+  }
 
   let vm = {
     sfLink: "https://" + sfHost,
@@ -117,9 +162,9 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
     autocompleteResults: ko.observable({sobjectName: "", title: "\u00A0", results: []}),
     autocompleteClick: null,
     exportResult: ko.observable({isWorking: false, exportStatus: "Ready", exportError: null, exportedData: null}),
-    queryHistory: ko.observable(getQueryHistory()),
+    queryHistory: new QueryHistory("insextQueryHistory", 20),
     selectedHistoryEntry: ko.observable(),
-    savedHistory: ko.observable(getSavedHistory()),
+    savedHistory: new QueryHistory("insextSavedQueryHistory", 50),
     selectedSavedEntry: ko.observable(),
     expandAutocomplete: ko.observable(false),
     resultsFilter: ko.observable(""),
@@ -140,29 +185,29 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
     },
     selectHistoryEntry() {
       if (vm.selectedHistoryEntry() != undefined) {
-        queryInput.setValue(vm.selectedHistoryEntry());
+        queryInput.setValue(vm.selectedHistoryEntry().query);
+        vm.queryTooling(vm.selectedHistoryEntry().useToolingApi);
         vm.selectedHistoryEntry(undefined);
       }
     },
     clearHistory() {
-      clearQueryHistory();
-      vm.queryHistory([]);
+      vm.queryHistory.clear();
     },
     selectSavedEntry() {
       if (vm.selectedSavedEntry() != undefined) {
         queryInput.setValue(vm.selectedSavedEntry());
+        vm.queryTooling(vm.selectedSavedEntry().useToolingApi);
         vm.selectedSavedEntry(undefined);
       }
     },
     clearSavedHistory() {
-      clearSavedQueryHistory();
-      vm.savedHistory([]);
+      vm.savedHistory.clear();
     },
     addToHistory() {
-      vm.savedHistory(addToSavedHistory(queryInput.getValue()));
+      vm.savedHistory.add({query: queryInput.getValue(), useToolingApi: vm.queryTooling()});
     },
     removeFromHistory() {
-      vm.savedHistory(removeFromSavedHistory(queryInput.getValue()));
+      vm.savedHistory.remove({query: queryInput.getValue(), useToolingApi: vm.queryTooling()});
     },
     queryAutocompleteHandler,
     autocompleteReload() {
@@ -196,8 +241,16 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
     vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
   }));
 
-  queryInput.setValue(args.get("query") || vm.queryHistory()[0] || "select Id from Account");
-  vm.queryTooling(args.has("useToolingApi"));
+  if (args.has("query")) {
+    queryInput.setValue(args.get("query"));
+    vm.queryTooling(args.has("useToolingApi"));
+  } else if (vm.queryHistory.list()[0]) {
+    queryInput.setValue(vm.queryHistory.list()[0].query);
+    vm.queryTooling(vm.queryHistory.list()[0].useToolingApi);
+  } else {
+    queryInput.setValue("select Id from Account");
+    vm.queryTooling(false);
+  }
 
   /**
    * SOQL query autocomplete handling.
@@ -734,78 +787,6 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
 
   vm.queryTooling.subscribe(() => queryAutocompleteHandler());
 
-  function getQueryHistory() {
-    let queryHistory;
-    try {
-      queryHistory = JSON.parse(queryHistoryStorage.get());
-    } catch (e) {
-      // empty
-    }
-    if (!Array.isArray(queryHistory)) {
-      queryHistory = [];
-    }
-    return queryHistory;
-  }
-
-  function getSavedHistory() {
-    let savedHistory;
-    try {
-      savedHistory = JSON.parse(savedHistoryStorage.get());
-    } catch (e) {
-      // empty
-    }
-    if (!Array.isArray(savedHistory)) {
-      savedHistory = [];
-    }
-    return savedHistory;
-  }
-
-  function addToQueryHistory(query) {
-    let queryHistory = getQueryHistory();
-    let historyIndex = queryHistory.indexOf(query);
-    if (historyIndex > -1) {
-      queryHistory.splice(historyIndex, 1);
-    }
-    queryHistory.splice(0, 0, query);
-    if (queryHistory.length > 20) {
-      queryHistory.pop();
-    }
-    queryHistoryStorage.set(JSON.stringify(queryHistory));
-    return queryHistory;
-  }
-
-  function addToSavedHistory(query) {
-    let savedHistory = getSavedHistory();
-    let historyIndex = savedHistory.indexOf(query);
-    if (historyIndex > -1) {
-      savedHistory.splice(historyIndex, 1);
-    }
-    savedHistory.splice(0, 0, query);
-    if (savedHistory.length > 50) {
-      savedHistory.pop();
-    }
-    savedHistoryStorage.set(JSON.stringify(savedHistory));
-    return savedHistory;
-  }
-
-  function removeFromSavedHistory(query) {
-    let savedHistory = getSavedHistory();
-    let historyIndex = savedHistory.indexOf(query);
-    if (historyIndex > -1) {
-      savedHistory.splice(historyIndex, 1);
-    }
-    savedHistoryStorage.set(JSON.stringify(savedHistory));
-    return savedHistory;
-  }
-
-  function clearQueryHistory() {
-    queryHistoryStorage.clear();
-  }
-
-  function clearSavedQueryHistory() {
-    savedHistoryStorage.clear();
-  }
-
   let exportProgress = {};
   function doExport() {
     let exportedData = new RecordTable();
@@ -829,7 +810,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
           });
           return pr;
         }
-        vm.queryHistory(addToQueryHistory(query));
+        vm.queryHistory.add({query, useToolingApi: exportedData.isTooling});
         if (exportedData.records.length == 0) {
           vm.exportResult({
             isWorking: false,
