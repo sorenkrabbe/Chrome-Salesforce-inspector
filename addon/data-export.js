@@ -197,6 +197,7 @@ function dataExportVm({args, queryInput, queryHistoryStorage, savedHistoryStorag
   }));
 
   queryInput.setValue(args.get("query") || vm.queryHistory()[0] || "select Id from Account");
+  vm.queryTooling(args.has("useToolingApi"));
 
   /**
    * SOQL query autocomplete handling.

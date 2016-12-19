@@ -180,7 +180,16 @@ class Model {
     if (this.recordData && this.recordData.Id) {
       query += " where Id = '" + this.recordData.Id + "'";
     }
-    return dataExportUrl(query);
+    return this.dataExportUrl(query);
+  }
+  dataExportUrl(query) {
+    let args = new URLSearchParams();
+    args.set("host", sfHost);
+    args.set("query", query);
+    if (this.useToolingApi) {
+      args.set("useToolingApi", "1");
+    }
+    return "data-export.html?" + args;
   }
   openSetup() {
     let args = new URLSearchParams();
@@ -801,21 +810,14 @@ class ChildRow extends TableRow {
     }
     let relatedListInfo = this.relatedListInfo;
     if (relatedListInfo) {
-      return dataExportUrl("select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + record.Id + "'");
+      return this.rowList.model.dataExportUrl("select Id, " + relatedListInfo.relatedList.columns.map(c => c.name).join(", ") + " from " + relatedListInfo.relatedList.sobject + " where " + relatedListInfo.relatedList.field + " = '" + record.Id + "'");
     }
     let childDescribe = this.childDescribe;
     if (childDescribe) {
-      return dataExportUrl("select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + record.Id + "'");
+      return this.rowList.model.dataExportUrl("select Id from " + childDescribe.childSObject + " where " + childDescribe.field + " = '" + record.Id + "'");
     }
     return "";
   }
-}
-
-function dataExportUrl(query) {
-  let args = new URLSearchParams();
-  args.set("host", sfHost);
-  args.set("query", query);
-  return "data-export.html?" + args;
 }
 
 function addProperties(map, object, prefix, ignore) {
