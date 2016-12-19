@@ -9,16 +9,22 @@
 class Model {
   constructor() {
     this.reactCallback = null;
-    this.sfLink = "https://" + sfHost;
-    this.spinnerCount = 0;
+
+    // Raw fetched data
     this.globalDescribe = null;
     this.sobjectDescribePromise = null;
     this.objectData = null;
     this.recordData = null;
     this.layoutInfo = null;
+
+    // URL parameters
     this.sobjectName = null;
     this.useToolingApi = null;
     this.recordId = null;
+
+    // Processed data and UI state
+    this.sfLink = "https://" + sfHost;
+    this.spinnerCount = 0;
     this.errorMessages = [];
     this.rowsFilter = "";
     this.useAdvancedFilter = false;
@@ -257,14 +263,14 @@ class Model {
     this.layoutInfo = null;
   }
   startLoading() {
+
+    // Fetch id prefix to object name mapping
     this.spinFor("describing global", askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/"), globalDescribe => {
       this.globalDescribe = globalDescribe;
-      this.didUpdate();
     });
 
-    this.sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/describe/");
-
     // Fetch object data using object describe call
+    this.sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/describe/");
     this.spinFor("describing object", this.sobjectDescribePromise, sobjectDescribe => {
       // Display the retrieved object data
       this.objectData = sobjectDescribe;
