@@ -5,15 +5,16 @@ html, body {
     white-space: normal;
     font-family: Arial, Helvetica, sans-serif;
     margin: 0;
-    height: 100%;
 }
 body {
     font-size: .8125rem;
 }
-body, #root, [data-reactroot] {
+html, body, #root, [data-reactroot] {
+    height: 100%;
+}
+[data-reactroot] {
     display: flex;
     flex-direction: column;
-    flex: 1;
 }
 .main {
     flex: 1;
