@@ -27,16 +27,15 @@ Features
 
 Troubleshooting
 -----
-If the tool is not available after installation, the most likely issue is that your browser is not up to date. See [instructions for Google Chrome](https://productforums.google.com/forum/#!topic/chrome/YK1-o4KoSjc).
-
-When you enable the My Domain feature in Salesforce, Salesforce Inspector not work until you have restarted your browser (or until you deleted the "sid" cookie for the old Salesforce domain by other means).
+* If Salesforce Inspector is not available after installation, the most likely issue is that your browser is not up to date. See [instructions for Google Chrome](https://productforums.google.com/forum/#!topic/chrome/YK1-o4KoSjc).
+* When you enable the My Domain feature in Salesforce, Salesforce Inspector may not work until you have restarted your browser (or until you have deleted the "sid" cookie for the old Salesforce domain by other means).
 
 Unit tests
 -----
 1. Set up a Developer Edition org with the customizations described in `test/org/`.
 2. Navigate to one of the extension pages and replace the file name with `test-framework.html`, for example `chrome-extension://example/test-framework.html?host=example.my.salesforce.com`.
-3. Open your browser's developer tools console.
-4. Wait until "Salesforce Inspector unit test finished" is logged, and verify that no error messages are logged (HTTP 4xx messages are OK)
+3. Wait until "Salesforce Inspector unit test finished successfully" is shown.
+4. If the test fails, open your browser's developer tools console to see error messages.
 
 ### Linting
 
