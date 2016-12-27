@@ -1,13 +1,12 @@
 /* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
 
 class Model {
-  constructor() {
+  constructor(sfHost) {
     this.reactCallback = null;
     this.sfLink = "https://" + sfHost;
     this.spinnerCount = 0;
@@ -31,7 +30,7 @@ class Model {
       })
       .catch(err => {
         console.error(err);
-        this.errorMessages.push("Error " + actionName + ": " + ((err && err.askSalesforceError) || err));
+        this.errorMessages.push("Error " + actionName + ": " + ((err && err.sfConnError) || err));
         this.spinnerCount--;
         this.didUpdate();
       })
@@ -62,7 +61,7 @@ class Model {
   }
 
   startLoading() {
-    let limitsPromise = askSalesforce("/services/data/v" + apiVersion + "/" + "limits");
+    let limitsPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "limits");
 
     this.spinFor("describing global", limitsPromise, (res) => {
       this.setLimitsData(res);
@@ -158,16 +157,12 @@ class App extends React.Component {
 {
 
   let args = new URLSearchParams(location.search.slice(1));
-  sfHost = args.get("host");
-  initButton(true);
-  chrome.runtime.sendMessage({
-    message: "getSession",
-    sfHost
-  }, message => {
-    session = message;
+  let sfHost = args.get("host");
+  initButton(sfHost, true);
+  sfConn.getSession(sfHost).then(() => {
 
     let root = document.getElementById("root");
-    let vm = new Model();
+    let vm = new Model(sfHost);
     vm.startLoading(args);
     vm.reactCallback = cb => {
       ReactDOM.render(h(App, {

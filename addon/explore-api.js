@@ -1,26 +1,25 @@
 /* eslint-disable no-unused-vars */
 /* global ko */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
 {
 
   let args = new URLSearchParams(location.search.slice(1));
-  sfHost = args.get("host");
-  initButton(true);
-  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-    session = message;
+  let sfHost = args.get("host");
+  initButton(sfHost, true);
+  sfConn.getSession(sfHost).then(() => {
 
-    let vm = new ApiExploreVm(args);
+    let vm = new ApiExploreVm(sfHost, args);
     ko.applyBindings(vm, document.documentElement);
   });
 
 }
 
 class ApiExploreVm {
-  constructor(args) {
+  constructor(sfHost, args) {
+    this.sfHost = sfHost;
     this.sfLink = "https://" + sfHost;
     this.spinnerCount = ko.observable(0);
     this.title = ko.observable("API Request");
@@ -40,7 +39,7 @@ class ApiExploreVm {
     if (args.has("apiUrls")) {
       let apiUrls = args.getAll("apiUrls");
       this.title(apiUrls.length + " API requests, e.g. " + apiUrls[0]);
-      let apiPromise = Promise.all(apiUrls.map(url => askSalesforce(url)));
+      let apiPromise = Promise.all(apiUrls.map(url => sfConn.rest(url)));
       this.performRequest(apiPromise);
     } else if (args.has("checkDeployStatus")) {
       this.editMode(true);
@@ -54,31 +53,31 @@ class ApiExploreVm {
         this.editUrl(apiUrl);
       } else {
         this.title(apiUrl);
-        let apiPromise = askSalesforce(apiUrl);
+        let apiPromise = sfConn.rest(apiUrl);
         this.performRequest(apiPromise);
       }
     }
 
-    this.spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(res => {
-      this.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
+    this.spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
+      this.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
     }));
   }
   openSubUrl(subUrl) {
     let args = new URLSearchParams();
-    args.set("host", sfHost);
+    args.set("host", this.sfHost);
     args.set("apiUrl", subUrl.apiUrl);
     return "explore-api.html?" + args;
   }
   editSubUrl(subUrl) {
     let args = new URLSearchParams();
-    args.set("host", sfHost);
+    args.set("host", this.sfHost);
     args.set("apiUrl", subUrl.apiUrl);
     args.set("edit", "1");
     return "explore-api.html?" + args;
   }
   openGroupUrl(groupUrl) {
     let args = new URLSearchParams();
-    args.set("host", sfHost);
+    args.set("host", this.sfHost);
     for (let url of groupUrl.apiUrls) {
       args.append("apiUrls", url);
     }
@@ -88,12 +87,12 @@ class ApiExploreVm {
     if (this.editType() == "REST") {
       let apiUrl = this.editUrl();
       this.title(apiUrl);
-      let apiPromise = askSalesforce(apiUrl, null, {method: this.editMethod(), bodyText: this.editBody()});
+      let apiPromise = sfConn.rest(apiUrl, {method: this.editMethod(), bodyText: this.editBody()});
       this.performRequest(apiPromise);
     } else if (this.editType() == "SOAP") {
       let apiUrl = this.editUrl();
       this.title("SOAP " + apiUrl);
-      let apiPromise = askSalesforceSoap(apiUrl, this.editNamespace(), this.editBody());
+      let apiPromise = sfConn.rawSoap({servicePortAddress: apiUrl, targetNamespace: this.editNamespace()}, this.editBody());
       this.performSoapRequest(apiPromise);
     } else {
       console.error("Unknown type");
@@ -105,33 +104,10 @@ class ApiExploreVm {
   }
   setSoapType(soapType) {
     let soapBody = "<methodName></methodName>";
-    switch (soapType) {
-      case "Enterprise":
-        this.editUrl("/services/Soap/c/" + apiVersion);
-        this.editNamespace("urn:enterprise.soap.sforce.com");
-        this.editBody(soapBody);
-        return;
-      case "Partner":
-        this.editUrl("/services/Soap/u/" + apiVersion);
-        this.editNamespace("urn:partner.soap.sforce.com");
-        this.editBody(soapBody);
-        return;
-      case "Apex":
-        this.editUrl("/services/Soap/s/" + apiVersion);
-        this.editNamespace("http://soap.sforce.com/2006/08/apex");
-        this.editBody(soapBody);
-        return;
-      case "Metadata":
-        this.editUrl("/services/Soap/m/" + apiVersion);
-        this.editNamespace("http://soap.sforce.com/2006/04/metadata");
-        this.editBody(soapBody);
-        return;
-      case "Tooling":
-        this.editUrl("/services/Soap/T/" + apiVersion);
-        this.editNamespace("urn:tooling.soap.sforce.com");
-        this.editBody(soapBody);
-        return;
-    }
+    let wsdl = sfConn.wsdl(apiVersion, soapType);
+    this.editUrl(wsdl.servicePortAddress);
+    this.editNamespace(wsdl.targetNamespace);
+    this.editBody(soapBody);
   }
   spinFor(promise) {
     let stopSpinner = () => {
@@ -145,7 +121,7 @@ class ApiExploreVm {
       this.parseResponse(result);
     }).catch(err => {
       console.error(err);
-      this.apiResponse({textViews: [{name: "Error", value: (err && err.askSalesforceError) || err}]});
+      this.apiResponse({textViews: [{name: "Error", value: (err && err.sfConnError) || err}]});
     }));
   }
   parseResponse(result) {
@@ -312,7 +288,17 @@ class ApiExploreVm {
       });
     }).catch(err => {
       console.error(err);
-      this.apiResponse({textViews: [{name: "Error", value: (err && err.responseXML && new XMLSerializer().serializeToString(err.responseXML)) || err}]});
+      let textViews = [];
+      if (err && err.sfConnError) {
+        textViews.push({name: "Error", value: err.sfConnError});
+      }
+      if (err && err.rawSoapError) {
+        textViews.push({name: "Error (Raw XML)", value: new XMLSerializer().serializeToString(err.rawSoapError)});
+      }
+      if (textViews.length == 0) {
+        textViews.push({name: "Error", value: err});
+      }
+      this.apiResponse({textViews});
     }));
   }
 }

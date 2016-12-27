@@ -1,11 +1,9 @@
 /* eslint-disable no-unused-vars */
-/* global test */
-/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* exported popupTest */
 /* eslint-enable no-unused-vars */
 "use strict";
-function* popupTest() {
+function* popupTest(test) {
   console.log("TEST popup");
   let {assertEquals, loadPage} = test;
   let page = yield loadPage("test-page.html");

@@ -1,10 +1,8 @@
 /* eslint-disable no-unused-vars */
-/* global sfHost */
-/* exported session sfHost */
 /* exported showStdPageDetails */
 /* eslint-enable no-unused-vars */
 "use strict";
-function showStdPageDetails(metadataResponse) {
+function showStdPageDetails(sfHost, metadataResponse) {
   let fieldDetailsByLabel = new Map();
   // Loop through all label elements, add event listeners
   for (let fieldDetails of metadataResponse.fields) {

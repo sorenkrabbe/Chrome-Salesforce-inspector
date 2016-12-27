@@ -1,12 +1,10 @@
 /* eslint-disable no-unused-vars */
-/* global test */
-/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* exported csvParseTest */
 /* eslint quotes: ["error", "single", {"avoidEscape": true}] */
 /* eslint-enable no-unused-vars */
 'use strict';
-function* csvParseTest() {
+function* csvParseTest(test) {
   console.log('TEST csvParse');
   let {assertEquals, assertThrows, loadPage} = test;
   let {csvParse} = yield loadPage('data-import.html');

@@ -1,12 +1,21 @@
 /* eslint-disable no-unused-vars */
-/* exported test */
-/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* global popupTest csvParseTest dataImportTest dataExportTest */
 /* eslint-enable no-unused-vars */
 "use strict";
 let seenError = false;
-let test = {
+class Test {
+
+  constructor(sfHost) {
+    this.sfHost = sfHost;
+    this.assertEquals = this.assertEquals.bind(this);
+    this.assertThrows = this.assertThrows.bind(this);
+    this.assertNotEquals = this.assertNotEquals.bind(this);
+    this.assert = this.assert.bind(this);
+    this.loadPage = this.loadPage.bind(this);
+    this.anonApex = this.anonApex.bind(this);
+  }
+
   assertEquals(expected, actual) {
     let strExpected = JSON.stringify(expected);
     let strActual = JSON.stringify(actual);
@@ -16,7 +25,7 @@ let test = {
       console.error(msg);
       throw msg;
     }
-  },
+  }
 
   assertThrows(expected, fn) {
     let strExpected = JSON.stringify(expected);
@@ -38,7 +47,7 @@ let test = {
     let msg = new Error("assertThrows failed: Expected thrown " + strExpected + " but found returned " + strRes + ".");
     console.error(msg);
     throw msg;
-  },
+  }
 
   assertNotEquals(expected, actual) {
     let strExpected = JSON.stringify(expected);
@@ -49,7 +58,7 @@ let test = {
       console.error(msg);
       throw msg;
     }
-  },
+  }
 
   assert(truth, msg) {
     if (!truth) {
@@ -58,7 +67,7 @@ let test = {
       let err = new Error("assert failed: " + msg);
       throw err;
     }
-  },
+  }
 
   loadPage(url) {
     return new Promise(resolve => {
@@ -69,30 +78,18 @@ let test = {
         }
       });
       let args = new URLSearchParams();
-      args.set("host", sfHost);
+      args.set("host", this.sfHost);
       window.page.src = url + "?" + args;
     });
-  },
+  }
 
   *anonApex(apex) {
     window.anonApex.removeAttribute("hidden");
-    let res = yield askSalesforce("/services/data/v" + apiVersion + "/tooling/executeAnonymous/?anonymousBody=" + encodeURIComponent(apex));
+    let res = yield sfConn.rest("/services/data/v" + apiVersion + "/tooling/executeAnonymous/?anonymousBody=" + encodeURIComponent(apex));
     window.anonApex.setAttribute("hidden", "");
-    test.assert(res.success, res);
+    this.assert(res.success, res);
   }
-};
 
-function async(iterator) {
-  return new Promise((resolve, reject) => {
-    function await(step) {
-      if (step.done) {
-        resolve(step.value);
-        return;
-      }
-      Promise.resolve(step.value).then(iterator.next.bind(iterator), iterator.throw.bind(iterator)).then(await, reject);
-    }
-    await(iterator.next());
-  });
 }
 
 this.isUnitTest = true;
@@ -101,21 +98,22 @@ addEventListener("load", () => {
   async(function*() {
     try {
       let args = new URLSearchParams(location.search.slice(1));
-      sfHost = args.get("host");
-      session = yield new Promise(resolve => {
-        chrome.runtime.sendMessage({message: "getSession", sfHost}, resolve);
-      });
-      yield* popupTest();
-      yield* csvParseTest();
-      yield* dataImportTest();
-      yield* dataExportTest();
+      let sfHost = args.get("host");
+      yield sfConn.getSession(sfHost);
+      let test = new Test(sfHost);
+      yield* popupTest(test);
+      yield* csvParseTest(test);
+      yield* dataImportTest(test);
+      yield* dataExportTest(test);
       test.assert(!seenError, "Expected no error");
       console.log("Salesforce Inspector unit test finished successfully");
       window.result.textContent = "Salesforce Inspector unit test finished successfully";
+      window.result.style.background = "green";
       window.page.src = "data:text/plain,Salesforce Inspector unit test finished successfully";
     } catch (e) {
       console.error("error", e);
       window.result.textContent = "Error: " + e;
+      window.result.style.background = "red";
     }
-  }());
+  })();
 });

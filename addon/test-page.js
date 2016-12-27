@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-/* exported initButton sfHost */
+/* exported initButton */
 /* global showStdPageDetails */
 /* eslint-enable no-unused-vars */
 "use strict";
@@ -11,13 +11,13 @@ let locationHref = "https://" + sfHost;
 chrome.runtime.sendMessage({message: "getSfHost", url: locationHref}, message => {
   sfHost = message;
   if (sfHost) {
-    initButton(false);
+    initButton(sfHost, false);
   } else {
     console.log("Salesforce Inspector: No session found for host " + locationHref);
   }
 });
 
-function initButton(inInspector) {
+function initButton(sfHost, inInspector) {
   let rootEl = document.createElement("div");
   rootEl.id = "insext";
   document.body.appendChild(rootEl);

@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global ko */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* global initButton */
 /* global csvParse */
 /* global Enumerable DescribeInfo copyToClipboard initScrollTable */
@@ -10,12 +9,11 @@
 {
 
   let args = new URLSearchParams(location.search.slice(1));
-  sfHost = args.get("host");
-  initButton(true);
-  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-    session = message;
+  let sfHost = args.get("host");
+  initButton(sfHost, true);
+  sfConn.getSession(sfHost).then(() => {
 
-    let vm = dataImportVm();
+    let vm = dataImportVm(sfHost);
     ko.applyBindings(vm, document.documentElement);
 
     function unloadListener(e) {
@@ -53,7 +51,7 @@
 
 }
 
-function dataImportVm() {
+function dataImportVm(sfHost) {
 
   let importData = ko.observable();
   let consecutiveFailures = 0;
@@ -255,6 +253,7 @@ function dataImportVm() {
         table: [header, ...data],
         isTooling: vm.useToolingApi(),
         describeInfo,
+        sfHost,
         rowVisibilities: [true, ...importData().taggedRows.map(row => vm.showStatus[row.status]())],
         colVisibilities: header.map(() => true)
       };
@@ -397,8 +396,8 @@ function dataImportVm() {
   }
 
   let describeInfo = new DescribeInfo(spinFor);
-  spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(res => {
-    vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
+  spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
+    vm.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
   }));
 
   let xmlName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // A (subset of a) valid XML name
@@ -469,11 +468,14 @@ function dataImportVm() {
     let data = importData().importTable.data;
     let header = importData().importTable.header.map(c => c.columnValue());
     let batchRows = [];
-    let doc = window.document.implementation.createDocument(null, importAction);
+    let importArgs = {};
     if (importAction == "upsert") {
-      let extId = doc.createElement("externalIDFieldName");
-      extId.textContent = idFieldName;
-      doc.documentElement.appendChild(extId);
+      importArgs.externalIDFieldName = idFieldName;
+    }
+    if (importAction == "delete") {
+      importArgs.ID = [];
+    } else {
+      importArgs.sObjects = [];
     }
 
     for (let row of data) {
@@ -486,48 +488,38 @@ function dataImportVm() {
       batchRows.push(row);
       row[statusColumnIndex] = "Processing";
       if (importAction == "delete") {
-        let deleteId = doc.createElement("ID");
-        deleteId.textContent = row[inputIdColumnIndex];
-        doc.documentElement.appendChild(deleteId);
+        importArgs.ID.push(row[inputIdColumnIndex]);
       } else {
-        let sobjects = doc.createElement("sObjects");
-        sobjects.setAttribute("xsi:type", sobjectType);
+        let sobject = {};
+        sobject["$xsi:type"] = sobjectType;
+        sobject.fieldsToNull = [];
         for (let c = 0; c < row.length; c++) {
           if (header[c][0] != "_") {
             let columnName = header[c].split(":");
             if (row[c].trim() == "") {
               if (c != inputIdColumnIndex) {
-                let field = doc.createElement("fieldsToNull");
+                let field;
                 let [fieldName] = columnName;
                 if (columnName.length == 1) { // Our validation ensures there are always one or three elements in the array
-                  field.textContent = fieldName;
+                  field = fieldName;
                 } else {
-                  field.textContent = /__r$/.test(fieldName) ? fieldName.replace(/__r$/, "__c") : fieldName + "Id";
+                  field = /__r$/.test(fieldName) ? fieldName.replace(/__r$/, "__c") : fieldName + "Id";
                 }
-                sobjects.appendChild(field);
+                sobject.fieldsToNull.push(field);
               }
+            } else if (columnName.length == 1) { // Our validation ensures there are always one or three elements in the array
+              let [fieldName] = columnName;
+              sobject[fieldName] = row[c];
             } else {
-              let field;
-              if (columnName.length == 1) { // Our validation ensures there are always one or three elements in the array
-                let [fieldName] = columnName;
-                // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
-                field = doc.createElement(fieldName);
-                field.textContent = row[c];
-              } else {
-                let [fieldName, typeName, subFieldName] = columnName;
-                // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
-                let subField = doc.createElement(subFieldName);
-                subField.textContent = row[c];
-                // For Mozilla reviewers: `doc` is a SOAP XML document, which is never interpreted as a HTML or XHTML document, so using dynamic element names is secure in this case.
-                field = doc.createElement(fieldName);
-                field.setAttribute("xsi:type", typeName);
-                field.appendChild(subField);
-              }
-              sobjects.appendChild(field);
+              let [fieldName, typeName, subFieldName] = columnName;
+              sobject[fieldName] = {
+                "$xsi:type": typeName,
+                [subFieldName]: row[c]
+              };
             }
           }
         }
-        doc.documentElement.appendChild(sobjects);
+        importArgs.sObjects.push(sobject);
       }
     }
     if (batchRows.length == 0) {
@@ -536,7 +528,6 @@ function dataImportVm() {
       }
       return;
     }
-    let batchXml = new XMLSerializer().serializeToString(doc);
     vm.activeBatches(vm.activeBatches() + 1);
     updateResult(importData().importTable);
 
@@ -551,41 +542,35 @@ function dataImportVm() {
     // unless batches are slower than timeoutDelay.
     setTimeout(executeBatch, 2500);
 
-    spinFor(askSalesforceSoap(useToolingApi ? "/services/Soap/T/" + apiVersion : "/services/Soap/c/" + apiVersion, useToolingApi ? "urn:tooling.soap.sforce.com" : "urn:enterprise.soap.sforce.com", batchXml).then(res => {
-      let results = res.querySelectorAll("Body result");
+    spinFor(sfConn.soap(sfConn.wsdl(apiVersion, useToolingApi ? "Tooling" : "Enterprise"), importAction, importArgs).then(res => {
+      let results = sfConn.asArray(res);
       for (let i = 0; i < results.length; i++) {
         let result = results[i];
         let row = batchRows[i];
-        if (result.querySelector("success").textContent == "true") {
+        if (result.success == "true") {
           row[statusColumnIndex] = "Succeeded";
           row[actionColumnIndex]
             = importAction == "create" ? "Inserted"
             : importAction == "update" ? "Updated"
-            : importAction == "upsert" ? (result.querySelector("created").textContent == "true" ? "Inserted" : "Updated")
+            : importAction == "upsert" ? (result.created == "true" ? "Inserted" : "Updated")
             : importAction == "delete" ? "Deleted"
             : "Unknown";
         } else {
           row[statusColumnIndex] = "Failed";
           row[actionColumnIndex] = "";
         }
-        row[resultIdColumnIndex] = result.querySelector("id").textContent;
-        row[errorColumnIndex] = Array.from(result.querySelectorAll("errors")).map(errorNode =>
-          errorNode.querySelector("statusCode").textContent
-            + ": " + errorNode.querySelector("message").textContent
-            + " [" + Array.from(errorNode.querySelectorAll("fields")).map(f => f.textContent).join(", ") + "]"
+        row[resultIdColumnIndex] = result.id || "";
+        row[errorColumnIndex] = sfConn.asArray(result.errors).map(errorNode =>
+          errorNode.statusCode
+            + ": " + errorNode.message
+            + " [" + sfConn.asArray(errorNode.fields).join(", ") + "]"
         ).join(", ");
       }
       consecutiveFailures = 0;
-    }, xhr => {
-      if (!xhr || xhr.readyState != 4) {
-        throw xhr; // Not an HTTP error response
-      }
-      let errorText;
-      if (xhr.responseXML != null) {
-        errorText = Array.from(xhr.responseXML.querySelectorAll("faultstring")).map(e => e.textContent).join(", ");
-      } else {
-        console.error(xhr);
-        errorText = "Connection to Salesforce failed" + (xhr.status != 0 ? " (HTTP " + xhr.status + ")" : "");
+    }, err => {
+      let errorText = err && err.sfConnError;
+      if (!errorText) {
+        throw err; // Not an HTTP error response
       }
       for (let row of batchRows) {
         row[statusColumnIndex] = "Failed";

@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global ko */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
+/* global sfConn apiVersion async */
 /* exported Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";
@@ -60,7 +60,7 @@ function DescribeInfo(spinFor) {
     if (apiDescribes.global.globalStatus == "pending") {
       apiDescribes.global.globalStatus = "loading";
       console.log(useToolingApi ? "getting tooling objects" : "getting objects");
-      spinFor(askSalesforce(useToolingApi ? "/services/data/v" + apiVersion + "/tooling/sobjects/" : "/services/data/v" + apiVersion + "/sobjects/").then(res => {
+      spinFor(sfConn.rest(useToolingApi ? "/services/data/v" + apiVersion + "/tooling/sobjects/" : "/services/data/v" + apiVersion + "/sobjects/").then(res => {
         apiDescribes.global.globalStatus = "ready";
         apiDescribes.global.globalDescribe = res;
         apiDescribes.sobjects = new Map();
@@ -111,7 +111,7 @@ function DescribeInfo(spinFor) {
       if (sobjectInfo.sobject.sobjectStatus == "pending") {
         sobjectInfo.sobject.sobjectStatus = "loading";
         console.log("getting fields for " + sobjectInfo.global.name);
-        spinFor(askSalesforce(sobjectInfo.global.urls.describe).then(res => {
+        spinFor(sfConn.rest(sobjectInfo.global.urls.describe).then(res => {
           sobjectInfo.sobject.sobjectStatus = "ready";
           sobjectInfo.sobject.sobjectDescribe = res;
           sobjectAllDescribes.valueHasMutated();
@@ -167,7 +167,7 @@ function renderCell(rt, cell, td) {
       for (let objectType of objectTypes) {
         let aShow = document.createElement("a");
         let args = new URLSearchParams();
-        args.set("host", sfHost);
+        args.set("host", rt.sfHost);
         args.set("objectType", objectType);
         if (rt.isTooling) {
           args.set("useToolingApi", "1");
@@ -182,7 +182,7 @@ function renderCell(rt, cell, td) {
       // If the recordId ends with 0000000000AAA it is a dummy ID such as the ID for the master record type 012000000000000AAA
       if (recordId && isRecordId(recordId) && !recordId.endsWith("0000000000AAA")) {
         let aView = document.createElement("a");
-        aView.href = "https://" + sfHost + "/" + recordId;
+        aView.href = "https://" + rt.sfHost + "/" + recordId;
         aView.textContent = "View in Salesforce";
         pop.appendChild(aView);
       }
@@ -276,6 +276,7 @@ interface Table {
   boolean[] colVisibilities; // For each column, true if it is visible, or false if it is hidden
   boolean isTooling;
   DescribeInfo describeInfo;
+  String sfHost;
 }
 void renderCell(Table table, Cell cell, DOMElement element); // Render cell within element
 interface Cell {

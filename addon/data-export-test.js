@@ -1,11 +1,9 @@
 /* eslint-disable no-unused-vars */
-/* global test */
-/* global session:true sfHost:true apiVersion askSalesforce:true askSalesforceSoap:true */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* exported dataExportTest */
 /* eslint-enable no-unused-vars */
 "use strict";
-function* dataExportTest() {
+function* dataExportTest(test) {
   console.log("TEST dataExportVm");
   let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
 
@@ -533,19 +531,19 @@ function* dataExportTest() {
   assertEquals([], vm.queryHistory.list());
 
   // Autocomplete load errors
-  let askOrig = win.askSalesforce;
-  let askError = () => Promise.reject();
+  let restOrig = win.sfConn.rest;
+  let restError = () => Promise.reject();
 
   // Autocomplete load errors for global describe
   setQuery("select Id from Acco", "", "");
-  win.askSalesforce = askError;
+  win.sfConn.rest = restError;
   vm.autocompleteReload();
   assertEquals("Loading metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
   yield waitForSpinner();
   assertEquals("Loading metadata failed.", vm.autocompleteResults().title);
   assertEquals(1, vm.autocompleteResults().results.length);
-  win.askSalesforce = askOrig;
+  win.sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("Loading metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
@@ -553,14 +551,14 @@ function* dataExportTest() {
   assertEquals("Objects:", vm.autocompleteResults().title);
 
   // Autocomplete load errors for object describe
-  win.askSalesforce = askError;
+  win.sfConn.rest = restError;
   setQuery("select Id", "", " from Account");
   assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
   yield waitForSpinner();
   assertEquals("Loading Account metadata failed.", vm.autocompleteResults().title);
   assertEquals(1, vm.autocompleteResults().results.length);
-  win.askSalesforce = askOrig;
+  win.sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
@@ -568,14 +566,14 @@ function* dataExportTest() {
   assertEquals("Account fields:", vm.autocompleteResults().title);
 
   // Autocomplete load errors for relationship object describe
-  win.askSalesforce = askError;
+  win.sfConn.rest = restError;
   setQuery("select Id, OWNER.USERN", "", " from Account");
   assertEquals("Loading User metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);
   yield waitForSpinner();
   assertEquals("Loading User metadata failed.", vm.autocompleteResults().title);
   assertEquals(1, vm.autocompleteResults().results.length);
-  win.askSalesforce = askOrig;
+  win.sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults().results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults().title);
   assertEquals(0, vm.autocompleteResults().results.length);

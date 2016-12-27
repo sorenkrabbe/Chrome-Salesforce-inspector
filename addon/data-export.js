@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global ko */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* global initButton */
 /* global Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
@@ -9,10 +8,9 @@
 {
 
   let args = new URLSearchParams(location.search.slice(1));
-  sfHost = args.get("host");
-  initButton(true);
-  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-    session = message;
+  let sfHost = args.get("host");
+  initButton(sfHost, true);
+  sfConn.getSession(sfHost).then(() => {
 
     let queryInput = document.querySelector("#query");
 
@@ -28,7 +26,7 @@
       }
     };
 
-    let vm = dataExportVm({args, queryInput: queryInputVm});
+    let vm = dataExportVm({sfHost, args, queryInput: queryInputVm});
     ko.applyBindings(vm, document.documentElement);
 
     function queryAutocompleteEvent() {
@@ -91,7 +89,7 @@
 
 }
 
-function dataExportVm({args, queryInput}) {
+function dataExportVm({sfHost, args, queryInput}) {
 
   let describeInfo = new DescribeInfo(spinFor);
   describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
@@ -237,8 +235,8 @@ function dataExportVm({args, queryInput}) {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  spinFor(askSalesforceSoap("/services/Soap/u/" + apiVersion, "urn:partner.soap.sforce.com", "<getUserInfo/>").then(res => {
-    vm.userInfo(res.querySelector("Body userFullName").textContent + " / " + res.querySelector("Body userName").textContent + " / " + res.querySelector("Body organizationName").textContent);
+  spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
+    vm.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
   }));
 
   if (args.has("query")) {
@@ -565,11 +563,11 @@ function dataExportVm({args, queryInput}) {
         let contextValueField = contextValueFields[0];
         let queryMethod = useToolingApi ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
         let acQuery = "select " + contextValueField.field.name + " from " + contextValueField.sobjectDescribe.name + " where " + contextValueField.field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + contextValueField.field.name + " limit 100";
-        spinFor(askSalesforce("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), autocompleteProgress)
+        spinFor(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), {progressHandler: autocompleteProgress})
           .catch(err => {
             vm.autocompleteResults({
               sobjectName,
-              title: "Error: " + ((err && err.askSalesforceError) || err),
+              title: "Error: " + ((err && err.sfConnError) || err),
               results: []
             });
             return null;
@@ -792,6 +790,7 @@ function dataExportVm({args, queryInput}) {
     let exportedData = new RecordTable();
     exportedData.isTooling = vm.queryTooling();
     exportedData.describeInfo = describeInfo;
+    exportedData.sfHost = sfHost;
     let query = queryInput.getValue();
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
     function batchHandler(batch) {
@@ -801,7 +800,7 @@ function dataExportVm({args, queryInput}) {
           exportedData.totalSize = data.totalSize;
         }
         if (!data.done) {
-          let pr = batchHandler(askSalesforce(data.nextRecordsUrl, exportProgress));
+          let pr = batchHandler(sfConn.rest(data.nextRecordsUrl, {progressHandler: exportProgress}));
           vm.exportResult({
             isWorking: true,
             exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
@@ -828,8 +827,8 @@ function dataExportVm({args, queryInput}) {
         });
         return null;
       }, err => {
-        if (!err || !err.askSalesforceError) {
-          throw err; // not an askSalesforceError
+        if (!err || !err.sfConnError) {
+          throw err; // not a sfConnError
         }
         if (exportedData.totalSize != -1) {
           // We already got some data. Show it, and indicate that not all data was exported
@@ -844,13 +843,13 @@ function dataExportVm({args, queryInput}) {
         vm.exportResult({
           isWorking: false,
           exportStatus: "Error",
-          exportError: err.askSalesforceError,
+          exportError: err.sfConnError,
           exportedData: null
         });
         return null;
       });
     }
-    spinFor(batchHandler(askSalesforce("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), exportProgress))
+    spinFor(batchHandler(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), {progressHandler: exportProgress}))
       .catch(error => {
         console.error(error);
         vm.exportResult({

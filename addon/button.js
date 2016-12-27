@@ -1,9 +1,8 @@
 /* eslint-disable no-unused-vars */
-/* exported initButton sfHost */
+/* exported initButton */
 /* global showStdPageDetails */
 /* eslint-enable no-unused-vars */
 "use strict";
-var sfHost; // eslint-disable-line no-var
 
 // sfdcBody = normal Salesforce page
 // ApexCSIPage = Developer Console
@@ -11,11 +10,10 @@ var sfHost; // eslint-disable-line no-var
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
   console.log("Salesforce Inspector: Loading button for " + location.href);
-  chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, message => {
-    sfHost = message;
+  chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, sfHost => {
     console.log("Salesforce Inspector: sfHost=" + sfHost);
     if (sfHost) {
-      initButton(false);
+      initButton(sfHost, false);
     } else {
       console.log("Salesforce Inspector: No session found for host " + location.href);
     }
@@ -24,7 +22,7 @@ if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) 
   console.log("Salesforce Inspector: Button not loading for " + location.href);
 }
 
-function initButton(inInspector) {
+function initButton(sfHost, inInspector) {
   let rootEl = document.createElement("div");
   rootEl.id = "insext";
   let btn = document.createElement("div");
@@ -76,7 +74,7 @@ function initButton(inInspector) {
         closePopup();
       }
       if (e.data.insextShowStdPageDetails) {
-        showStdPageDetails(e.data.insextData);
+        showStdPageDetails(sfHost, e.data.insextData);
       }
     });
     rootEl.appendChild(popupEl);

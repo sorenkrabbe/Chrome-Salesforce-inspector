@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
@@ -13,7 +12,6 @@ let h = React.createElement;
   addEventListener("message", function initResponseHandler(e) {
     if (e.source == parent && e.data.insextInitResponse) {
       removeEventListener("message", initResponseHandler);
-      sfHost = e.data.sfHost;
       init(e.data);
     }
   });
@@ -25,17 +23,15 @@ function closePopup() {
 
 function init(params) {
 
-  let hostArg = new URLSearchParams();
-  hostArg.set("host", sfHost);
+  let sfHost = params.sfHost;
   let addonVersion = chrome.runtime.getManifest().version;
 
-  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-    session = message;
+  sfConn.getSession(sfHost).then(() => {
 
     ReactDOM.render(h(App, {
+      sfHost,
       forceTargetBlank: params.forceTargetBlank,
       showDetailsSupported: params.showStdPageDetailsSupported,
-      hostArg,
       addonVersion,
     }), document.getElementById("root"));
 
@@ -92,7 +88,7 @@ class App extends React.PureComponent {
     }
 
     function getObjects(url, api) {
-      return askSalesforce(url).then(describe => {
+      return sfConn.rest(url).then(describe => {
         for (let sobject of describe.sobjects) {
           addEntity(sobject, api);
         }
@@ -103,7 +99,7 @@ class App extends React.PureComponent {
 
     function getEntityDefinitions(bucket) {
       let query = "select QualifiedApiName, Label, KeyPrefix from EntityDefinition" + bucket;
-      return askSalesforce("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent(query)).then(res => {
+      return sfConn.rest("/services/data/v" + apiVersion + "/tooling/query?q=" + encodeURIComponent(query)).then(res => {
         for (let record of res.records) {
           addEntity({
             name: record.QualifiedApiName,
@@ -160,13 +156,17 @@ class App extends React.PureComponent {
       e.preventDefault();
       this.refs.dataImportBtn.click();
     }
-    if (e.key == "x") {
-      e.preventDefault();
-      this.refs.apiExploreBtn.click();
-    }
     if (e.key == "l") {
       e.preventDefault();
       this.refs.limitsBtn.click();
+    }
+    if (e.key == "d") {
+      e.preventDefault();
+      this.refs.metaRetrieveBtn.click();
+    }
+    if (e.key == "x") {
+      e.preventDefault();
+      this.refs.apiExploreBtn.click();
     }
   }
   componentDidMount() {
@@ -181,9 +181,9 @@ class App extends React.PureComponent {
   }
   render() {
     let {
+      sfHost,
       forceTargetBlank,
       showDetailsSupported,
-      hostArg,
       addonVersion,
     } = this.props;
     let {
@@ -191,6 +191,8 @@ class App extends React.PureComponent {
       sobjectsLoading,
       contextRecordId,
     } = this.state;
+    let hostArg = new URLSearchParams();
+    hostArg.set("host", sfHost);
     let linkTarget = forceTargetBlank ? "_blank" : "_top";
     return (
       h("div", {},
@@ -209,12 +211,13 @@ class App extends React.PureComponent {
           "Salesforce inspector"
         ),
         h("div", {className: "main"},
-          h(AllDataBox, {ref: "showAllDataBox", showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
+          h(AllDataBox, {ref: "showAllDataBox", sfHost, showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
           h("div", {className: "global-box"},
             h("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
             h("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
             h("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
             // Advanded features should be put below this line, and the layout adjusted so they are below the fold
+            h("a", {ref: "metaRetrieveBtn", href: "metadata-retrieve.html?" + hostArg, target: linkTarget, className: "button"}, h("u", {}, "D"), "ownload Metadata"),
             h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button"}, "E", h("u", {}, "x"), "plore API")
           )
         ),
@@ -251,7 +254,7 @@ class ShowDetailsButton extends React.PureComponent {
     let tooling = !selectedValue.sobject.availableApis.includes("regularApi");
     let url = "/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + selectedValue.sobject.name + "/describe/";
     this.setState({detailsShown: true, detailsLoading: true});
-    askSalesforce(url).then(res => {
+    sfConn.rest(url).then(res => {
       this.setState({detailsShown: true, detailsLoading: false});
       parent.postMessage({insextShowStdPageDetails: true, insextData: res}, "*");
       closePopup();
@@ -364,13 +367,13 @@ class AllDataBox extends React.PureComponent {
     }
   }
   render() {
-    let {showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget} = this.props;
+    let {sfHost, showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget} = this.props;
     let {selectedValue} = this.state;
     return (
       h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
         h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches}),
         selectedValue
-          ? h(AllDataSelection, {ref: "allDataSelection", showDetailsSupported, contextRecordId, selectedValue, linkTarget})
+          ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, contextRecordId, selectedValue, linkTarget})
           : h("div", {className: "all-data-box-inner empty"}, "No record to display")
       )
     );
@@ -385,7 +388,7 @@ class AllDataSelection extends React.PureComponent {
     this.refs.showAllDataBtn.click();
   }
   getAllDataUrl(toolingApi) {
-    let {selectedValue} = this.props;
+    let {sfHost, selectedValue} = this.props;
     if (selectedValue) {
       let args = new URLSearchParams();
       args.set("host", sfHost);
@@ -402,7 +405,7 @@ class AllDataSelection extends React.PureComponent {
     }
   }
   getDeployStatusUrl() {
-    let {selectedValue} = this.props;
+    let {sfHost, selectedValue} = this.props;
     let args = new URLSearchParams();
     args.set("host", sfHost);
     args.set("checkDeployStatus", selectedValue.recordId);

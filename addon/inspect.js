@@ -1,13 +1,12 @@
 /* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global session:true sfHost:true apiVersion askSalesforce askSalesforceSoap */
-/* exported session sfHost */
+/* global sfConn apiVersion async */
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
 
 class Model {
-  constructor() {
+  constructor(sfHost) {
     this.reactCallback = null;
 
     // Raw fetched data
@@ -23,7 +22,8 @@ class Model {
     this.recordId = null;
 
     // Processed data and UI state
-    this.sfLink = "https://" + sfHost;
+    this.sfHost = sfHost;
+    this.sfLink = "https://" + this.sfHost;
     this.spinnerCount = 0;
     this.errorMessages = [];
     this.rowsFilter = "";
@@ -65,7 +65,7 @@ class Model {
       })
       .catch(err => {
         console.error(err);
-        this.errorMessages.push("Error " + actionName + ": " + ((err && err.askSalesforceError) || err));
+        this.errorMessages.push("Error " + actionName + ": " + ((err && err.sfConnError) || err));
         this.spinnerCount--;
         this.didUpdate();
       })
@@ -135,10 +135,10 @@ class Model {
     let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
     this.spinFor(
       "saving record",
-      askSalesforce(recordUrl, null, {method: "PATCH", body: record}),
+      sfConn.rest(recordUrl, {method: "PATCH", body: record}),
       () => {
         this.clearRecordData();
-        this.setRecordData(askSalesforce(recordUrl));
+        this.setRecordData(sfConn.rest(recordUrl));
       }
     );
   }
@@ -155,16 +155,16 @@ class Model {
   }
   viewLink() {
     if (this.recordData && this.recordData.Id) {
-      return "https://" + sfHost + "/" + this.recordData.Id;
+      return "https://" + this.sfHost + "/" + this.recordData.Id;
     }
     if (this.objectData && this.objectData.keyPrefix) {
-      return "https://" + sfHost + "/" + this.objectData.keyPrefix + "/o";
+      return "https://" + this.sfHost + "/" + this.objectData.keyPrefix + "/o";
     }
     return undefined;
   }
   editLayoutLink() {
     if (this.layoutInfo && this.layoutInfo.id) {
-      return "https://" + sfHost + "//layouteditor/layoutEditor.apexp?type=" + this.sobjectName + "&lid=" + this.layoutInfo.id;
+      return "https://" + this.sfHost + "//layouteditor/layoutEditor.apexp?type=" + this.sobjectName + "&lid=" + this.layoutInfo.id;
     }
     return undefined;
   }
@@ -184,7 +184,7 @@ class Model {
   }
   dataExportUrl(query) {
     let args = new URLSearchParams();
-    args.set("host", sfHost);
+    args.set("host", this.sfHost);
     args.set("query", query);
     if (this.useToolingApi) {
       args.set("useToolingApi", "1");
@@ -193,7 +193,7 @@ class Model {
   }
   openSetup() {
     let args = new URLSearchParams();
-    args.set("host", sfHost);
+    args.set("host", this.sfHost);
     args.set("object", this.objectName());
     return "open-object-setup.html?" + args;
   }
@@ -211,7 +211,7 @@ class Model {
         "describing layout",
         this.sobjectDescribePromise.then(sobjectDescribe => {
           if (sobjectDescribe.urls.layouts) {
-            return askSalesforce(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA"));
+            return sfConn.rest(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA"));
           }
           return undefined;
         }),
@@ -274,12 +274,12 @@ class Model {
   startLoading() {
 
     // Fetch id prefix to object name mapping
-    this.spinFor("describing global", askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/"), globalDescribe => {
+    this.spinFor("describing global", sfConn.rest("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/"), globalDescribe => {
       this.globalDescribe = globalDescribe;
     });
 
     // Fetch object data using object describe call
-    this.sobjectDescribePromise = askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/describe/");
+    this.sobjectDescribePromise = sfConn.rest("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/describe/");
     this.spinFor("describing object", this.sobjectDescribePromise, sobjectDescribe => {
       // Display the retrieved object data
       this.objectData = sobjectDescribe;
@@ -295,7 +295,7 @@ class Model {
 
     // Fetch record data using record retrieve call
     if (this.recordId) {
-      this.setRecordData(askSalesforce("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/" + this.recordId));
+      this.setRecordData(sfConn.rest("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/" + this.recordId));
     }
 
     // Fetch fields using a Tooling API call, which returns fields not readable by the current user, but fails if the user does not have access to the Tooling API.
@@ -305,7 +305,7 @@ class Model {
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
     this.spinFor(
       "querying tooling particles",
-      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")),
+      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")),
       res => {
         for (let entityParticle of res.records) {
           this.fieldRows.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
@@ -605,7 +605,7 @@ class FieldRow extends TableRow {
   }
   openSetup() {
     let args = new URLSearchParams();
-    args.set("host", sfHost);
+    args.set("host", this.rowList.model.sfHost);
     args.set("object", this.rowList.model.objectName());
     args.set("field", this.fieldName);
     return "open-field-setup.html?" + args;
@@ -651,7 +651,7 @@ class FieldRow extends TableRow {
     return false;
   }
   idLink() {
-    return "https://" + sfHost + "/" + this.dataTypedValue;
+    return "https://" + this.rowList.model.sfHost + "/" + this.dataTypedValue;
   }
   toggleRecordIdPop() {
     if (this.recordIdPop) {
@@ -666,7 +666,7 @@ class FieldRow extends TableRow {
         .filter(sobject => sobject.keyPrefix == keyPrefix)
         .map(sobject => {
           let args = new URLSearchParams();
-          args.set("host", sfHost);
+          args.set("host", this.rowList.model.sfHost);
           args.set("objectType", sobject.name);
           if (this.rowList.model.useToolingApi) {
             args.set("useToolingApi", "1");
@@ -682,7 +682,7 @@ class FieldRow extends TableRow {
   }
   showReferenceUrl(type) {
     let args = new URLSearchParams();
-    args.set("host", sfHost);
+    args.set("host", this.rowList.model.sfHost);
     args.set("objectType", type);
     if (this.rowList.model.useToolingApi) {
       args.set("useToolingApi", "1");
@@ -706,7 +706,7 @@ class FieldRow extends TableRow {
     }
     this.rowList.model.spinFor(
       "getting field definition metadata for " + this.fieldName,
-      askSalesforce("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + this.entityParticle.FieldDefinition.DurableId + "'")),
+      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + this.entityParticle.FieldDefinition.DurableId + "'")),
       fieldDefs => {
         this.fieldParticleMetadata = fieldDefs.records[0];
       }
@@ -772,7 +772,7 @@ class ChildRow extends TableRow {
     let childDescribe = this.childDescribe;
     if (childDescribe) {
       let args = new URLSearchParams();
-      args.set("host", sfHost);
+      args.set("host", this.rowList.model.sfHost);
       args.set("objectType", childDescribe.childSObject);
       if (this.rowList.model.useToolingApi) {
         args.set("useToolingApi", "1");
@@ -785,7 +785,7 @@ class ChildRow extends TableRow {
     let childDescribe = this.childDescribe;
     if (childDescribe) {
       let args = new URLSearchParams();
-      args.set("host", sfHost);
+      args.set("host", this.rowList.model.sfHost);
       args.set("object", childDescribe.childSObject);
       args.set("field", childDescribe.field);
       return "open-field-setup.html?" + args;
@@ -793,7 +793,7 @@ class ChildRow extends TableRow {
     let relatedListInfo = this.relatedListInfo;
     if (relatedListInfo) {
       let args = new URLSearchParams();
-      args.set("host", sfHost);
+      args.set("host", this.rowList.model.sfHost);
       args.set("object", relatedListInfo.relatedList.sobject);
       args.set("field", relatedListInfo.relatedList.field);
       return "open-field-setup.html?" + args;
@@ -1277,13 +1277,12 @@ class DetailsBox extends React.Component {
 {
 
   let args = new URLSearchParams(location.search.slice(1));
-  sfHost = args.get("host");
-  initButton(true);
-  chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-    session = message;
+  let sfHost = args.get("host");
+  initButton(sfHost, true);
+  sfConn.getSession(sfHost).then(() => {
 
     let root = document.getElementById("root");
-    let vm = new Model();
+    let vm = new Model(sfHost);
     vm.sobjectName = args.get("objectType");
     vm.useToolingApi = args.has("useToolingApi");
     vm.recordId = args.get("recordId");
@@ -1295,24 +1294,24 @@ class DetailsBox extends React.Component {
 
   });
 
-  {
-    let isDragging = false;
-    document.body.onmousedown = () => {
-      isDragging = false;
-    };
-    document.body.onmousemove = e => {
-      if (e.movementX || e.movementY) {
-        isDragging = true;
-      }
-    };
-    document.body.onclick = e => {
-      if (!e.target.closest("a") && !isDragging) {
-        let el = e.target.closest(".quick-select");
-        if (el) {
-          getSelection().selectAllChildren(el);
-        }
-      }
-    };
-  }
+}
 
+{
+  let isDragging = false;
+  document.body.onmousedown = () => {
+    isDragging = false;
+  };
+  document.body.onmousemove = e => {
+    if (e.movementX || e.movementY) {
+      isDragging = true;
+    }
+  };
+  document.body.onclick = e => {
+    if (!e.target.closest("a") && !isDragging) {
+      let el = e.target.closest(".quick-select");
+      if (el) {
+        getSelection().selectAllChildren(el);
+      }
+    }
+  };
 }
