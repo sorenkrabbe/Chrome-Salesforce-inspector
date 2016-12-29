@@ -13,7 +13,7 @@
   initButton(sfHost, true);
   sfConn.getSession(sfHost).then(() => {
 
-    let vm = dataImportVm(sfHost);
+    let vm = new Model(sfHost);
     ko.applyBindings(vm, document.documentElement);
 
     function unloadListener(e) {
@@ -51,324 +51,406 @@
 
 }
 
-function dataImportVm(sfHost) {
+class Model {
 
-  let importData = ko.observable();
-  let consecutiveFailures = 0;
+  constructor(sfHost) {
+    this.message = this.message.bind(this);
+    this.dataPaste = this.dataPaste.bind(this);
+    this.setData = this.setData.bind(this);
+    this.invalidInput = this.invalidInput.bind(this);
+    this.isWorking = this.isWorking.bind(this);
+    this.columns = this.columns.bind(this);
+    this.sobjectList = this.sobjectList.bind(this);
+    this.idLookupList = this.idLookupList.bind(this);
+    this.columnList = this.columnList.bind(this);
+    this.importIdColumnValid = this.importIdColumnValid.bind(this);
+    this.importIdColumnError = this.importIdColumnError.bind(this);
+    this.importTypeError = this.importTypeError.bind(this);
+    this.externalIdError = this.externalIdError.bind(this);
+    this.idFieldName = this.idFieldName.bind(this);
+    this.inputIdColumnIndex = this.inputIdColumnIndex.bind(this);
+    this.batchSizeError = this.batchSizeError.bind(this);
+    this.batchConcurrencyError = this.batchConcurrencyError.bind(this);
+    this.canCopy = this.canCopy.bind(this);
+    this.copyAsExcel = this.copyAsExcel.bind(this);
+    this.copyAsCsv = this.copyAsCsv.bind(this);
+    this.copyResult = this.copyResult.bind(this);
+    this.importCounts = this.importCounts.bind(this);
+    this.importTableResult = this.importTableResult.bind(this);
+    this.confirmPopupYes = this.confirmPopupYes.bind(this);
+    this.confirmPopupNo = this.confirmPopupNo.bind(this);
+    this.toggleHelp = this.toggleHelp.bind(this);
+    this.showDescribeUrl = this.showDescribeUrl.bind(this);
+    this.doImport = this.doImport.bind(this);
+    this.toggleProcessing = this.toggleProcessing.bind(this);
+    this.retryFailed = this.retryFailed.bind(this);
+    this.updateResult = this.updateResult.bind(this);
+    this.spinFor = this.spinFor.bind(this);
+    this.makeColumn = this.makeColumn.bind(this);
+    this.executeBatch = this.executeBatch.bind(this);
 
-  let vm = {
-    sfLink: "https://" + sfHost,
-    spinnerCount: ko.observable(0),
-    showHelp: ko.observable(false),
-    userInfo: ko.observable("..."),
-    dataError: ko.observable(""),
-    message() { return vm.dataFormat() == "excel" ? "Paste Excel data here" : "Paste CSV data here"; },
-    dataPaste(_, e) {
-      let text = e.clipboardData.getData("text/plain");
-      vm.setData(text);
-    },
-    setData(text) {
-      if (vm.isWorking()) {
-        return;
-      }
-      let separator = vm.dataFormat() == "excel" ? "\t" : ",";
-      let data;
-      try {
-        data = csvParse(text, separator);
-      } catch (e) {
-        console.log(e);
-        vm.dataError("Error: " + e.message);
-        updateResult(null);
-        return;
-      }
+    this.sfHost = sfHost;
+    this.importData = ko.observable();
+    this.consecutiveFailures = 0;
 
-      if (data.length < 2) {
-        vm.dataError("Error: No records to import");
-        updateResult(null);
-        return;
-      }
-      vm.dataError("");
-      let header = data.shift().map(makeColumn);
-      updateResult(null); // Two updates, the first clears state from the scrolltable
-      updateResult({header, data});
-    },
-    invalidInput() {
-      // We should try to allow imports to succeed even if our validation logic does not exactly match the one in Salesforce.
-      // We only hard-fail on errors that prevent us from building the API request.
-      // When possible, we submit the request with errors and let Salesforce give a descriptive message in the response.
-      return !vm.importIdColumnValid() || !importData().importTable || !importData().importTable.header.every(col => col.columnIgnore() || col.columnValid());
-    },
-    isWorking() {
-      return vm.activeBatches() != 0 || vm.isProcessingQueue();
-    },
-    columns() {
-      return importData().importTable && importData().importTable.header;
-    },
-
-    sobjectList() {
-      sobjectAllDescribes(); // Tell Knockout we have read describe info.
-      let {globalDescribe} = describeInfo.describeGlobal(vm.useToolingApi());
-      if (!globalDescribe) {
-        return [];
-      }
-      return globalDescribe.sobjects
-        .filter(sobjectDescribe => sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable)
-        .map(sobjectDescribe => sobjectDescribe.name);
-    },
-    idLookupList() {
-      let sobjectName = vm.importType();
-      sobjectAllDescribes(); // Tell Knockout we have read describe info.
-      let sobjectDescribe = describeInfo.describeSobject(vm.useToolingApi(), sobjectName).sobjectDescribe;
-
-      if (!sobjectDescribe) {
-        return [];
-      }
-      return sobjectDescribe.fields.filter(field => field.idLookup).map(field => field.name);
-    },
-    columnList() {
-      return Array.from(function*() {
-        let importAction = vm.importAction();
-
-        if (importAction == "delete") {
-          yield "Id";
-        } else {
-          let sobjectName = vm.importType();
-          let useToolingApi = vm.useToolingApi();
-          sobjectAllDescribes(); // Tell Knockout we have read describe info.
-          let sobjectDescribe = describeInfo.describeSobject(useToolingApi, sobjectName).sobjectDescribe;
-          if (sobjectDescribe) {
-            let idFieldName = vm.idFieldName();
-            for (let field of sobjectDescribe.fields) {
-              if (field.createable || field.updateable) {
-                yield field.name;
-                for (let referenceSobjectName of field.referenceTo) {
-                  sobjectAllDescribes(); // Tell Knockout we have read describe info.
-                  let referenceSobjectDescribe = describeInfo.describeSobject(useToolingApi, referenceSobjectName).sobjectDescribe;
-                  if (referenceSobjectDescribe) {
-                    for (let referenceField of referenceSobjectDescribe.fields) {
-                      if (referenceField.idLookup) {
-                        yield field.relationshipName + ":" + referenceSobjectDescribe.name + ":" + referenceField.name;
-                      }
-                    }
-                  }
-                }
-              } else if (field.idLookup && field.name.toLowerCase() == idFieldName.toLowerCase()) {
-                yield field.name;
-              }
-            }
-          }
-        }
-        yield "__Status";
-        yield "__Id";
-        yield "__Action";
-        yield "__Errors";
-      }());
-    },
-    useToolingApi: ko.observable(false),
-    dataFormat: ko.observable("excel"),
-    importAction: ko.observable("create"),
-    importIdColumnValid() {
-      return vm.importAction() == "create" || vm.inputIdColumnIndex() > -1;
-    },
-    importIdColumnError() {
-      if (!vm.importIdColumnValid()) {
-        return "Error: The field mapping has no '" + vm.idFieldName() + "' column";
-      }
-      return "";
-    },
-    importType: ko.observable("Account"),
-    importTypeError() {
-      let importType = vm.importType();
-      if (!vm.sobjectList().some(s => s.toLowerCase() == importType.toLowerCase())) {
-        return "Error: Unknown object";
-      }
-      return "";
-    },
-    externalId: ko.observable("Id"),
-    externalIdError() {
-      let externalId = vm.externalId();
-      if (!vm.idLookupList().some(s => s.toLowerCase() == externalId.toLowerCase())) {
-        return "Error: Unknown field or not an external ID";
-      }
-      return "";
-    },
-    idFieldName() {
-      return vm.importAction() == "create" ? "" : vm.importAction() == "upsert" ? vm.externalId() : "Id";
-    },
-    inputIdColumnIndex() {
-      let importTable = importData().importTable;
-      if (!importTable) {
-        return -1;
-      }
-      let idFieldName = vm.idFieldName();
-      return importTable.header.findIndex(c => c.columnValue().toLowerCase() == idFieldName.toLowerCase());
-    },
-    batchSize: ko.observable("200"),
-    batchSizeError() {
-      if (!(+vm.batchSize() > 0)) { // This also handles NaN
-        return "Error: Must be a positive number";
-      }
-      return "";
-    },
-    batchConcurrency: ko.observable("6"),
-    batchConcurrencyError() {
-      if (!(+vm.batchConcurrency() > 0)) { // This also handles NaN
-        return "Error: Must be a positive number";
-      }
-      if (+vm.batchConcurrency() > 6) {
-        return "Note: More than 6 threads will not help since Salesforce does not support HTTP2";
-      }
-      return "";
-    },
-    confirmPopup: ko.observable(null),
-    activeBatches: ko.observable(0),
-    isProcessingQueue: ko.observable(false),
-    importState: ko.observable(null),
-    showStatus: {
+    this.sfLink = "https://" + this.sfHost;
+    this.spinnerCount = ko.observable(0);
+    this.showHelp = ko.observable(false);
+    this.userInfo = ko.observable("...");
+    this.dataError = ko.observable("");
+    this.useToolingApi = ko.observable(false);
+    this.dataFormat = ko.observable("excel");
+    this.importAction = ko.observable("create");
+    this.importType = ko.observable("Account");
+    this.externalId = ko.observable("Id");
+    this.batchSize = ko.observable("200");
+    this.batchConcurrency = ko.observable("6");
+    this.confirmPopup = ko.observable(null);
+    this.activeBatches = ko.observable(0);
+    this.isProcessingQueue = ko.observable(false);
+    this.importState = ko.observable(null);
+    this.showStatus = {
       Queued: ko.observable(true),
       Processing: ko.observable(true),
       Succeeded: ko.observable(true),
       Failed: ko.observable(true)
-    },
-    canCopy() {
-      return importData().taggedRows != null;
-    },
-    copyAsExcel() {
-      vm.copyResult("\t");
-    },
-    copyAsCsv() {
-      vm.copyResult(",");
-    },
-    copyResult(separator) {
-      let header = importData().importTable.header.map(c => c.columnValue());
-      let data = importData().taggedRows.filter(row => vm.showStatus[row.status]()).map(row => row.cells);
-      copyToClipboard(csvSerialize([header, ...data], separator));
-    },
-    importCounts() {
-      return importData().counts;
-    },
-    importTableResult() {
-      if (importData().taggedRows == null) {
-        return null;
-      }
-      let header = importData().importTable.header.map(c => c.columnValue());
-      let data = importData().taggedRows.map(row => row.cells);
-      return {
-        table: [header, ...data],
-        isTooling: vm.useToolingApi(),
-        describeInfo,
-        sfHost,
-        rowVisibilities: [true, ...importData().taggedRows.map(row => vm.showStatus[row.status]())],
-        colVisibilities: header.map(() => true)
-      };
-    },
-    confirmPopupYes() {
-      vm.confirmPopup(null);
+    };
 
-      let {header, data} = importData().importTable;
+    this.updateResult(null);
 
-      let statusColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__status");
-      if (statusColumnIndex == -1) {
-        statusColumnIndex = header.length;
-        header.push(makeColumn("__Status"));
-        for (let row of data) {
-          row.push("");
-        }
-      }
-      let resultIdColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__id");
-      if (resultIdColumnIndex == -1) {
-        resultIdColumnIndex = header.length;
-        header.push(makeColumn("__Id"));
-        for (let row of data) {
-          row.push("");
-        }
-      }
-      let actionColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__action");
-      if (actionColumnIndex == -1) {
-        actionColumnIndex = header.length;
-        header.push(makeColumn("__Action"));
-        for (let row of data) {
-          row.push("");
-        }
-      }
-      let errorColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__errors");
-      if (errorColumnIndex == -1) {
-        errorColumnIndex = header.length;
-        header.push(makeColumn("__Errors"));
-        for (let row of data) {
-          row.push("");
-        }
-      }
-      for (let row of data) {
-        if (["queued", "processing", ""].includes(row[statusColumnIndex].toLowerCase())) {
-          row[statusColumnIndex] = "Queued";
-        }
-      }
-      updateResult(importData().importTable);
-      vm.importState({
-        statusColumnIndex,
-        resultIdColumnIndex,
-        actionColumnIndex,
-        errorColumnIndex,
-        importAction: vm.importAction(),
-        useToolingApi: vm.useToolingApi(),
-        sobjectType: vm.importType(),
-        idFieldName: vm.idFieldName(),
-        inputIdColumnIndex: vm.inputIdColumnIndex()
-      });
+    this.sobjectAllDescribes = ko.observable({});
+    this.describeInfo = new DescribeInfo(this.spinFor, () => {
+      this.sobjectAllDescribes.valueHasMutated();
+    });
+    this.spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
+      this.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
+    }));
 
-      consecutiveFailures = 0;
-      vm.isProcessingQueue(true);
-      executeBatch();
-    },
-    confirmPopupNo() {
-      vm.confirmPopup(null);
-    },
-    toggleHelp() {
-      vm.showHelp(!vm.showHelp());
-    },
-    showDescribeUrl() {
-      let args = new URLSearchParams();
-      args.set("host", sfHost);
-      args.set("objectType", vm.importType());
-      if (vm.useToolingApi()) {
-        args.set("useToolingApi", "1");
-      }
-      return "inspect.html?" + args;
-    },
-    doImport() {
-      let importedRecords = importData().counts.Queued + importData().counts.Processing;
-      let skippedRecords = importData().counts.Succeeded + importData().counts.Failed;
-      vm.confirmPopup({
-        text: importedRecords + " records will be imported."
-          + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded or Failed." : "")
-      });
-    },
-    toggleProcessing() {
-      vm.isProcessingQueue(!vm.isProcessingQueue());
-    },
-    retryFailed() {
-      if (!importData().importTable) {
-        return;
-      }
-      let statusColumnIndex = importData().importTable.header.findIndex(c => c.columnValue().toLowerCase() == "__status");
-      if (statusColumnIndex < 0) {
-        return;
-      }
-      for (let row of importData().taggedRows) {
-        if (row.status == "Failed") {
-          row.cells[statusColumnIndex] = "Queued";
-        }
-      }
-      updateResult(importData().importTable);
-      executeBatch();
+    this.batchSize.subscribe(this.executeBatch);
+    this.batchConcurrency.subscribe(this.executeBatch);
+    // Cannot subscribe to this.isProcessingQueue, this.activeBatches or this.importData, since this.executeBatch modifies them, and Knockout cannot handle these cycles
+  }
+
+  message() {
+    return this.dataFormat() == "excel" ? "Paste Excel data here" : "Paste CSV data here";
+  }
+
+  dataPaste(_, e) {
+    let text = e.clipboardData.getData("text/plain");
+    this.setData(text);
+  }
+
+  setData(text) {
+    if (this.isWorking()) {
+      return;
     }
-  };
-  updateResult(null);
-  function updateResult(importTable) {
+    let separator = this.dataFormat() == "excel" ? "\t" : ",";
+    let data;
+    try {
+      data = csvParse(text, separator);
+    } catch (e) {
+      console.log(e);
+      this.dataError("Error: " + e.message);
+      this.updateResult(null);
+      return;
+    }
+
+    if (data.length < 2) {
+      this.dataError("Error: No records to import");
+      this.updateResult(null);
+      return;
+    }
+    this.dataError("");
+    let header = data.shift().map(this.makeColumn);
+    this.updateResult(null); // Two updates, the first clears state from the scrolltable
+    this.updateResult({header, data});
+  }
+
+  invalidInput() {
+    // We should try to allow imports to succeed even if our validation logic does not exactly match the one in Salesforce.
+    // We only hard-fail on errors that prevent us from building the API request.
+    // When possible, we submit the request with errors and let Salesforce give a descriptive message in the response.
+    return !this.importIdColumnValid() || !this.importData().importTable || !this.importData().importTable.header.every(col => col.columnIgnore() || col.columnValid());
+  }
+
+  isWorking() {
+    return this.activeBatches() != 0 || this.isProcessingQueue();
+  }
+
+  columns() {
+    return this.importData().importTable && this.importData().importTable.header;
+  }
+
+  sobjectList() {
+    this.sobjectAllDescribes(); // Tell Knockout we have read describe info.
+    let {globalDescribe} = this.describeInfo.describeGlobal(this.useToolingApi());
+    if (!globalDescribe) {
+      return [];
+    }
+    return globalDescribe.sobjects
+      .filter(sobjectDescribe => sobjectDescribe.createable || sobjectDescribe.deletable || sobjectDescribe.updateable)
+      .map(sobjectDescribe => sobjectDescribe.name);
+  }
+
+  idLookupList() {
+    let sobjectName = this.importType();
+    this.sobjectAllDescribes(); // Tell Knockout we have read describe info.
+    let sobjectDescribe = this.describeInfo.describeSobject(this.useToolingApi(), sobjectName).sobjectDescribe;
+
+    if (!sobjectDescribe) {
+      return [];
+    }
+    return sobjectDescribe.fields.filter(field => field.idLookup).map(field => field.name);
+  }
+
+  columnList() {
+    let self = this;
+    return Array.from(function*() {
+      let importAction = self.importAction();
+
+      if (importAction == "delete") {
+        yield "Id";
+      } else {
+        let sobjectName = self.importType();
+        let useToolingApi = self.useToolingApi();
+        self.sobjectAllDescribes(); // Tell Knockout we have read describe info.
+        let sobjectDescribe = self.describeInfo.describeSobject(useToolingApi, sobjectName).sobjectDescribe;
+        if (sobjectDescribe) {
+          let idFieldName = self.idFieldName();
+          for (let field of sobjectDescribe.fields) {
+            if (field.createable || field.updateable) {
+              yield field.name;
+              for (let referenceSobjectName of field.referenceTo) {
+                self.sobjectAllDescribes(); // Tell Knockout we have read describe info.
+                let referenceSobjectDescribe = self.describeInfo.describeSobject(useToolingApi, referenceSobjectName).sobjectDescribe;
+                if (referenceSobjectDescribe) {
+                  for (let referenceField of referenceSobjectDescribe.fields) {
+                    if (referenceField.idLookup) {
+                      yield field.relationshipName + ":" + referenceSobjectDescribe.name + ":" + referenceField.name;
+                    }
+                  }
+                }
+              }
+            } else if (field.idLookup && field.name.toLowerCase() == idFieldName.toLowerCase()) {
+              yield field.name;
+            }
+          }
+        }
+      }
+      yield "__Status";
+      yield "__Id";
+      yield "__Action";
+      yield "__Errors";
+    }());
+  }
+
+  importIdColumnValid() {
+    return this.importAction() == "create" || this.inputIdColumnIndex() > -1;
+  }
+
+  importIdColumnError() {
+    if (!this.importIdColumnValid()) {
+      return "Error: The field mapping has no '" + this.idFieldName() + "' column";
+    }
+    return "";
+  }
+
+  importTypeError() {
+    let importType = this.importType();
+    if (!this.sobjectList().some(s => s.toLowerCase() == importType.toLowerCase())) {
+      return "Error: Unknown object";
+    }
+    return "";
+  }
+
+  externalIdError() {
+    let externalId = this.externalId();
+    if (!this.idLookupList().some(s => s.toLowerCase() == externalId.toLowerCase())) {
+      return "Error: Unknown field or not an external ID";
+    }
+    return "";
+  }
+
+  idFieldName() {
+    return this.importAction() == "create" ? "" : this.importAction() == "upsert" ? this.externalId() : "Id";
+  }
+
+  inputIdColumnIndex() {
+    let importTable = this.importData().importTable;
+    if (!importTable) {
+      return -1;
+    }
+    let idFieldName = this.idFieldName();
+    return importTable.header.findIndex(c => c.columnValue().toLowerCase() == idFieldName.toLowerCase());
+  }
+
+  batchSizeError() {
+    if (!(+this.batchSize() > 0)) { // This also handles NaN
+      return "Error: Must be a positive number";
+    }
+    return "";
+  }
+
+  batchConcurrencyError() {
+    if (!(+this.batchConcurrency() > 0)) { // This also handles NaN
+      return "Error: Must be a positive number";
+    }
+    if (+this.batchConcurrency() > 6) {
+      return "Note: More than 6 threads will not help since Salesforce does not support HTTP2";
+    }
+    return "";
+  }
+
+  canCopy() {
+    return this.importData().taggedRows != null;
+  }
+
+  copyAsExcel() {
+    this.copyResult("\t");
+  }
+
+  copyAsCsv() {
+    this.copyResult(",");
+  }
+
+  copyResult(separator) {
+    let header = this.importData().importTable.header.map(c => c.columnValue());
+    let data = this.importData().taggedRows.filter(row => this.showStatus[row.status]()).map(row => row.cells);
+    copyToClipboard(csvSerialize([header, ...data], separator));
+  }
+
+  importCounts() {
+    return this.importData().counts;
+  }
+
+  importTableResult() {
+    if (this.importData().taggedRows == null) {
+      return null;
+    }
+    let header = this.importData().importTable.header.map(c => c.columnValue());
+    let data = this.importData().taggedRows.map(row => row.cells);
+    return {
+      table: [header, ...data],
+      isTooling: this.useToolingApi(),
+      describeInfo: this.describeInfo,
+      sfHost: this.sfHost,
+      rowVisibilities: [true, ...this.importData().taggedRows.map(row => this.showStatus[row.status]())],
+      colVisibilities: header.map(() => true)
+    };
+  }
+
+  confirmPopupYes() {
+    this.confirmPopup(null);
+
+    let {header, data} = this.importData().importTable;
+
+    let statusColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__status");
+    if (statusColumnIndex == -1) {
+      statusColumnIndex = header.length;
+      header.push(this.makeColumn("__Status"));
+      for (let row of data) {
+        row.push("");
+      }
+    }
+    let resultIdColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__id");
+    if (resultIdColumnIndex == -1) {
+      resultIdColumnIndex = header.length;
+      header.push(this.makeColumn("__Id"));
+      for (let row of data) {
+        row.push("");
+      }
+    }
+    let actionColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__action");
+    if (actionColumnIndex == -1) {
+      actionColumnIndex = header.length;
+      header.push(this.makeColumn("__Action"));
+      for (let row of data) {
+        row.push("");
+      }
+    }
+    let errorColumnIndex = header.findIndex(c => c.columnValue().toLowerCase() == "__errors");
+    if (errorColumnIndex == -1) {
+      errorColumnIndex = header.length;
+      header.push(this.makeColumn("__Errors"));
+      for (let row of data) {
+        row.push("");
+      }
+    }
+    for (let row of data) {
+      if (["queued", "processing", ""].includes(row[statusColumnIndex].toLowerCase())) {
+        row[statusColumnIndex] = "Queued";
+      }
+    }
+    this.updateResult(this.importData().importTable);
+    this.importState({
+      statusColumnIndex,
+      resultIdColumnIndex,
+      actionColumnIndex,
+      errorColumnIndex,
+      importAction: this.importAction(),
+      useToolingApi: this.useToolingApi(),
+      sobjectType: this.importType(),
+      idFieldName: this.idFieldName(),
+      inputIdColumnIndex: this.inputIdColumnIndex()
+    });
+
+    this.consecutiveFailures = 0;
+    this.isProcessingQueue(true);
+    this.executeBatch();
+  }
+
+  confirmPopupNo() {
+    this.confirmPopup(null);
+  }
+
+  toggleHelp() {
+    this.showHelp(!this.showHelp());
+  }
+
+  showDescribeUrl() {
+    let args = new URLSearchParams();
+    args.set("host", this.sfHost);
+    args.set("objectType", this.importType());
+    if (this.useToolingApi()) {
+      args.set("useToolingApi", "1");
+    }
+    return "inspect.html?" + args;
+  }
+
+  doImport() {
+    let importedRecords = this.importData().counts.Queued + this.importData().counts.Processing;
+    let skippedRecords = this.importData().counts.Succeeded + this.importData().counts.Failed;
+    this.confirmPopup({
+      text: importedRecords + " records will be imported."
+        + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded or Failed." : "")
+    });
+  }
+
+  toggleProcessing() {
+    this.isProcessingQueue(!this.isProcessingQueue());
+  }
+
+  retryFailed() {
+    if (!this.importData().importTable) {
+      return;
+    }
+    let statusColumnIndex = this.importData().importTable.header.findIndex(c => c.columnValue().toLowerCase() == "__status");
+    if (statusColumnIndex < 0) {
+      return;
+    }
+    for (let row of this.importData().taggedRows) {
+      if (row.status == "Failed") {
+        row.cells[statusColumnIndex] = "Queued";
+      }
+    }
+    this.updateResult(this.importData().importTable);
+    this.executeBatch();
+  }
+
+  updateResult(importTable) {
     let counts = {Queued: 0, Processing: 0, Succeeded: 0, Failed: 0};
     if (!importTable) {
-      importData({
+      this.importData({
         importTable: null,
         counts,
         taggedRows: null
@@ -381,34 +463,27 @@ function dataImportVm(sfHost) {
       let status = statusColumnIndex < 0 ? "Queued"
         : cells[statusColumnIndex].toLowerCase() == "queued" ? "Queued"
         : cells[statusColumnIndex].toLowerCase() == "" ? "Queued"
-        : cells[statusColumnIndex].toLowerCase() == "processing" && !vm.isWorking() ? "Queued"
+        : cells[statusColumnIndex].toLowerCase() == "processing" && !this.isWorking() ? "Queued"
         : cells[statusColumnIndex].toLowerCase() == "processing" ? "Processing"
         : cells[statusColumnIndex].toLowerCase() == "succeeded" ? "Succeeded"
         : "Failed";
       counts[status]++;
       taggedRows.push({status, cells});
     }
-    importData({importTable, counts, taggedRows});
+    this.importData({importTable, counts, taggedRows});
   }
 
-  function spinFor(promise) {
-    vm.spinnerCount(vm.spinnerCount() + 1);
+  spinFor(promise) {
+    let stopSpinner = () => {
+      this.spinnerCount(this.spinnerCount() - 1);
+    };
+    this.spinnerCount(this.spinnerCount() + 1);
     promise.catch(e => { console.error("spinFor", e); }).then(stopSpinner, stopSpinner);
   }
-  function stopSpinner() {
-    vm.spinnerCount(vm.spinnerCount() - 1);
-  }
 
-  let sobjectAllDescribes = ko.observable({});
-  let describeInfo = new DescribeInfo(spinFor, () => {
-    sobjectAllDescribes.valueHasMutated();
-  });
-  spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
-    vm.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
-  }));
-
-  let xmlName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // A (subset of a) valid XML name
-  function makeColumn(column) {
+  makeColumn(column) {
+    let self = this;
+    let xmlName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // A (subset of a) valid XML name
     let columnVm = {
       columnValue: ko.observable(column),
       columnIgnore() { return columnVm.columnValue().startsWith("_"); },
@@ -439,7 +514,7 @@ function dataImportVm(sfHost) {
           return "Error: Invalid field name";
         }
         let value = columnVm.columnValue();
-        if (!vm.columnList().some(s => s.toLowerCase() == value.toLowerCase())) {
+        if (!self.columnList().some(s => s.toLowerCase() == value.toLowerCase())) {
           return "Error: Unknown field";
         }
         return "";
@@ -448,32 +523,28 @@ function dataImportVm(sfHost) {
     return columnVm;
   }
 
-  vm.batchSize.subscribe(executeBatch);
-  vm.batchConcurrency.subscribe(executeBatch);
-  // Cannot subscribe to vm.isProcessingQueue, vm.activeBatches or importData, since executeBatch modifies them, and Knockout cannot handle these cycles
-
-  function executeBatch() {
-    if (!vm.isProcessingQueue()) {
+  executeBatch() {
+    if (!this.isProcessingQueue()) {
       return;
     }
 
-    let batchSize = +vm.batchSize();
+    let batchSize = +this.batchSize();
     if (!(batchSize > 0)) { // This also handles NaN
       return;
     }
 
-    let batchConcurrency = +vm.batchConcurrency();
+    let batchConcurrency = +this.batchConcurrency();
     if (!(batchConcurrency > 0)) { // This also handles NaN
       return;
     }
 
-    if (batchConcurrency <= vm.activeBatches()) {
+    if (batchConcurrency <= this.activeBatches()) {
       return;
     }
 
-    let {statusColumnIndex, resultIdColumnIndex, actionColumnIndex, errorColumnIndex, importAction, useToolingApi, sobjectType, idFieldName, inputIdColumnIndex} = vm.importState();
-    let data = importData().importTable.data;
-    let header = importData().importTable.header.map(c => c.columnValue());
+    let {statusColumnIndex, resultIdColumnIndex, actionColumnIndex, errorColumnIndex, importAction, useToolingApi, sobjectType, idFieldName, inputIdColumnIndex} = this.importState();
+    let data = this.importData().importTable.data;
+    let header = this.importData().importTable.header.map(c => c.columnValue());
     let batchRows = [];
     let importArgs = {};
     if (importAction == "upsert") {
@@ -530,13 +601,13 @@ function dataImportVm(sfHost) {
       }
     }
     if (batchRows.length == 0) {
-      if (vm.activeBatches() == 0) {
-        vm.isProcessingQueue(false);
+      if (this.activeBatches() == 0) {
+        this.isProcessingQueue(false);
       }
       return;
     }
-    vm.activeBatches(vm.activeBatches() + 1);
-    updateResult(importData().importTable);
+    this.activeBatches(this.activeBatches() + 1);
+    this.updateResult(this.importData().importTable);
 
     // When receiving invalid input, Salesforce will respond with HTTP status 500.
     // Chrome misinterprets that as the server being overloaded,
@@ -547,9 +618,9 @@ function dataImportVm(sfHost) {
     // Note: When a batch finishes successfully, it will start a timeout parallel to any existing timeouts,
     // so we will reach full batchConcurrency faster that timeoutDelay*batchConcurrency,
     // unless batches are slower than timeoutDelay.
-    setTimeout(executeBatch, 2500);
+    setTimeout(this.executeBatch, 2500);
 
-    spinFor(sfConn.soap(sfConn.wsdl(apiVersion, useToolingApi ? "Tooling" : "Enterprise"), importAction, importArgs).then(res => {
+    this.spinFor(sfConn.soap(sfConn.wsdl(apiVersion, useToolingApi ? "Tooling" : "Enterprise"), importAction, importArgs).then(res => {
       let results = sfConn.asArray(res);
       for (let i = 0; i < results.length; i++) {
         let result = results[i];
@@ -573,7 +644,7 @@ function dataImportVm(sfHost) {
             + " [" + sfConn.asArray(errorNode.fields).join(", ") + "]"
         ).join(", ");
       }
-      consecutiveFailures = 0;
+      this.consecutiveFailures = 0;
     }, err => {
       let errorText = err && err.sfConnError;
       if (!errorText) {
@@ -585,29 +656,28 @@ function dataImportVm(sfHost) {
         row[actionColumnIndex] = "";
         row[errorColumnIndex] = errorText;
       }
-      consecutiveFailures++;
+      this.consecutiveFailures++;
       // If a whole batch has failed (as opposed to individual records failing),
       // too many times in a row, we stop the import.
       // This is useful when an error will affect all batches, for example a field name being misspelled.
       // This also helps prevent throtteling in Chrome.
       // A batch failing might not affect all batches, so we wait for a few consecutive errors before we stop.
       // For example, a whole batch will fail if one of the field values is of an incorrect type or format.
-      if (consecutiveFailures >= 3) {
-        vm.isProcessingQueue(false);
+      if (this.consecutiveFailures >= 3) {
+        this.isProcessingQueue(false);
       }
     }).then(() => {
-      vm.activeBatches(vm.activeBatches() - 1);
-      updateResult(importData().importTable);
-      executeBatch();
+      this.activeBatches(this.activeBatches() - 1);
+      this.updateResult(this.importData().importTable);
+      this.executeBatch();
     }).catch(error => {
       console.error("Unexpected exception", error);
-      vm.isProcessingQueue(false);
+      this.isProcessingQueue(false);
     }));
   }
 
-  function csvSerialize(table, separator) {
-    return table.map(row => row.map(text => "\"" + ("" + (text == null ? "" : text)).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n");
-  }
+}
 
-  return vm;
+function csvSerialize(table, separator) {
+  return table.map(row => row.map(text => "\"" + ("" + (text == null ? "" : text)).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n");
 }
