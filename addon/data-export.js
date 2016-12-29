@@ -91,8 +91,11 @@
 
 function dataExportVm({sfHost, args, queryInput}) {
 
-  let describeInfo = new DescribeInfo(spinFor);
-  describeInfo.dataUpdate.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
+  let sobjectAllDescribes = ko.observable({});
+  let describeInfo = new DescribeInfo(spinFor, () => {
+    sobjectAllDescribes.valueHasMutated();
+  });
+  sobjectAllDescribes.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
 
   class QueryHistory {
     constructor(storageKey, max) {
@@ -332,6 +335,7 @@ function dataExportVm({sfHost, args, queryInput}) {
 
     // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
+      sobjectAllDescribes(); // Tell Knockout we have read describe info.
       let {globalStatus, globalDescribe} = describeInfo.describeGlobal(useToolingApi);
       if (!globalDescribe) {
         switch (globalStatus) {
@@ -403,6 +407,7 @@ function dataExportVm({sfHost, args, queryInput}) {
         isAfterFrom = selStart > fromKeywordMatch.index + fromKeywordMatch[0].length;
       }
     }
+    sobjectAllDescribes(); // Tell Knockout we have read describe info.
     let {sobjectStatus, sobjectDescribe} = describeInfo.describeSobject(useToolingApi, sobjectName);
     if (!sobjectDescribe) {
       switch (sobjectStatus) {
@@ -480,6 +485,7 @@ function dataExportVm({sfHost, args, queryInput}) {
           .filter(field => field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase())
           .flatMap(field => field.referenceTo)
         ) {
+          sobjectAllDescribes(); // Tell Knockout we have read describe info.
           let {sobjectStatus, sobjectDescribe} = describeInfo.describeSobject(useToolingApi, referencedSobjectName);
           if (sobjectDescribe) {
             newContextSobjectDescribes.add(sobjectDescribe);

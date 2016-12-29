@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-/* global ko */
 /* global sfConn apiVersion async */
 /* exported Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
@@ -47,16 +46,17 @@ Enumerable.prototype.filter.prototype = Enumerable.prototype;
 Enumerable.prototype.flatMap.prototype = Enumerable.prototype;
 Enumerable.prototype.concat.prototype = Enumerable.prototype;
 
-function DescribeInfo(spinFor) {
+// @param didUpdate: A callback function to listen for updates to describe data
+function DescribeInfo(spinFor, didUpdate) {
   function initialState() {
     return {
       data: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null},
       tool: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null}
     };
   }
-  let sobjectAllDescribes = ko.observable(initialState());
+  let sobjectAllDescribes = initialState();
   function getGlobal(useToolingApi) {
-    let apiDescribes = sobjectAllDescribes()[useToolingApi ? "tool" : "data"];
+    let apiDescribes = sobjectAllDescribes[useToolingApi ? "tool" : "data"];
     if (apiDescribes.global.globalStatus == "pending") {
       apiDescribes.global.globalStatus = "loading";
       console.log(useToolingApi ? "getting tooling objects" : "getting objects");
@@ -67,20 +67,18 @@ function DescribeInfo(spinFor) {
         for (let sobjectDescribe of res.sobjects) {
           apiDescribes.sobjects.set(sobjectDescribe.name.toLowerCase(), {global: sobjectDescribe, sobject: {sobjectStatus: "pending", sobjectDescribe: null}});
         }
-        sobjectAllDescribes.valueHasMutated();
+        didUpdate();
       }, () => {
         apiDescribes.global.globalStatus = "loadfailed";
-        sobjectAllDescribes.valueHasMutated();
+        didUpdate();
       }));
     }
     return apiDescribes;
   }
   // Makes global and sobject describe API calls, and caches the results.
   // If the result of an API call is not already cashed, empty data is returned immediately, and the API call is made asynchronously.
-  // The caller is notified using a Knockout observable when the API call completes, so it can make the call again to get the cached results.
+  // The caller is notified using the didUpdate callback when the API call completes, so it can make the call again to get the cached results.
   return {
-    // A Knockout observable to listen for updates to describe data
-    dataUpdate: sobjectAllDescribes,
     // Returns an object with two properties:
     // - globalStatus: a string with one of the following values:
     //    "pending": (has not started loading, never returned by this function)
@@ -114,16 +112,17 @@ function DescribeInfo(spinFor) {
         spinFor(sfConn.rest(sobjectInfo.global.urls.describe).then(res => {
           sobjectInfo.sobject.sobjectStatus = "ready";
           sobjectInfo.sobject.sobjectDescribe = res;
-          sobjectAllDescribes.valueHasMutated();
+          didUpdate();
         }, () => {
           sobjectInfo.sobject.sobjectStatus = "loadfailed";
-          sobjectAllDescribes.valueHasMutated();
+          didUpdate();
         }));
       }
       return sobjectInfo.sobject;
     },
     reloadAll() {
-      sobjectAllDescribes(initialState());
+      sobjectAllDescribes = initialState();
+      didUpdate();
     }
   };
 }

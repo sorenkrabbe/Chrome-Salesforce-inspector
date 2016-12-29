@@ -106,6 +106,7 @@ function dataImportVm(sfHost) {
     },
 
     sobjectList() {
+      sobjectAllDescribes(); // Tell Knockout we have read describe info.
       let {globalDescribe} = describeInfo.describeGlobal(vm.useToolingApi());
       if (!globalDescribe) {
         return [];
@@ -116,6 +117,7 @@ function dataImportVm(sfHost) {
     },
     idLookupList() {
       let sobjectName = vm.importType();
+      sobjectAllDescribes(); // Tell Knockout we have read describe info.
       let sobjectDescribe = describeInfo.describeSobject(vm.useToolingApi(), sobjectName).sobjectDescribe;
 
       if (!sobjectDescribe) {
@@ -132,6 +134,7 @@ function dataImportVm(sfHost) {
         } else {
           let sobjectName = vm.importType();
           let useToolingApi = vm.useToolingApi();
+          sobjectAllDescribes(); // Tell Knockout we have read describe info.
           let sobjectDescribe = describeInfo.describeSobject(useToolingApi, sobjectName).sobjectDescribe;
           if (sobjectDescribe) {
             let idFieldName = vm.idFieldName();
@@ -139,6 +142,7 @@ function dataImportVm(sfHost) {
               if (field.createable || field.updateable) {
                 yield field.name;
                 for (let referenceSobjectName of field.referenceTo) {
+                  sobjectAllDescribes(); // Tell Knockout we have read describe info.
                   let referenceSobjectDescribe = describeInfo.describeSobject(useToolingApi, referenceSobjectName).sobjectDescribe;
                   if (referenceSobjectDescribe) {
                     for (let referenceField of referenceSobjectDescribe.fields) {
@@ -395,7 +399,10 @@ function dataImportVm(sfHost) {
     vm.spinnerCount(vm.spinnerCount() - 1);
   }
 
-  let describeInfo = new DescribeInfo(spinFor);
+  let sobjectAllDescribes = ko.observable({});
+  let describeInfo = new DescribeInfo(spinFor, () => {
+    sobjectAllDescribes.valueHasMutated();
+  });
   spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
     vm.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
   }));
