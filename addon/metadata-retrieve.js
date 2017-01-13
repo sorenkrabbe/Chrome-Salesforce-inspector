@@ -204,6 +204,32 @@ class Model {
   }
 }
 
+let timeout = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+class Logger {
+  constructor(model) {
+    this.model = model;
+  }
+
+  log(msg) {
+    if (typeof msg != "string") {
+      msg = JSON.stringify(msg, null, "  ");
+    }
+    this.model.logMessages.push({level: "info", text: msg});
+    this.model.didUpdate();
+  }
+
+  error(msg) {
+    console.error(msg);
+    if (typeof msg != "string") {
+      msg = JSON.stringify(msg, null, "  ");
+    }
+    this.model.logMessages.push({level: "error", text: msg});
+    this.model.didUpdate();
+  }
+
+}
+
 let h = React.createElement;
 
 class App extends React.Component {
@@ -287,31 +313,5 @@ class ObjectSelector extends React.Component {
     ReactDOM.render(h(App, {model}), root);
 
   });
-
-}
-
-let timeout = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-class Logger {
-  constructor(model) {
-    this.model = model;
-  }
-
-  log(msg) {
-    if (typeof msg != "string") {
-      msg = JSON.stringify(msg, null, "  ");
-    }
-    this.model.logMessages.push({level: "info", text: msg});
-    this.model.didUpdate();
-  }
-
-  error(msg) {
-    console.error(msg);
-    if (typeof msg != "string") {
-      msg = JSON.stringify(msg, null, "  ");
-    }
-    this.model.logMessages.push({level: "error", text: msg});
-    this.model.didUpdate();
-  }
 
 }
