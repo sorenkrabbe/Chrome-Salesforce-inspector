@@ -236,6 +236,15 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.onStartClick = this.onStartClick.bind(this);
+    this.onSelectAllChange = this.onSelectAllChange.bind(this);
+  }
+  onSelectAllChange(e) {
+    let {model} = this.props;
+    let checked = e.target.checked;
+    for (let metadataObject of model.metadataObjects) {
+      metadataObject.selected = checked;
+    }
+    model.didUpdate();
   }
   onStartClick() {
     let {model} = this.props;
@@ -267,6 +276,11 @@ class App extends React.Component {
         h("div", {className: "body"},
           model.metadataObjects
             ? h("div", {},
+              h("label", {},
+                h("input", {type: "checkbox", checked: model.metadataObjects.every(metadataObject => metadataObject.selected), onChange: this.onSelectAllChange}),
+                "Select all"
+              ),
+              h("br", {}),
               model.metadataObjects.map(metadataObject => h(ObjectSelector, {key: metadataObject.xmlName, metadataObject, model})),
               h("p", {}, "Select what to download above, and then click the button below. If downloading fails, try unchecking some of the boxes."),
               h("button", {onClick: this.onStartClick}, "Download metadata")
