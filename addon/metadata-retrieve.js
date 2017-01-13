@@ -55,8 +55,10 @@ class Model {
 
         // Code below is originally from forcecmd
         let metadataApi = sfConn.wsdl(apiVersion, "Metadata");
-        logger.log("DescribeMetadata");
-        let res = yield sfConn.soap(metadataApi, "describeMetadata", {apiVersion});
+        let res = yield logger.monitor(
+          "DescribeMetadata",
+          sfConn.soap(metadataApi, "describeMetadata", {apiVersion})
+        );
         let availableMetadataObjects = res.metadataObjects
           .filter(metadataObject => metadataObject.xmlName != "InstalledPackage");
         // End of forcecmd code
@@ -121,14 +123,18 @@ class Model {
             });
           });
         res = yield Promise.all(groupByThree(flattenArray(x)).map(async(function*(xmlNames) {
-          logger.log("ListMetadata " + xmlNames.join(", "));
-          let someItems = sfConn.asArray(yield sfConn.soap(metadataApi, "listMetadata", {queries: xmlNames.map(xmlName => ({type: xmlName}))}));
+          let someItems = sfConn.asArray(yield logger.monitor(
+            "ListMetadata " + xmlNames.join(", "),
+            sfConn.soap(metadataApi, "listMetadata", {queries: xmlNames.map(xmlName => ({type: xmlName}))})
+          ));
           let folders = someItems.filter(folder => folderMap[folder.type]);
           let nonFolders = someItems.filter(folder => !folderMap[folder.type]);
           let p = yield Promise
             .all(groupByThree(folders).map(async(function*(folderGroup) {
-              logger.log("ListMetadata " + folderGroup.map(folder => folderMap[folder.type] + "/" + folder.fullName).join(", "));
-              return sfConn.asArray(yield sfConn.soap(metadataApi, "listMetadata", {queries: folderGroup.map(folder => ({type: folderMap[folder.type], folder: folder.fullName}))}));
+              return sfConn.asArray(yield logger.monitor(
+                "ListMetadata " + folderGroup.map(folder => folderMap[folder.type] + "/" + folder.fullName).join(", "),
+                sfConn.soap(metadataApi, "listMetadata", {queries: folderGroup.map(folder => ({type: folderMap[folder.type], folder: folder.fullName}))})
+              ));
             })));
           return flattenArray(p).concat(
             folders.map(folder => ({type: folderMap[folder.type], fullName: folder.fullName})),
@@ -159,14 +165,18 @@ class Model {
         types = types.map(x => ({name: x.type, members: decodeURIComponent(x.fullName)}));
         //logger.log(types);
         let retrieve = async(function*() {
-          logger.log("Retrieve");
-          let result = yield sfConn.soap(metadataApi, "retrieve", {retrieveRequest: {apiVersion, unpackaged: {types, version: apiVersion}}});
+          let result = yield logger.monitor(
+            "Retrieve",
+            sfConn.soap(metadataApi, "retrieve", {retrieveRequest: {apiVersion, unpackaged: {types, version: apiVersion}}})
+          );
           logger.log({id: result.id});
           let res;
           for (;;) {
             yield timeout(2000);
-            logger.log("CheckRetrieveStatus");
-            res = yield sfConn.soap(metadataApi, "checkRetrieveStatus", {id: result.id});
+            res = yield logger.monitor(
+              "CheckRetrieveStatus",
+              sfConn.soap(metadataApi, "checkRetrieveStatus", {id: result.id})
+            );
             if (res.done !== "false") {
               break;
             }
@@ -217,6 +227,22 @@ class Logger {
     }
     this.model.logMessages.push({level: "info", text: msg});
     this.model.didUpdate();
+  }
+
+  monitor(msg, promise) {
+    let message = {level: "working", text: msg};
+    this.model.logMessages.push(message);
+    this.model.didUpdate();
+    promise.then(res => {
+      message.level = "info";
+      this.model.didUpdate();
+      return res;
+    }, err => {
+      message.level = "error";
+      this.model.didUpdate();
+      throw err;
+    });
+    return promise;
   }
 
   error(msg) {
