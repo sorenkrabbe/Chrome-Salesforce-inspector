@@ -163,8 +163,8 @@ class Model {
           let result = yield sfConn.soap(metadataApi, "retrieve", {retrieveRequest: {apiVersion, unpackaged: {types, version: apiVersion}}});
           logger.log({id: result.id});
           let res;
-          for (let interval = 1000; ; interval *= 1.3) {
-            yield timeout(interval);
+          for (;;) {
+            yield timeout(2000);
             logger.log("CheckRetrieveStatus");
             res = yield sfConn.soap(metadataApi, "checkRetrieveStatus", {id: result.id});
             if (res.done !== "false") {
