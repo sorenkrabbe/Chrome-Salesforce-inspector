@@ -39,7 +39,7 @@ class Model {
    * Notify React that we changed something, so it will rerender the view.
    * Should only be called once at the end of an event or asynchronous operation, since each call can take some time.
    * All event listeners (functions starting with "on") should call this function if they update the model.
-   * Asynchronous operations should use the spinFor function, which will call this function after calling its callback.
+   * Asynchronous operations should use the spinFor function, which will call this function after the asynchronous operation completes.
    * Other functions should not call this function, since they are called by a function that does.
    * @param cb A function to be called once React has processed the update.
    */
@@ -51,21 +51,18 @@ class Model {
   /**
    * Show the spinner while waiting for a promise, and show an error if it fails.
    * didUpdate() must be called after calling spinFor.
+   * didUpdate() is called when the promise is resolved or rejected, so the caller doesn't have to call it, when it updates the model just before resolving the promise, for better performance.
    * @param actionName Name to show in the errors list if the operation fails.
    * @param promise The promise to wait for.
-   * @param cb The callback to be called with the result if the promise is successful. didUpdate() is called after calling the callback, so the callback doesn't have to call it for better performance.
    */
-  spinFor(actionName, promise, cb) {
+  spinFor(actionName, promise) {
     this.spinnerCount++;
     promise
-      .then(res => {
-        this.spinnerCount--;
-        cb(res);
-        this.didUpdate();
-      })
       .catch(err => {
         console.error(err);
         this.errorMessages.push("Error " + actionName + ": " + ((err && err.sfConnError) || err));
+      })
+      .then(() => {
         this.spinnerCount--;
         this.didUpdate();
       })
@@ -135,11 +132,10 @@ class Model {
     let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
     this.spinFor(
       "saving record",
-      sfConn.rest(recordUrl, {method: "PATCH", body: record}),
-      () => {
+      sfConn.rest(recordUrl, {method: "PATCH", body: record}).then(() => {
         this.clearRecordData();
         this.setRecordData(sfConn.rest(recordUrl));
-      }
+      })
     );
   }
   cancelEdit() {
@@ -198,7 +194,7 @@ class Model {
     return "open-object-setup.html?" + args;
   }
   setRecordData(recordDataPromise) {
-    this.spinFor("retrieving record", recordDataPromise, res => {
+    this.spinFor("retrieving record", recordDataPromise.then(res => {
       for (let name in res) {
         if (name != "attributes") {
           this.fieldRows.getRow(name).dataTypedValue = res[name];
@@ -214,8 +210,7 @@ class Model {
             return sfConn.rest(sobjectDescribe.urls.layouts + "/" + (res.RecordTypeId || "012000000000000AAA"));
           }
           return undefined;
-        }),
-        layoutDescribe => {
+        }).then(layoutDescribe => {
           if (layoutDescribe) {
             for (let layoutType of [{sections: "detailLayoutSections", property: "detailLayoutInfo"}, {sections: "editLayoutSections", property: "editLayoutInfo"}]) {
               layoutDescribe[layoutType.sections].forEach((section, sectionIndex) => {
@@ -253,9 +248,9 @@ class Model {
             this.childRows.resortRows();
             this.layoutInfo = layoutDescribe;
           }
-        }
+        })
       );
-    });
+    }));
   }
   clearRecordData() {
     for (let fieldRow of this.fieldRows.rows) {
@@ -274,13 +269,13 @@ class Model {
   startLoading() {
 
     // Fetch id prefix to object name mapping
-    this.spinFor("describing global", sfConn.rest("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/"), globalDescribe => {
+    this.spinFor("describing global", sfConn.rest("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/").then(globalDescribe => {
       this.globalDescribe = globalDescribe;
-    });
+    }));
 
     // Fetch object data using object describe call
     this.sobjectDescribePromise = sfConn.rest("/services/data/v" + apiVersion + "/" + (this.useToolingApi ? "tooling/" : "") + "sobjects/" + this.sobjectName + "/describe/");
-    this.spinFor("describing object", this.sobjectDescribePromise, sobjectDescribe => {
+    this.spinFor("describing object", this.sobjectDescribePromise.then(sobjectDescribe => {
       // Display the retrieved object data
       this.objectData = sobjectDescribe;
       for (let fieldDescribe of sobjectDescribe.fields) {
@@ -291,7 +286,7 @@ class Model {
         this.childRows.getRow(childDescribe.relationshipName).childDescribe = childDescribe;
       }
       this.childRows.resortRows();
-    });
+    }));
 
     // Fetch record data using record retrieve call
     if (this.recordId) {
@@ -305,14 +300,13 @@ class Model {
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
     this.spinFor(
       "querying tooling particles",
-      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")),
-      res => {
+      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")).then(res => {
         for (let entityParticle of res.records) {
           this.fieldRows.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
         }
         this.hasEntityParticles = true;
         this.fieldRows.resortRows();
-      }
+      })
     );
 
   }
@@ -706,10 +700,9 @@ class FieldRow extends TableRow {
     }
     this.rowList.model.spinFor(
       "getting field definition metadata for " + this.fieldName,
-      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + this.entityParticle.FieldDefinition.DurableId + "'")),
-      fieldDefs => {
+      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select Metadata from FieldDefinition where DurableId = '" + this.entityParticle.FieldDefinition.DurableId + "'")).then(fieldDefs => {
         this.fieldParticleMetadata = fieldDefs.records[0];
-      }
+      })
     );
   }
 }
@@ -850,118 +843,125 @@ class App extends React.Component {
     this.refs.rowsFilter.focus();
   }
   onToggleAdvancedFilter(e) {
+    let {model} = this.props;
     e.preventDefault();
-    this.props.vm.useAdvancedFilter = !this.props.vm.useAdvancedFilter;
-    this.props.vm.didUpdate();
+    model.useAdvancedFilter = !model.useAdvancedFilter;
+    model.didUpdate();
   }
   onRowsFilterInput(e) {
-    this.props.vm.rowsFilter = e.target.value;
-    this.props.vm.didUpdate();
+    let {model} = this.props;
+    model.rowsFilter = e.target.value;
+    model.didUpdate();
   }
   onClearAndFocusFilter(e) {
     e.preventDefault();
-    this.props.vm.rowsFilter = "";
+    let {model} = this.props;
+    model.rowsFilter = "";
     this.refs.rowsFilter.focus();
-    this.props.vm.didUpdate();
+    model.didUpdate();
   }
   onShowObjectMetadata(e) {
     e.preventDefault();
-    this.props.vm.showObjectMetadata();
-    this.props.vm.didUpdate();
+    let {model} = this.props;
+    model.showObjectMetadata();
+    model.didUpdate();
   }
   onDoEdit() {
-    this.props.vm.doEdit();
-    this.props.vm.didUpdate();
+    let {model} = this.props;
+    model.doEdit();
+    model.didUpdate();
   }
   onDoSave() {
-    this.props.vm.doSave();
-    this.props.vm.didUpdate();
+    let {model} = this.props;
+    model.doSave();
+    model.didUpdate();
   }
   onCancelEdit() {
-    this.props.vm.cancelEdit();
-    this.props.vm.didUpdate();
+    let {model} = this.props;
+    model.cancelEdit();
+    model.didUpdate();
   }
   render() {
-    let vm = this.props.vm;
-    document.title = vm.title();
+    let {model} = this.props;
+    document.title = model.title();
     return (
       h("div", {},
         h("div", {className: "object-bar"},
-          h("img", {id: "spinner", src: "data:image/gif;base64,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", hidden: vm.spinnerCount == 0}),
-          h("a", {href: vm.sfLink, className: "sf-link"},
+          h("img", {id: "spinner", src: "data:image/gif;base64,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", hidden: model.spinnerCount == 0}),
+          h("a", {href: model.sfLink, className: "sf-link"},
             h("svg", {viewBox: "0 0 24 24"},
               h("path", {d: "M18.9 12.3h-1.5v6.6c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-5.1h-3.6v5.1c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-6.6H5.1c-.1 0-.3-.1-.3-.2s0-.2.1-.3l6.9-7c.1-.1.3-.1.4 0l7 7v.3c0 .1-.2.2-.3.2z"})
             ),
             " Salesforce Home"
           ),
-          vm.useAdvancedFilter ? null : h("span", {className: "filter-box"},
-            h("input", {className: "filter-input", placeholder: "Filter", value: vm.rowsFilter, onChange: this.onRowsFilterInput, ref: "rowsFilter"}),
+          model.useAdvancedFilter ? null : h("span", {className: "filter-box"},
+            h("input", {className: "filter-input", placeholder: "Filter", value: model.rowsFilter, onChange: this.onRowsFilterInput, ref: "rowsFilter"}),
             h("a", {href: "about:blank", className: "char-btn", onClick: this.onClearAndFocusFilter}, "X")
           ),
-          h("a", {href: "about:blank", onClick: this.onToggleAdvancedFilter}, vm.useAdvancedFilter ? "Simple filter" : "Advanced filter"),
+          h("a", {href: "about:blank", onClick: this.onToggleAdvancedFilter}, model.useAdvancedFilter ? "Simple filter" : "Advanced filter"),
           h("h1", {className: "object-name"},
-            h("span", {className: "quick-select"}, vm.objectName()),
+            h("span", {className: "quick-select"}, model.objectName()),
             " ",
-            vm.recordHeading()
+            model.recordHeading()
           ),
           h("span", {className: "object-actions"},
-            !vm.isEditing ? h("button", {title: "Inline edit the values of this record", disabled: !vm.canEdit() || !vm.fieldRows.selectedColumnMap.has("value"), onClick: this.onDoEdit}, "Edit") : null,
+            !model.isEditing ? h("button", {title: "Inline edit the values of this record", disabled: !model.canEdit() || !model.fieldRows.selectedColumnMap.has("value"), onClick: this.onDoEdit}, "Edit") : null,
             " ",
-            vm.isEditing ? h("button", {title: "Inline edit the values of this record", onClick: this.onDoSave}, "Save") : null,
+            model.isEditing ? h("button", {title: "Inline edit the values of this record", onClick: this.onDoSave}, "Save") : null,
             " ",
-            vm.isEditing ? h("button", {title: "Inline edit the values of this record", onClick: this.onCancelEdit}, "Cancel") : null,
+            model.isEditing ? h("button", {title: "Inline edit the values of this record", onClick: this.onCancelEdit}, "Cancel") : null,
             " ",
-            vm.exportLink() ? h("a", {href: vm.exportLink(), title: "Export data from this object"}, "Export") : null,
+            model.exportLink() ? h("a", {href: model.exportLink(), title: "Export data from this object"}, "Export") : null,
             " ",
-            vm.viewLink() ? h("a", {href: vm.viewLink(), title: "View this record in Salesforce"}, "View") : null,
+            model.viewLink() ? h("a", {href: model.viewLink(), title: "View this record in Salesforce"}, "View") : null,
             " ",
-            vm.editLayoutLink() ? h("a", {href: vm.editLayoutLink(), title: "Open the page layout editor"}, "Edit layout") : null,
+            model.editLayoutLink() ? h("a", {href: model.editLayoutLink(), title: "Open the page layout editor"}, "Edit layout") : null,
             " ",
-            vm.objectName() ? h("a", {href: "about:blank", onClick: this.onShowObjectMetadata}, "More") : null,
+            model.objectName() ? h("a", {href: "about:blank", onClick: this.onShowObjectMetadata}, "More") : null,
             " ",
-            vm.objectName() ? h("a", {href: vm.openSetup()}, "Setup") : null,
+            model.objectName() ? h("a", {href: model.openSetup()}, "Setup") : null,
             " ",
             h(ColumnsVisibiltyBox, {
-              rowList: vm.fieldRows,
+              rowList: model.fieldRows,
               label: "Field columns",
               content: () => [
-                h(ColumnVisibiltyToggle, {rowList: vm.fieldRows, key: "name", name: "name", disabled: true}),
-                h(ColumnVisibiltyToggle, {rowList: vm.fieldRows, key: "label", name: "label"}),
-                h(ColumnVisibiltyToggle, {rowList: vm.fieldRows, key: "type", name: "type"}),
-                h(ColumnVisibiltyToggle, {rowList: vm.fieldRows, key: "value", name: "value", disabled: !vm.canView()}),
-                h(ColumnVisibiltyToggle, {rowList: vm.fieldRows, key: "helptext", name: "helptext"}),
-                h(ColumnVisibiltyToggle, {rowList: vm.fieldRows, key: "desc", name: "desc", disabled: !vm.hasEntityParticles}),
+                h(ColumnVisibiltyToggle, {rowList: model.fieldRows, key: "name", name: "name", disabled: true}),
+                h(ColumnVisibiltyToggle, {rowList: model.fieldRows, key: "label", name: "label"}),
+                h(ColumnVisibiltyToggle, {rowList: model.fieldRows, key: "type", name: "type"}),
+                h(ColumnVisibiltyToggle, {rowList: model.fieldRows, key: "value", name: "value", disabled: !model.canView()}),
+                h(ColumnVisibiltyToggle, {rowList: model.fieldRows, key: "helptext", name: "helptext"}),
+                h(ColumnVisibiltyToggle, {rowList: model.fieldRows, key: "desc", name: "desc", disabled: !model.hasEntityParticles}),
                 h("hr", {key: "---"}),
-                vm.fieldRows.availableColumns.map(col => h(ColumnVisibiltyToggle, {key: col, name: col, label: col, rowList: vm.fieldRows}))
+                model.fieldRows.availableColumns.map(col => h(ColumnVisibiltyToggle, {key: col, name: col, label: col, rowList: model.fieldRows}))
               ]
             }),
             " ",
             h(ColumnsVisibiltyBox, {
-              rowList: vm.childRows,
+              rowList: model.childRows,
               label: "Relationship columns",
               content: () => [
-                ["name", "object", "field", "label"].map(col => h(ColumnVisibiltyToggle, {key: col, rowList: vm.childRows, name: col})),
+                ["name", "object", "field", "label"].map(col => h(ColumnVisibiltyToggle, {key: col, rowList: model.childRows, name: col})),
                 h("hr", {key: "---"}),
-                vm.childRows.availableColumns.map(col => h(ColumnVisibiltyToggle, {key: col, rowList: vm.childRows, name: col}))
+                model.childRows.availableColumns.map(col => h(ColumnVisibiltyToggle, {key: col, rowList: model.childRows, name: col}))
               ]
             })
           )
         ),
-        h("div", {className: "body " + (vm.fieldRows.selectedColumnMap.size < 2 && vm.childRows.selectedColumnMap.size < 2 ? "empty " : "")},
-          h("div", {hidden: vm.errorMessages.length == 0, className: "error-message"}, vm.errorMessages.map((data, index) => h("div", {key: index}, data))),
+        h("div", {className: "body " + (model.fieldRows.selectedColumnMap.size < 2 && model.childRows.selectedColumnMap.size < 2 ? "empty " : "")},
+          h("div", {hidden: model.errorMessages.length == 0, className: "error-message"}, model.errorMessages.map((data, index) => h("div", {key: index}, data))),
           h(RowTable, {
-            rowList: vm.fieldRows,
+            rowList: model.fieldRows,
             actionsColumn: {className: "field-actions", reactElement: FieldActionsCell},
             classNameForRow: row => (row.fieldIsCalculated() ? "fieldCalculated " : "") + (row.fieldIsHidden() ? "fieldHidden " : "")
           }),
           h("hr", {}),
           h(RowTable, {
-            rowList: vm.childRows,
+            rowList: model.childRows,
             actionsColumn: {className: "child-actions", reactElement: ChildActionsCell},
             classNameForRow: () => ""
           })
         ),
-        vm.detailsBox ? h(DetailsBox, {model: vm}) : null
+        model.detailsBox ? h(DetailsBox, {model}) : null
       )
     );
   }
@@ -974,16 +974,18 @@ class ColumnsVisibiltyBox extends React.Component {
   }
   onAvailableColumnsClick(e) {
     e.preventDefault();
-    this.props.rowList.toggleAvailableColumns();
-    this.props.rowList.model.didUpdate();
+    let {rowList} = this.props;
+    rowList.toggleAvailableColumns();
+    rowList.model.didUpdate();
   }
   render() {
+    let {rowList, label, content} = this.props;
     return h("span", {className: "column-button-outer"},
       h("a", {href: "about:blank", onClick: this.onAvailableColumnsClick},
-        this.props.label
+        label
       ),
-      this.props.rowList.availableColumns ? h("div", {className: "column-popup"},
-        this.props.content()
+      rowList.availableColumns ? h("div", {className: "column-popup"},
+        content()
       ) : null
     );
   }
@@ -995,46 +997,49 @@ class ColumnVisibiltyToggle extends React.Component {
     this.onShowColumnChange = this.onShowColumnChange.bind(this);
   }
   onShowColumnChange(e) {
-    this.props.rowList.showHideColumn(e.target.checked, this.props.name);
-    this.props.rowList.model.didUpdate();
+    let {rowList, name} = this.props;
+    rowList.showHideColumn(e.target.checked, name);
+    rowList.model.didUpdate();
   }
   render() {
+    let {rowList, name, disabled} = this.props;
     return h("label", {},
       h("input", {
         type: "checkbox",
-        checked: this.props.rowList.selectedColumnMap.has(this.props.name),
+        checked: rowList.selectedColumnMap.has(name),
         onChange: this.onShowColumnChange,
-        disabled: this.props.disabled
+        disabled
       }),
-      this.props.rowList.createColumn(this.props.name).label
+      rowList.createColumn(name).label
     );
   }
 }
 
 class RowTable extends React.Component {
   render() {
-    let selectedColumns = Array.from(this.props.rowList.selectedColumnMap.values());
+    let {rowList, actionsColumn, classNameForRow} = this.props;
+    let selectedColumns = Array.from(rowList.selectedColumnMap.values());
     return h("table", {},
       h("thead", {},
         h("tr", {},
           selectedColumns.map(col =>
-            h(HeaderCell, {key: col.name, col, rowList: this.props.rowList})
+            h(HeaderCell, {key: col.name, col, rowList})
           ),
-          h("th", {className: this.props.actionsColumn.className}, "Actions")
+          h("th", {className: actionsColumn.className}, "Actions")
         ),
-        this.props.rowList.model.useAdvancedFilter ? h("tr", {},
+        rowList.model.useAdvancedFilter ? h("tr", {},
           selectedColumns.map(col =>
-            h(FilterCell, {key: col.name, col, rowList: this.props.rowList})
+            h(FilterCell, {key: col.name, col, rowList})
           ),
-          h("th", {className: this.props.actionsColumn.className})
+          h("th", {className: actionsColumn.className})
         ) : null
       ),
-      h("tbody", {}, this.props.rowList.rows.map(row =>
-        h("tr", {className: this.props.classNameForRow(row), hidden: !row.visible(), title: row.summary(), key: row.reactKey},
+      h("tbody", {}, rowList.rows.map(row =>
+        h("tr", {className: classNameForRow(row), hidden: !row.visible(), title: row.summary(), key: row.reactKey},
           selectedColumns.map(col =>
             h(col.reactElement, {key: col.name, row, col})
           ),
-          h(this.props.actionsColumn.reactElement, {row})
+          h(actionsColumn.reactElement, {row})
         )
       ))
     );
@@ -1047,17 +1052,19 @@ class HeaderCell extends React.Component {
     this.onSortRowsBy = this.onSortRowsBy.bind(this);
   }
   onSortRowsBy() {
-    this.props.rowList.sortRowsBy(this.props.col.name);
-    this.props.rowList.model.didUpdate();
+    let {rowList, col} = this.props;
+    rowList.sortRowsBy(col.name);
+    rowList.model.didUpdate();
   }
   render() {
+    let {col} = this.props;
     return h("th",
       {
-        className: this.props.col.className,
+        className: col.className,
         tabIndex: 0,
         onClick: this.onSortRowsBy
       },
-      this.props.col.label
+      col.label
     );
   }
 }
@@ -1068,15 +1075,17 @@ class FilterCell extends React.Component {
     this.onColumnFilterInput = this.onColumnFilterInput.bind(this);
   }
   onColumnFilterInput(e) {
-    this.props.col.columnFilter = e.target.value;
-    this.props.rowList.model.didUpdate();
+    let {rowList, col} = this.props;
+    col.columnFilter = e.target.value;
+    rowList.model.didUpdate();
   }
   render() {
-    return h("th", {className: this.props.col.className},
+    let {col} = this.props;
+    return h("th", {className: col.className},
       h("input", {
         placeholder: "Filter",
         className: "column-filter-box",
-        value: this.props.col.columnFilter,
+        value: col.columnFilter,
         onChange: this.onColumnFilterInput
       })
     );
@@ -1085,8 +1094,9 @@ class FilterCell extends React.Component {
 
 class DefaultCell extends React.Component {
   render() {
-    return h("td", {className: this.props.col.className},
-      h(TypedValue, {value: this.props.row.sortKey(this.props.col.name)})
+    let {row, col} = this.props;
+    return h("td", {className: col.className},
+      h(TypedValue, {value: row.sortKey(col.name)})
     );
   }
 }
@@ -1100,28 +1110,31 @@ class FieldValueCell extends React.Component {
     this.onRecordIdClick = this.onRecordIdClick.bind(this);
   }
   onTryEdit(e) {
-    if (this.props.row.tryEdit()) {
+    let {row} = this.props;
+    if (row.tryEdit()) {
       let td = e.nativeEvent.currentTarget;
-      this.props.row.rowList.model.didUpdate(() => td.querySelector("textarea").focus());
+      row.rowList.model.didUpdate(() => td.querySelector("textarea").focus());
     }
   }
   onDataEditValueInput(e) {
-    this.props.row.dataEditValue = e.target.value;
-    this.props.row.rowList.model.didUpdate();
+    let {row} = this.props;
+    row.dataEditValue = e.target.value;
+    row.rowList.model.didUpdate();
   }
   onCancelEdit(e) {
     e.preventDefault();
-    this.props.row.dataEditValue = null;
-    this.props.row.rowList.model.didUpdate();
+    let {row} = this.props;
+    row.dataEditValue = null;
+    row.rowList.model.didUpdate();
   }
   onRecordIdClick(e) {
     e.preventDefault();
-    this.props.row.toggleRecordIdPop();
-    this.props.row.rowList.model.didUpdate();
+    let {row} = this.props;
+    row.toggleRecordIdPop();
+    row.rowList.model.didUpdate();
   }
   render() {
-    let row = this.props.row;
-    let col = this.props.col;
+    let {row, col} = this.props;
     if (row.isEditing()) {
       return h("td", {className: col.className},
         h("textarea", {value: row.dataEditValue, onChange: this.onDataEditValueInput}),
@@ -1142,8 +1155,7 @@ class FieldValueCell extends React.Component {
 
 class FieldTypeCell extends React.Component {
   render() {
-    let row = this.props.row;
-    let col = this.props.col;
+    let {row, col} = this.props;
     return h("td", {className: col.className + " quick-select"},
       row.referenceTypes() ? row.referenceTypes().map(data =>
         h("span", {key: data}, h("a", {href: row.showReferenceUrl(data)}, data), " ")
@@ -1155,8 +1167,7 @@ class FieldTypeCell extends React.Component {
 
 class ChildObjectCell extends React.Component {
   render() {
-    let row = this.props.row;
-    let col = this.props.col;
+    let {row, col} = this.props;
     return h("td", {className: col.className + " quick-select", key: col.name},
       h("a", {href: row.showChildObjectUrl()}, row.childObject())
     );
@@ -1188,14 +1199,16 @@ class FieldActionsCell extends React.Component {
   }
   onOpenDetails(e) {
     e.preventDefault();
-    this.props.row.rowList.model.showDetailsBox(this.props.row.fieldName, this.props.row.rowProperties(), this.props.row.rowList);
-    this.props.row.rowList.model.didUpdate();
+    let {row} = this.props;
+    row.rowList.model.showDetailsBox(row.fieldName, row.rowProperties(), row.rowList);
+    row.rowList.model.didUpdate();
   }
   render() {
+    let {row} = this.props;
     return h("td", {className: "field-actions"},
       h("a", {href: "about:blank", onClick: this.onOpenDetails}, "More"),
       " ",
-      h("a", {href: this.props.row.openSetup()}, "Setup")
+      h("a", {href: row.openSetup()}, "Setup")
     );
   }
 }
@@ -1207,16 +1220,18 @@ class ChildActionsCell extends React.Component {
   }
   onOpenDetails(e) {
     e.preventDefault();
-    this.props.row.rowList.model.showDetailsBox(this.props.row.childName, this.props.row.rowProperties(), this.props.row.rowList);
-    this.props.row.rowList.model.didUpdate();
+    let {row} = this.props;
+    row.rowList.model.showDetailsBox(row.childName, row.rowProperties(), row.rowList);
+    row.rowList.model.didUpdate();
   }
   render() {
+    let {row} = this.props;
     return h("td", {className: "child-actions"},
       h("a", {href: "about:blank", onClick: this.onOpenDetails}, "More"),
       " ",
-      this.props.row.queryListUrl() ? h("a", {href: this.props.row.queryListUrl(), title: "Export records in this related list"}, "List") : null,
+      row.queryListUrl() ? h("a", {href: row.queryListUrl(), title: "Export records in this related list"}, "List") : null,
       " ",
-      h("a", {href: this.props.row.openSetup()}, "Setup")
+      h("a", {href: row.openSetup()}, "Setup")
     );
   }
 }
@@ -1233,33 +1248,37 @@ class DetailsBox extends React.Component {
   }
   onCloseDetailsBox(e) {
     e.preventDefault();
-    this.props.model.detailsBox = null;
-    this.props.model.didUpdate();
+    let {model} = this.props;
+    model.detailsBox = null;
+    model.didUpdate();
   }
   onDetailsFilterInput(e) {
-    this.props.model.detailsFilter = e.target.value;
-    this.props.model.didUpdate();
+    let {model} = this.props;
+    model.detailsFilter = e.target.value;
+    model.didUpdate();
   }
   onDetailsFilterClick(e, row, detailsFilterList) {
     e.preventDefault();
-    this.props.model.detailsBox = null;
+    let {model} = this.props;
+    model.detailsBox = null;
     detailsFilterList.showColumn(row.key, row.value);
-    this.props.model.didUpdate();
+    model.didUpdate();
   }
   render() {
+    let {model} = this.props;
     return h("div", {},
       h("div", {id: "fieldDetailsView"},
         h("div", {className: "container"},
           h("a", {href: "about:blank", className: "closeLnk", onClick: this.onCloseDetailsBox}, "X"),
           h("div", {className: "mainContent"},
-            h("h3", {}, "All available metadata for \"" + this.props.model.detailsBox.name + "\""),
-            h("input", {placeholder: "Filter", value: this.props.model.detailsFilter, onChange: this.onDetailsFilterInput, ref: "detailsFilter"}),
+            h("h3", {}, "All available metadata for \"" + model.detailsBox.name + "\""),
+            h("input", {placeholder: "Filter", value: model.detailsFilter, onChange: this.onDetailsFilterInput, ref: "detailsFilter"}),
             h("table", {},
               h("thead", {}, h("tr", {}, h("th", {}, "Key"), h("th", {}, "Value"))),
-              h("tbody", {}, this.props.model.detailsBox.rows.map(row =>
+              h("tbody", {}, model.detailsBox.rows.map(row =>
                 h("tr", {hidden: !row.visible(), key: row.key},
                   h("td", {},
-                    h("a", {href: "about:blank", onClick: e => this.onDetailsFilterClick(e, row, this.props.model.detailsBox.detailsFilterList), hidden: !this.props.model.detailsBox.detailsFilterList, title: "Show fields with this property"}, "🔍"),
+                    h("a", {href: "about:blank", onClick: e => this.onDetailsFilterClick(e, row, model.detailsBox.detailsFilterList), hidden: !model.detailsBox.detailsFilterList, title: "Show fields with this property"}, "🔍"),
                     " ",
                     h("span", {className: "quick-select"}, row.key)
                   ),
@@ -1282,15 +1301,15 @@ class DetailsBox extends React.Component {
   sfConn.getSession(sfHost).then(() => {
 
     let root = document.getElementById("root");
-    let vm = new Model(sfHost);
-    vm.sobjectName = args.get("objectType");
-    vm.useToolingApi = args.has("useToolingApi");
-    vm.recordId = args.get("recordId");
-    vm.startLoading();
-    vm.reactCallback = cb => {
-      ReactDOM.render(h(App, {vm}), root, cb);
+    let model = new Model(sfHost);
+    model.sobjectName = args.get("objectType");
+    model.useToolingApi = args.has("useToolingApi");
+    model.recordId = args.get("recordId");
+    model.startLoading();
+    model.reactCallback = cb => {
+      ReactDOM.render(h(App, {model}), root, cb);
     };
-    ReactDOM.render(h(App, {vm}), root);
+    ReactDOM.render(h(App, {model}), root);
 
   });
 
