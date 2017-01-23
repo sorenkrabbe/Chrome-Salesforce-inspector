@@ -1,5 +1,6 @@
 *.sublime-*
 *.xpi
+*.zip
 node_modules/
 temp/
 *.bak
