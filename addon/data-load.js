@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global sfConn apiVersion async */
-/* exported Enumerable DescribeInfo copyToClipboard initScrollTable */
+/* exported Enumerable DescribeInfo copyToClipboard initScrollTable legacyKnockoutObservable */
 /* eslint-enable no-unused-vars */
 "use strict";
 
@@ -77,7 +77,7 @@ function DescribeInfo(spinFor, didUpdate) {
   }
   // Makes global and sobject describe API calls, and caches the results.
   // If the result of an API call is not already cashed, empty data is returned immediately, and the API call is made asynchronously.
-  // The caller is notified using the didUpdate callback when the API call completes, so it can make the call again to get the cached results.
+  // The caller is notified using the didUpdate callback or the spinFor promise when the API call completes, so it can make the call again to get the cached results.
   return {
     // Returns an object with two properties:
     // - globalStatus: a string with one of the following values:
@@ -273,6 +273,7 @@ interface Table {
   Cell[][] table; // a two-dimensional array of table rows and cells
   boolean[] rowVisibilities; // For each row, true if it is visible, or false if it is hidden
   boolean[] colVisibilities; // For each column, true if it is visible, or false if it is hidden
+  // Refactor: The following three attributes are only used by renderCell, they should be moved to a different interface
   boolean isTooling;
   DescribeInfo describeInfo;
   String sfHost;
@@ -489,4 +490,21 @@ function initScrollTable(scroller, dataObs, resizeObs) {
   dataObs.subscribe(dataChange);
   resizeObs.subscribe(viewportChange);
   scroller.addEventListener("scroll", viewportChange);
+}
+
+function legacyKnockoutObservable(value) {
+  let subscriber;
+  function obs() {
+    return value;
+  }
+  obs.subscribe = newSubscriber => {
+    subscriber = newSubscriber;
+  };
+  obs.update = newValue => {
+    value = newValue;
+    if (subscriber) {
+      subscriber();
+    }
+  };
+  return obs;
 }

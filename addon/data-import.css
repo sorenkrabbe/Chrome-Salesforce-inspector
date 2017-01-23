@@ -11,7 +11,17 @@ body {
   margin: 0 8px;
   height: 100%;
   display: flex;
+}
+#root {
+  display: flex;
+  flex-grow: 1;
+  width: 100%;
+}
+[data-reactroot] {
+  display: flex;
+  flex-grow: 1;
   flex-direction: column;
+  width: 100%;
 }
 #user-info {
   background-color: #1797c0;
@@ -41,7 +51,7 @@ body {
   border-radius: 2px;
   fill: white;
 }
-#result-box {
+#result-table {
   margin-top: 3px;
   overflow: auto;
   flex-basis: 0;
@@ -181,4 +191,7 @@ label.statusGroupEmpty {
 }
 .dialog-buttons {
   text-align: center;
+}
+.button-space {
+  margin-right: 20px;
 }

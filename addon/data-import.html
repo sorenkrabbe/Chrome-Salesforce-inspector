@@ -1,168 +1,20 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>Data Import</title>
-  <link rel="stylesheet" href="button.css">
-  <link rel="stylesheet" href="data-load.css">
-  <link rel="stylesheet" href="data-import.css">
-</head>
-<body>
-  <img id="spinner" src="data:image/gif;base64,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" data-bind="visible: spinnerCount() > 0">
-  <div id="user-info">
-    <a data-bind="attr: {href: sfLink}" class="sf-link">
-      <svg viewBox="0 0 24 24">
-        <path d="M18.9 12.3h-1.5v6.6c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-5.1h-3.6v5.1c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-6.6H5.1c-.1 0-.3-.1-.3-.2s0-.2.1-.3l6.9-7c.1-.1.3-.1.4 0l7 7v.3c0 .1-.2.2-.3.2z"/>
-      </svg>
-      Salesforce Home
-    </a>
-    &nbsp;
-    <h1>Data Import</h1>
-    <span>/</span>
-    <span data-bind="text: userInfo"></span>
-  </div>
-  <div class="conf-section">
-    <div class="conf-subsection">
-      <div class="conf-line">
-        <label class="conf-input" title="With the tooling API you can query more metadata, but you cannot query regular data">
-          <span class="conf-label"></span>
-          <span class="conf-value">
-            <input type="checkbox" data-bind="checked: useToolingApi, disable: isWorking()"> Use Tooling API?
-          </span>
-        </label>
-      </div>
-      <div class="conf-line">
-        <label class="conf-input">
-          <span class="conf-label">Action</span>
-          <span class="conf-value">
-            <select data-bind="value: importAction, disable: isWorking()"><option value="create">Insert<option value="update">Update<option value="upsert">Upsert<option value="delete">Delete</select>
-          </span>
-        </label>
-      </div>
-      <div class="conf-line">
-        <label class="conf-input">
-          <span class="conf-label">Object</span>
-          <span class="conf-value">
-            <input type="text" data-bind="value: importType, css: {confError: importTypeError()}, disable: isWorking()" list="sobjectlist">
-            <div class="conf-error" data-bind="visible: importTypeError(), text: importTypeError()"></div>
-          </span>
-        </label>
-        <a class="char-btn" data-bind="attr: {href: showDescribeUrl()}" title="Show field info for the selected object">i</a>
-      </div>
-      <div class="conf-line">
-        <span class="conf-label">Format</span>
-        <label><input type=radio name="data-input-format" value="excel" data-bind="checked: dataFormat, disable: isWorking()"> <span>Excel</span></label>
-        <label><input type=radio name="data-input-format" value="csv" data-bind="checked: dataFormat, disable: isWorking()"> <span>CSV</span></label>
-      </div>
-      <div class="conf-line">
-        <label class="conf-input">
-          <span class="conf-label">Data</span>
-          <span class="conf-value">
-            <textarea id="data" data-bind="value: message(), event: {paste: dataPaste}, css: {confError: dataError()}, disable: isWorking()" readonly rows="1"></textarea>
-            <div class="conf-error" data-bind="visible: dataError(), text: dataError()"></div>
-          </span>
-        </label>
-      </div>
-      <div class="conf-line" data-bind="visible: importAction() == 'upsert'">
-        <label class="conf-input" title="Used in upserts to determine if an existing record should be updated or a new record should be created">
-          <span class="conf-label">External ID:</span>
-          <span class="conf-value">
-            <input type="text" data-bind="value: externalId, css: {confError: externalIdError()}, disable: isWorking()" list="idlookuplist">
-            <div class="conf-error" data-bind="visible: externalIdError(), text: externalIdError()"></div>
-          </span>
-        </label>
-      </div>
-      <div class="conf-line">
-        <label class="conf-input" title="The number of records per batch. A higher value is faster but increases the risk of errors due to governor limits.">
-          <span class="conf-label">Batch size</span>
-          <span class="conf-value">
-            <input type="number" data-bind="value: batchSize, css: {confError: batchSizeError()}" class="batch-size">
-            <div class="conf-error" data-bind="visible: batchSizeError(), text: batchSizeError()"></div>
-          </span>
-        </label>
-      </div>
-      <div class="conf-line">
-        <label class="conf-input" title="The number of batches to execute concurrently. A higher number is faster but increases the risk of errors due to lock congestion.">
-          <span class="conf-label">Threads</span>
-          <span class="conf-value">
-            <input type="number" data-bind="value: batchConcurrency, css: {confError: batchConcurrencyError()}" class="batch-size">
-            <span data-bind="visible: isWorking(), text: activeBatches()"></span>
-            <div class="conf-error" data-bind="visible: batchConcurrencyError(), text: batchConcurrencyError()"></div>
-          </span>
-        </label>
-      </div>
-      <datalist id="sobjectlist" data-bind="foreach: sobjectList()"><option data-bind="attr: {value: $data}"></datalist>
-      <datalist id="idlookuplist" data-bind="foreach: idLookupList()"><option data-bind="attr: {value: $data}"></datalist>
-      <datalist id="columnlist" data-bind="foreach: columnList()"><option data-bind="attr: {value: $data}"></datalist>
-    </div>
-    <div class="conf-subsection columns-mapping">
-      <div class="columns-label">Field mapping</div>
-      <div class="conf-error confError" data-bind="visible: importIdColumnError(), text: importIdColumnError()"></div>
-      <div class="conf-value" data-bind="foreach: columns()">
-        <div class="conf-line">
-          <input type="text" list="columnlist" data-bind="value: columnValue, css: {confError: columnError()}, disable: $parent.isWorking()">
-          <div class="conf-error" data-bind="visible: columnError()"><span data-bind="text: columnError()"></span> <a href="about:blank" data-bind="click: columnSkip, visible: !$parent.isWorking()" title="Don't import this column">Skip</a></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="conf-line">
-    <span class="conf-label"></span>
-    <a href="about:blank" id="import-help-btn" data-bind="click: toggleHelp">Import help</a>
-    <button data-bind="click: doImport, disable: invalidInput() || isWorking() || importCounts().Queued == 0">Import</button>
-    <button data-bind="enable: isWorking(), click: toggleProcessing, text: isWorking() && !isProcessingQueue() ? 'Resume queued' : 'Cancel queued'"></button>
-    <button data-bind="enable: importCounts().Failed > 0, click: retryFailed" style="margin-right: 20px">Retry failed</button>
-    <button data-bind="enable: canCopy(), click: copyAsExcel" title="Copy import result to clipboard for pasting into Excel or similar">Copy (Excel format)</button>
-    <button data-bind="enable: canCopy(), click: copyAsCsv" title="Copy import result to clipboard for saving as a CSV file">Copy (CSV)</button>
-  </div>
-  <div data-bind="visible: showHelp">
-    <p>Use for quick one-off data imports.</p>
-    <ul>
-      <li>Enter your CSV or Excel data in the box above.
-        <ul>
-          <li>The input must contain a header row with field API names.</li>
-          <li>To use an external ID for a lookup field, the header row should contain the lookup relation name, the target sobject name and the external ID name separated by colons, e.g. "MyLookupField__r:MyObject__c:MyExternalIdField__c".</li>
-          <li>Empty cells insert null values.</li>
-          <li>Number, date, time and checkbox values must conform to the relevant <a href="http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes" target="_blank">XSD datatypes</a>.</li>
-          <li>Columns starting with an underscore are ignored.</li>
-          <li>You can resume a previous import by including the "__Status" column in your input.</li>
-        </ul>
-      </li>
-      <li>Select your input format</li>
-      <li>Select an action (insert, update, upsert or delete)</li>
-      <li>Enter the API name of the object to import</li>
-      <li>Press Import</li>
-    </ul>
-    <p>Bulk API is not supported. Large data volumes may freeze or crash your browser.</p>
-  </div>
-  <div class="status-group">
-    <span class="conf-label">Status</span>
-    <label data-bind="css: {statusGroupEmpty: importCounts().Queued == 0}"><input type=checkbox data-bind="checked: showStatus.Queued"> <span data-bind="text: importCounts().Queued"></span> <span>Queued</span></label>
-    <label data-bind="css: {statusGroupEmpty: importCounts().Processing == 0}"><input type=checkbox data-bind="checked: showStatus.Processing"> <span data-bind="text: importCounts().Processing"></span> <span>Processing</span></label>
-    <label data-bind="css: {statusGroupEmpty: importCounts().Succeeded == 0}"><input type=checkbox data-bind="checked: showStatus.Succeeded"> <span data-bind="text: importCounts().Succeeded"></span> <span>Succeeded</span></label>
-    <label data-bind="css: {statusGroupEmpty: importCounts().Failed == 0}"><input type=checkbox data-bind="checked: showStatus.Failed"> <span data-bind="text: importCounts().Failed"></span> <span>Failed</span></label>
-  </div>
-  <div id="result-box">
-    <!-- the scroll table goes here -->
-  </div>
-  <div data-bind="if: confirmPopup()">
-    <div id="confirm-background">
-      <div id="confirm-dialog">
-        <h1>Import</h1>
-        <p>You are about to modify your data in Salesforce. This action cannot be undone.</p>
-        <p data-bind="text: confirmPopup().text"></p>
-        <div class="dialog-buttons">
-          <button data-bind="click: confirmPopupYes">Import</button>
-          <button data-bind="click: confirmPopupNo">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script src="knockout-3.2.0.js"></script>
-  <script src="inspector.js"></script>
-  <script src="button.js"></script>
-  <script src="csv-parse.js"></script>
-  <script src="data-load.js"></script>
-  <script src="data-import.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <title>Data Import</title>
+    <link rel="stylesheet" href="button.css">
+    <link rel="stylesheet" href="data-load.css">
+    <link rel="stylesheet" href="data-import.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="react.js"></script>
+    <script src="react-dom.js"></script>
+    <script src="inspector.js"></script>
+    <script src="button.js"></script>
+    <script src="csv-parse.js"></script>
+    <script src="data-load.js"></script>
+    <script src="data-import.js"></script>
+  </body>
 </html>
