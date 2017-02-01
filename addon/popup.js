@@ -315,7 +315,7 @@ class AllDataBox extends React.PureComponent {
       return null;
     }
     let recordId = null;
-    if (sobject.keyPrefix == queryKeyPrefix && query.length >= 15) {
+    if (sobject.keyPrefix == queryKeyPrefix && query.match(/^([a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$/)) {
       recordId = query;
     }
     return {recordId, sobject};
@@ -344,7 +344,7 @@ class AllDataBox extends React.PureComponent {
       }));
     query = query || contextRecordId || "";
     queryKeyPrefix = query.substring(0, 3);
-    if (query.length >= 15) {
+    if (query.match(/^([a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$/)) {
       let objectsForId = sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
       for (let sobject of objectsForId) {
         res.unshift({recordId: query, sobject, relevance: 1});
