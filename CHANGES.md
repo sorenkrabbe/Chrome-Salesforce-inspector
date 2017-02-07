@@ -1,3 +1,48 @@
+Version NEXT
+============
+
+Inspector menu
+--------------
+* Use the autocomplete to find object API names, labels and ID prefixes.
+* View some information about the selected record or object directly in the menu.
+* Inspect objects in the Tooling API and objects you don't have read access to.
+* When viewing a Deployment Status, a new button allows you to get all the details of the deployment.
+* The Explore API button is now visible everywhere.
+
+Show all data
+-------------
+* The Type column has more information. (required, unique, auto number etc.)
+* Add your own columns, (for example a column showing the formula of formula fields, or a collumn that tells which fields can be used as a filter.) for both fields and relationships.
+* The "Advanced filter" option is more discoverable now.
+* New button to start data export for the shown object.
+* New button to edit the page layout for the shown record.
+* Better handling of objects that share a common ID prefix or is available with both the regular API and the Tooling API.
+
+Data export
+-----------
+* Save your favourite SOQL queries.
+* The query history remembers if queries were done with the Tooling API or not.
+* Fixed right clicking on IDs in the exported data.
+
+Data import
+-----------
+* Fix for importing data from Excel on Mac into Chrome.
+
+Org Limits
+----------
+* View how much of your org's limits you are currently using.
+
+Download Metadata
+-----------------
+* Download all your org's Apex classes, Visualforce pages, objects, fields, validation rules, workflow rules, reports and much more. Use it for backup, or if you want to search for any place a particular item is used, or for many other purposes.
+
+API Explorer
+------------
+* Choose between showing the result for easy viewing or for easy copying.
+* Make SOAP requests.
+* Make REST requests for any HTTP method.
+* Edit any API request before sending.
+
 Version 1.1
 ============
 
