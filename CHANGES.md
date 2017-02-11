@@ -1,6 +1,10 @@
 Version NEXT
 ============
 
+General
+-------
+* Update API versoin to Spring 17.
+
 Inspector menu
 --------------
 * Use the autocomplete to find object API names, labels and ID prefixes.
