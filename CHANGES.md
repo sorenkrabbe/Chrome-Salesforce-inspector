@@ -1,5 +1,5 @@
-Version NEXT
-============
+Version 1.2
+===========
 
 General
 -------
