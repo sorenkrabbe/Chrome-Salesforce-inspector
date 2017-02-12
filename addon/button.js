@@ -9,17 +9,11 @@
 // auraLoadingBox = Lightning / Salesforce1
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
-  console.log("Salesforce Inspector: Loading button for " + location.href);
   chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, sfHost => {
-    console.log("Salesforce Inspector: sfHost=" + sfHost);
     if (sfHost) {
       initButton(sfHost, false);
-    } else {
-      console.log("Salesforce Inspector: No session found for host " + location.href);
     }
   });
-} else {
-  console.log("Salesforce Inspector: Button not loading for " + location.href);
 }
 
 function initButton(sfHost, inInspector) {
@@ -41,7 +35,6 @@ function initButton(sfHost, inInspector) {
   });
 
   function loadPopup() {
-    console.log("Salesforce Inspector: Load popup");
     btn.addEventListener("click", () => {
       if (!rootEl.classList.contains("insext-active")) {
         openPopup();
@@ -59,7 +52,6 @@ function initButton(sfHost, inInspector) {
         return;
       }
       if (e.data.insextInitRequest) {
-        console.log("Salesforce Inspector: Init popup");
         popupEl.contentWindow.postMessage({
           insextInitResponse: true,
           sfHost,
@@ -79,7 +71,6 @@ function initButton(sfHost, inInspector) {
     });
     rootEl.appendChild(popupEl);
     function openPopup() {
-      console.log("Salesforce Inspector: Open popup");
       popupEl.contentWindow.postMessage({insextUpdateRecordId: true, locationHref: location.href}, "*");
       rootEl.classList.add("insext-active");
       // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector
