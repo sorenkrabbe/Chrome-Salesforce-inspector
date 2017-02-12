@@ -5,3 +5,4 @@ node_modules/
 temp/
 *.bak
 npm-debug.log
+target/

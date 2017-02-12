@@ -1,9 +1,13 @@
 {
   "name": "salesforce-inspector",
   "scripts": {
-    "eslint": "eslint ."
+    "eslint": "eslint .",
+    "firefox-release-build": "node scripts/firefox-release-build.js"
   },
   "devDependencies": {
-    "eslint": "^3.11.0"
+    "eslint": "3.11.0",
+    "fs-extra": "2.0.0",
+    "replace-in-file": "2.2.2",
+    "web-ext": "1.8.1"
   }
 }

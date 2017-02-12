@@ -47,9 +47,14 @@ Release
 -------
 Version number must be manually incremented in [addon/manifest.json](addon/manifest.json) file
 
-**Chrome:** When commit message contains *#releaseIt* the revision will be packaged and uploaded to Chrome Web Store ready for manual release to the masses.
+### Chrome
 
-**Firefox:** Manually so far
+When commit message contains *#releaseIt* the revision will be packaged and uploaded to Chrome Web Store ready for manual release to the masses.
+
+### Firefox
+
+1. `npm run firefox-release-build`
+2. Upload the file from `target/firefox/salesforce_inspector-x.y.zip` to addons.mozilla.org
 
 Design Principles
 -----
