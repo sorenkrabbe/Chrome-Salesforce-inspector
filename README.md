@@ -30,6 +30,19 @@ Troubleshooting
 * If Salesforce Inspector is not available after installation, the most likely issue is that your browser is not up to date. See [instructions for Google Chrome](https://productforums.google.com/forum/#!topic/chrome/YK1-o4KoSjc).
 * When you enable the My Domain feature in Salesforce, Salesforce Inspector may not work until you have restarted your browser (or until you have deleted the "sid" cookie for the old Salesforce domain by other means).
 
+Development
+-----
+
+### Chrome
+1. Open `chrome://extensions/`.
+2. Enable `Developer mode`.
+3. Click `Load unpacked extension...`.
+4. Select the `addon` subdirectory of this repository.
+
+### Firefox
+
+The extension is located in the `addon` subdirectory of this repository. Run it as per [Mozilla's guide](https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Getting_started_with_web-ext).
+
 Unit tests
 -----
 1. Set up a Developer Edition org with the customizations described in `test/org/`.
