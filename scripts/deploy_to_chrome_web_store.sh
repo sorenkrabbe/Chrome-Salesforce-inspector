@@ -61,6 +61,8 @@ log_message "0.2) -> Yes - source version \"$SOURCE_VERSION_NUMBER\" will be upl
 
 log_message "1) Prepare application app package";
 
+nvm install 7
+npm install
 # Uses ENVIRONMENT_TYPE and ZIP_FILE_NAME
 npm run chrome-release-build
 
