@@ -4,3 +4,4 @@ node_js:
 script:
   - npm run eslint
   - npm run firefox-release-build
+  - npm run chrome-release-build

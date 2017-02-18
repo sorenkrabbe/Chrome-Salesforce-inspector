@@ -18,8 +18,7 @@ ENVIRONMENT_TYPE=$2      # second URL parameter - PROD|BETA
 #CHROME_REFRESH_TOKEN="" # Securely defined in environment
 #CI_COMMIT_ID=""         # Populated by environment
 CHROME_ACCESS_TOKEN=""
-WORKING_DIR="temp"
-ZIP_FILE_NAME="$WORKING_DIR/salesforceInspectorForChrome-$CI_COMMIT_ID-$ENVIRONMENT_TYPE.zip"
+export ZIP_FILE_NAME="target/chrome/salesforceInspectorForChrome-$CI_COMMIT_ID-$ENVIRONMENT_TYPE.zip"
 
 log_message() {
      printf "** $1\n";
@@ -30,8 +29,6 @@ log_error() {
 log_detail() {
      printf "   -------- \n$1\n   --------\n";
 }
-
-mkdir -p $WORKING_DIR
 
 log_message "0) Should release?";
 
@@ -64,18 +61,8 @@ log_message "0.2) -> Yes - source version \"$SOURCE_VERSION_NUMBER\" will be upl
 
 log_message "1) Prepare application app package";
 
-# Now handled in runtime:
-# log_message "1.x) Set version number in app files (version $SOURCE_VERSION_NUMBER)"
-# sed -i .bak -e "s/<!--##VERSION##-->/${SOURCE_VERSION_NUMBER}/g" addon/popup.js
-
-log_message "1.1) Tweak to match ENVIRONMENT_TYPE $ENVIRONMENT_TYPE"
-if [[ $ENVIRONMENT_TYPE == "BETA" ]]
-then
-     jq -c '.name=.name+" BETA"' addon/manifest.json > addon/manifest.tmp.json && mv addon/manifest.tmp.json addon/manifest.json
-fi
-
-log_message "1.2) Create ZIP file (include chrome required files only)"
-zip -q -r $ZIP_FILE_NAME . --exclude \*.git\* $WORKING_DIR\* log\* tmp\* scripts\* package.json docs\* test\* \*.md \*.bak
+# Uses ENVIRONMENT_TYPE and ZIP_FILE_NAME
+npm run chrome-release-build
 
 log_message "2) Push to chrome web store"
 
