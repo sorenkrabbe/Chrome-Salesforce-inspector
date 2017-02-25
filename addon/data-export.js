@@ -26,7 +26,7 @@
       }
     };
 
-    let vm = dataExportVm({sfHost, args, queryInput: queryInputVm});
+    let vm = new Model({sfHost, args, queryInput: queryInputVm});
     ko.applyBindings(vm, document.documentElement);
 
     function queryAutocompleteEvent() {
@@ -89,170 +89,188 @@
 
 }
 
-function dataExportVm({sfHost, args, queryInput}) {
-
-  let sobjectAllDescribes = ko.observable({});
-  let describeInfo = new DescribeInfo(spinFor, () => {
-    sobjectAllDescribes.valueHasMutated();
-  });
-  sobjectAllDescribes.subscribe(() => queryAutocompleteHandler({newDescribe: true}));
-
-  class QueryHistory {
-    constructor(storageKey, max) {
-      this.storageKey = storageKey;
-      this.max = max;
-      this.list = ko.observable(this._get());
-    }
-
-    _get() {
-      let history;
-      try {
-        history = JSON.parse(localStorage[this.storageKey]);
-      } catch (e) {
-        // empty
-      }
-      if (!Array.isArray(history)) {
-        history = [];
-      }
-      // A previous version stored just strings. Skip entries from that to avoid errors.
-      history = history.filter(e => typeof e == "object");
-      return history;
-    }
-
-    add(entry) {
-      let history = this._get();
-      let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
-      if (historyIndex > -1) {
-        history.splice(historyIndex, 1);
-      }
-      history.splice(0, 0, entry);
-      if (history.length > this.max) {
-        history.pop();
-      }
-      localStorage[this.storageKey] = JSON.stringify(history);
-      this.list(history);
-    }
-
-    remove(entry) {
-      let history = this._get();
-      let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
-      if (historyIndex > -1) {
-        history.splice(historyIndex, 1);
-      }
-      localStorage[this.storageKey] = JSON.stringify(history);
-      this.list(history);
-    }
-
-    clear() {
-      localStorage.removeItem(this.storageKey);
-      this.list([]);
-    }
-
+class QueryHistory {
+  constructor(storageKey, max) {
+    this.storageKey = storageKey;
+    this.max = max;
+    this.list = ko.observable(this._get());
   }
 
-  let vm = {
-    sfLink: "https://" + sfHost,
-    spinnerCount: ko.observable(0),
-    showHelp: ko.observable(false),
-    userInfo: ko.observable("..."),
-    winInnerHeight: ko.observable(0),
-    winInnerWidth: ko.observable({}),
-    resultBoxOffsetTop: ko.observable(0),
-    queryAll: ko.observable(false),
-    queryTooling: ko.observable(false),
-    autocompleteResults: ko.observable({sobjectName: "", title: "\u00A0", results: []}),
-    autocompleteClick: null,
-    exportResult: ko.observable({isWorking: false, exportStatus: "Ready", exportError: null, exportedData: null}),
-    queryHistory: new QueryHistory("insextQueryHistory", 20),
-    selectedHistoryEntry: ko.observable(),
-    savedHistory: new QueryHistory("insextSavedQueryHistory", 50),
-    selectedSavedEntry: ko.observable(),
-    expandAutocomplete: ko.observable(false),
-    resultsFilter: ko.observable(""),
-    toggleHelp() {
-      vm.showHelp(!vm.showHelp());
-    },
-    toggleExpand() {
-      vm.expandAutocomplete(!vm.expandAutocomplete());
-    },
-    showDescribeUrl() {
-      let args = new URLSearchParams();
-      args.set("host", sfHost);
-      args.set("objectType", vm.autocompleteResults().sobjectName);
-      if (vm.queryTooling()) {
-        args.set("useToolingApi", "1");
-      }
-      return "inspect.html?" + args;
-    },
-    selectHistoryEntry() {
-      if (vm.selectedHistoryEntry() != undefined) {
-        queryInput.setValue(vm.selectedHistoryEntry().query);
-        vm.queryTooling(vm.selectedHistoryEntry().useToolingApi);
-        vm.selectedHistoryEntry(undefined);
-      }
-    },
-    clearHistory() {
-      vm.queryHistory.clear();
-    },
-    selectSavedEntry() {
-      if (vm.selectedSavedEntry() != undefined) {
-        queryInput.setValue(vm.selectedSavedEntry());
-        vm.queryTooling(vm.selectedSavedEntry().useToolingApi);
-        vm.selectedSavedEntry(undefined);
-      }
-    },
-    clearSavedHistory() {
-      vm.savedHistory.clear();
-    },
-    addToHistory() {
-      vm.savedHistory.add({query: queryInput.getValue(), useToolingApi: vm.queryTooling()});
-    },
-    removeFromHistory() {
-      vm.savedHistory.remove({query: queryInput.getValue(), useToolingApi: vm.queryTooling()});
-    },
-    queryAutocompleteHandler,
-    autocompleteReload() {
-      describeInfo.reloadAll();
-    },
-    doExport,
-    canCopy() {
-      return vm.exportResult().exportedData != null;
-    },
-    copyAsExcel() {
-      copyToClipboard(vm.exportResult().exportedData.csvSerialize("\t"));
-    },
-    copyAsCsv() {
-      copyToClipboard(vm.exportResult().exportedData.csvSerialize(","));
-    },
-    copyAsJson() {
-      copyToClipboard(JSON.stringify(vm.exportResult().exportedData.records, null, "  "));
-    },
-    stopExport
-  };
+  _get() {
+    let history;
+    try {
+      history = JSON.parse(localStorage[this.storageKey]);
+    } catch (e) {
+      // empty
+    }
+    if (!Array.isArray(history)) {
+      history = [];
+    }
+    // A previous version stored just strings. Skip entries from that to avoid errors.
+    history = history.filter(e => typeof e == "object");
+    return history;
+  }
 
-  function spinFor(promise) {
-    vm.spinnerCount(vm.spinnerCount() + 1);
+  add(entry) {
+    let history = this._get();
+    let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
+    if (historyIndex > -1) {
+      history.splice(historyIndex, 1);
+    }
+    history.splice(0, 0, entry);
+    if (history.length > this.max) {
+      history.pop();
+    }
+    localStorage[this.storageKey] = JSON.stringify(history);
+    this.list(history);
+  }
+
+  remove(entry) {
+    let history = this._get();
+    let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
+    if (historyIndex > -1) {
+      history.splice(historyIndex, 1);
+    }
+    localStorage[this.storageKey] = JSON.stringify(history);
+    this.list(history);
+  }
+
+  clear() {
+    localStorage.removeItem(this.storageKey);
+    this.list([]);
+  }
+
+}
+
+class Model {
+  constructor({sfHost, args, queryInput}) {
+    this.sfHost = sfHost;
+    this.queryInput = queryInput;
+    this.sobjectAllDescribes = ko.observable({});
+    this.describeInfo = new DescribeInfo(this.spinFor.bind(this), () => {
+      this.sobjectAllDescribes.valueHasMutated();
+    });
+    this.sobjectAllDescribes.subscribe(() => this.queryAutocompleteHandler({newDescribe: true}));
+
+    this.sfLink = "https://" + sfHost;
+    this.spinnerCount = ko.observable(0);
+    this.showHelp = ko.observable(false);
+    this.userInfo = ko.observable("...");
+    this.winInnerHeight = ko.observable(0);
+    this.winInnerWidth = ko.observable({});
+    this.resultBoxOffsetTop = ko.observable(0);
+    this.queryAll = ko.observable(false);
+    this.queryTooling = ko.observable(false);
+    this.autocompleteResults = ko.observable({sobjectName: "", title: "\u00A0", results: []});
+    this.autocompleteClick = null;
+    this.exportResult = ko.observable({isWorking: false, exportStatus: "Ready", exportError: null, exportedData: null});
+    this.queryHistory = new QueryHistory("insextQueryHistory", 20);
+    this.selectedHistoryEntry = ko.observable();
+    this.savedHistory = new QueryHistory("insextSavedQueryHistory", 50);
+    this.selectedSavedEntry = ko.observable();
+    this.expandAutocomplete = ko.observable(false);
+    this.resultsFilter = ko.observable("");
+    this.autocompleteState = "";
+    this.autocompleteProgress = {};
+    this.exportProgress = {};
+
+    this.spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
+      this.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
+    }));
+
+    if (args.has("query")) {
+      queryInput.setValue(args.get("query"));
+      this.queryTooling(args.has("useToolingApi"));
+    } else if (this.queryHistory.list()[0]) {
+      queryInput.setValue(this.queryHistory.list()[0].query);
+      this.queryTooling(this.queryHistory.list()[0].useToolingApi);
+    } else {
+      queryInput.setValue("select Id from Account");
+      this.queryTooling(false);
+    }
+
+    this.queryTooling.subscribe(() => this.queryAutocompleteHandler());
+
+    this.resultsFilter.subscribe(() => {
+      let exportResult = this.exportResult();
+      if (exportResult.exportedData == null) {
+        return;
+      }
+      // Recalculate visibility
+      exportResult.exportedData.updateVisibility();
+      // Notify about the change
+      this.exportResult({
+        isWorking: exportResult.isWorking,
+        exportStatus: exportResult.exportStatus,
+        exportError: exportResult.exportError,
+        exportedData: exportResult.exportedData
+      });
+    });
+
+  }
+  toggleHelp() {
+    this.showHelp(!this.showHelp());
+  }
+  toggleExpand() {
+    this.expandAutocomplete(!this.expandAutocomplete());
+  }
+  showDescribeUrl() {
+    let args = new URLSearchParams();
+    args.set("host", this.sfHost);
+    args.set("objectType", this.autocompleteResults().sobjectName);
+    if (this.queryTooling()) {
+      args.set("useToolingApi", "1");
+    }
+    return "inspect.html?" + args;
+  }
+  selectHistoryEntry() {
+    if (this.selectedHistoryEntry() != undefined) {
+      this.queryInput.setValue(this.selectedHistoryEntry().query);
+      this.queryTooling(this.selectedHistoryEntry().useToolingApi);
+      this.selectedHistoryEntry(undefined);
+    }
+  }
+  clearHistory() {
+    this.queryHistory.clear();
+  }
+  selectSavedEntry() {
+    if (this.selectedSavedEntry() != undefined) {
+      this.queryInput.setValue(this.selectedSavedEntry());
+      this.queryTooling(this.selectedSavedEntry().useToolingApi);
+      this.selectedSavedEntry(undefined);
+    }
+  }
+  clearSavedHistory() {
+    this.savedHistory.clear();
+  }
+  addToHistory() {
+    this.savedHistory.add({query: this.queryInput.getValue(), useToolingApi: this.queryTooling()});
+  }
+  removeFromHistory() {
+    this.savedHistory.remove({query: this.queryInput.getValue(), useToolingApi: this.queryTooling()});
+  }
+  autocompleteReload() {
+    this.describeInfo.reloadAll();
+  }
+  canCopy() {
+    return this.exportResult().exportedData != null;
+  }
+  copyAsExcel() {
+    copyToClipboard(this.exportResult().exportedData.csvSerialize("\t"));
+  }
+  copyAsCsv() {
+    copyToClipboard(this.exportResult().exportedData.csvSerialize(","));
+  }
+  copyAsJson() {
+    copyToClipboard(JSON.stringify(this.exportResult().exportedData.records, null, "  "));
+  }
+  spinFor(promise) {
+    let stopSpinner = () => {
+      this.spinnerCount(this.spinnerCount() - 1);
+    };
+    this.spinnerCount(this.spinnerCount() + 1);
     promise.catch(e => console.error("spinFor", e)).then(stopSpinner, stopSpinner);
   }
-  function stopSpinner() {
-    vm.spinnerCount(vm.spinnerCount() - 1);
-  }
-
-  spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
-    vm.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
-  }));
-
-  if (args.has("query")) {
-    queryInput.setValue(args.get("query"));
-    vm.queryTooling(args.has("useToolingApi"));
-  } else if (vm.queryHistory.list()[0]) {
-    queryInput.setValue(vm.queryHistory.list()[0].query);
-    vm.queryTooling(vm.queryHistory.list()[0].useToolingApi);
-  } else {
-    queryInput.setValue("select Id from Account");
-    vm.queryTooling(false);
-  }
-
   /**
    * SOQL query autocomplete handling.
    * Put caret at the end of a word or select some text to autocomplete it.
@@ -265,30 +283,29 @@ function dataExportVm({sfHost, args, queryInput}) {
    * Inserts all autocomplete field suggestions when Ctrl+Space is pressed.
    * Supports subqueries in where clauses, but not in select clauses.
    */
-  let autocompleteState = "";
-  let autocompleteProgress = {};
-  function queryAutocompleteHandler(e = {}) {
+  queryAutocompleteHandler(e = {}) {
+    let vm = this; // eslint-disable-line consistent-this
     let useToolingApi = vm.queryTooling();
-    let query = queryInput.getValue();
-    let selStart = queryInput.getSelStart();
-    let selEnd = queryInput.getSelEnd();
+    let query = vm.queryInput.getValue();
+    let selStart = vm.queryInput.getSelStart();
+    let selEnd = vm.queryInput.getSelEnd();
     let ctrlSpace = e.ctrlSpace;
 
     // Skip the calculation when no change is made. This improves performance and prevents async operations (Ctrl+Space) from being canceled when they should not be.
     let newAutocompleteState = [useToolingApi, query, selStart, selEnd].join("$");
-    if (newAutocompleteState == autocompleteState && !ctrlSpace && !e.newDescribe) {
+    if (newAutocompleteState == vm.autocompleteState && !ctrlSpace && !e.newDescribe) {
       return;
     }
-    autocompleteState = newAutocompleteState;
+    vm.autocompleteState = newAutocompleteState;
 
     // Cancel any async operation since its results will no longer be relevant.
-    if (autocompleteProgress.abort) {
-      autocompleteProgress.abort();
+    if (vm.autocompleteProgress.abort) {
+      vm.autocompleteProgress.abort();
     }
 
     vm.autocompleteClick = ({value, suffix}) => {
-      queryInput.insertText(value + suffix, selStart, selEnd);
-      queryAutocompleteHandler();
+      vm.queryInput.insertText(value + suffix, selStart, selEnd);
+      vm.queryAutocompleteHandler();
     };
 
     // Find the token we want to autocomplete. This is the selected text, or the last word before the cursor.
@@ -335,8 +352,8 @@ function dataExportVm({sfHost, args, queryInput}) {
 
     // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
-      sobjectAllDescribes(); // Tell Knockout we have read describe info.
-      let {globalStatus, globalDescribe} = describeInfo.describeGlobal(useToolingApi);
+      vm.sobjectAllDescribes(); // Tell Knockout we have read describe info.
+      let {globalStatus, globalDescribe} = vm.describeInfo.describeGlobal(useToolingApi);
       if (!globalDescribe) {
         switch (globalStatus) {
           case "loading":
@@ -352,7 +369,7 @@ function dataExportVm({sfHost, args, queryInput}) {
               title: "Loading metadata failed.",
               results: [{value: "Retry", title: "Retry"}]
             });
-            vm.autocompleteClick = vm.autocompleteReload;
+            vm.autocompleteClick = vm.autocompleteReload.bind(vm);
             return;
           default:
             vm.autocompleteResults({
@@ -407,8 +424,8 @@ function dataExportVm({sfHost, args, queryInput}) {
         isAfterFrom = selStart > fromKeywordMatch.index + fromKeywordMatch[0].length;
       }
     }
-    sobjectAllDescribes(); // Tell Knockout we have read describe info.
-    let {sobjectStatus, sobjectDescribe} = describeInfo.describeSobject(useToolingApi, sobjectName);
+    vm.sobjectAllDescribes(); // Tell Knockout we have read describe info.
+    let {sobjectStatus, sobjectDescribe} = vm.describeInfo.describeSobject(useToolingApi, sobjectName);
     if (!sobjectDescribe) {
       switch (sobjectStatus) {
         case "loading":
@@ -424,7 +441,7 @@ function dataExportVm({sfHost, args, queryInput}) {
             title: "Loading " + sobjectName + " metadata failed.",
             results: [{value: "Retry", title: "Retry"}]
           });
-          vm.autocompleteClick = vm.autocompleteReload;
+          vm.autocompleteClick = vm.autocompleteReload.bind(vm);
           return;
         case "notfound":
           vm.autocompleteResults({
@@ -485,8 +502,8 @@ function dataExportVm({sfHost, args, queryInput}) {
           .filter(field => field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase())
           .flatMap(field => field.referenceTo)
         ) {
-          sobjectAllDescribes(); // Tell Knockout we have read describe info.
-          let {sobjectStatus, sobjectDescribe} = describeInfo.describeSobject(useToolingApi, referencedSobjectName);
+          vm.sobjectAllDescribes(); // Tell Knockout we have read describe info.
+          let {sobjectStatus, sobjectDescribe} = vm.describeInfo.describeSobject(useToolingApi, referencedSobjectName);
           if (sobjectDescribe) {
             newContextSobjectDescribes.add(sobjectDescribe);
           } else {
@@ -512,7 +529,7 @@ function dataExportVm({sfHost, args, queryInput}) {
           title: "Loading " + sobjectStatuses.get("loadfailed") + " metadata failed.",
           results: [{value: "Retry", title: "Retry"}]
         });
-        vm.autocompleteClick = vm.autocompleteReload;
+        vm.autocompleteClick = vm.autocompleteReload.bind(vm);
         return;
       }
       if (sobjectStatuses.has("notfound")) {
@@ -569,7 +586,7 @@ function dataExportVm({sfHost, args, queryInput}) {
         let contextValueField = contextValueFields[0];
         let queryMethod = useToolingApi ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
         let acQuery = "select " + contextValueField.field.name + " from " + contextValueField.sobjectDescribe.name + " where " + contextValueField.field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + contextValueField.field.name + " limit 100";
-        spinFor(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), {progressHandler: autocompleteProgress})
+        vm.spinFor(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), {progressHandler: vm.autocompleteProgress})
           .catch(err => {
             vm.autocompleteResults({
               sobjectName,
@@ -579,7 +596,7 @@ function dataExportVm({sfHost, args, queryInput}) {
             return null;
           })
           .then(data => {
-            autocompleteProgress = {};
+            vm.autocompleteProgress = {};
             if (!data) {
               return;
             }
@@ -685,9 +702,9 @@ function dataExportVm({sfHost, args, queryInput}) {
           .map(field => contextPath + field.name)
           .toArray();
         if (ar.length > 0) {
-          queryInput.insertText(ar.join(", ") + (isAfterFrom ? " " : ", "), selStart - contextPath.length, selEnd);
+          vm.queryInput.insertText(ar.join(", ") + (isAfterFrom ? " " : ", "), selStart - contextPath.length, selEnd);
         }
-        queryAutocompleteHandler();
+        vm.queryAutocompleteHandler();
         return;
       }
       vm.autocompleteResults({
@@ -713,91 +730,13 @@ function dataExportVm({sfHost, args, queryInput}) {
       return;
     }
   }
-
-  function RecordTable() {
-    /*
-    We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
-    This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
-    We don't care, because we don't need a stable set of columns for our use case.
-    */
-    let columnIdx = new Map();
-    let header = ["_"];
-    function discoverColumns(record, prefix, row) {
-      for (let field in record) {
-        if (field == "attributes") {
-          continue;
-        }
-        let column = prefix + field;
-        let c;
-        if (columnIdx.has(column)) {
-          c = columnIdx.get(column);
-        } else {
-          c = header.length;
-          columnIdx.set(column, c);
-          for (let row of rt.table) {
-            row.push(undefined);
-          }
-          header[c] = column;
-          rt.colVisibilities.push(true);
-        }
-        row[c] = record[field];
-        if (typeof record[field] == "object" && record[field] != null) {
-          discoverColumns(record[field], column + ".", row);
-        }
-      }
-    }
-    function cellToString(cell) {
-      if (cell == null) {
-        return "";
-      } else if (typeof cell == "object" && cell.attributes && cell.attributes.type) {
-        return "[" + cell.attributes.type + "]";
-      } else {
-        return "" + cell;
-      }
-    }
-    let isVisible = (row, filter) => !filter || row.some(cell => cellToString(cell).toLowerCase().includes(filter.toLowerCase()));
-    let rt = {
-      records: [],
-      table: [],
-      rowVisibilities: [],
-      colVisibilities: [true],
-      isTooling: false,
-      totalSize: -1,
-      addToTable(expRecords) {
-        rt.records = rt.records.concat(expRecords);
-        if (rt.table.length == 0 && expRecords.length > 0) {
-          rt.table.push(header);
-          rt.rowVisibilities.push(true);
-        }
-        let filter = vm.resultsFilter();
-        for (let record of expRecords) {
-          let row = new Array(header.length);
-          row[0] = record;
-          rt.table.push(row);
-          rt.rowVisibilities.push(isVisible(row, filter));
-          discoverColumns(record, "", row);
-        }
-      },
-      csvSerialize: separator => rt.table.map(row => row.map(cell => "\"" + cellToString(cell).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n"),
-      updateVisibility() {
-        let filter = vm.resultsFilter();
-        for (let r = 1/* always show header */; r < rt.table.length; r++) {
-          rt.rowVisibilities[r] = isVisible(rt.table[r], filter);
-        }
-      }
-    };
-    return rt;
-  }
-
-  vm.queryTooling.subscribe(() => queryAutocompleteHandler());
-
-  let exportProgress = {};
-  function doExport() {
-    let exportedData = new RecordTable();
+  doExport() {
+    let vm = this; // eslint-disable-line consistent-this
+    let exportedData = new RecordTable(vm);
     exportedData.isTooling = vm.queryTooling();
-    exportedData.describeInfo = describeInfo;
-    exportedData.sfHost = sfHost;
-    let query = queryInput.getValue();
+    exportedData.describeInfo = vm.describeInfo;
+    exportedData.sfHost = vm.sfHost;
+    let query = vm.queryInput.getValue();
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
     function batchHandler(batch) {
       return batch.then(data => {
@@ -806,7 +745,7 @@ function dataExportVm({sfHost, args, queryInput}) {
           exportedData.totalSize = data.totalSize;
         }
         if (!data.done) {
-          let pr = batchHandler(sfConn.rest(data.nextRecordsUrl, {progressHandler: exportProgress}));
+          let pr = batchHandler(sfConn.rest(data.nextRecordsUrl, {progressHandler: vm.exportProgress}));
           vm.exportResult({
             isWorking: true,
             exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
@@ -855,7 +794,7 @@ function dataExportVm({sfHost, args, queryInput}) {
         return null;
       });
     }
-    spinFor(batchHandler(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), {progressHandler: exportProgress}))
+    vm.spinFor(batchHandler(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), {progressHandler: vm.exportProgress}))
       .catch(error => {
         console.error(error);
         vm.exportResult({
@@ -873,26 +812,82 @@ function dataExportVm({sfHost, args, queryInput}) {
       exportedData
     });
   }
-
-  function stopExport() {
-    exportProgress.abort({records: [], done: true, totalSize: -1});
+  stopExport() {
+    this.exportProgress.abort({records: [], done: true, totalSize: -1});
   }
+}
 
-  vm.resultsFilter.subscribe(() => {
-    let exportResult = vm.exportResult();
-    if (exportResult.exportedData == null) {
-      return;
+function RecordTable(vm) {
+  /*
+  We don't want to build our own SOQL parser, so we discover the columns based on the data returned.
+  This means that we cannot find the columns of cross-object relationships, when the relationship field is null for all returned records.
+  We don't care, because we don't need a stable set of columns for our use case.
+  */
+  let columnIdx = new Map();
+  let header = ["_"];
+  function discoverColumns(record, prefix, row) {
+    for (let field in record) {
+      if (field == "attributes") {
+        continue;
+      }
+      let column = prefix + field;
+      let c;
+      if (columnIdx.has(column)) {
+        c = columnIdx.get(column);
+      } else {
+        c = header.length;
+        columnIdx.set(column, c);
+        for (let row of rt.table) {
+          row.push(undefined);
+        }
+        header[c] = column;
+        rt.colVisibilities.push(true);
+      }
+      row[c] = record[field];
+      if (typeof record[field] == "object" && record[field] != null) {
+        discoverColumns(record[field], column + ".", row);
+      }
     }
-    // Recalculate visibility
-    exportResult.exportedData.updateVisibility();
-    // Notify about the change
-    vm.exportResult({
-      isWorking: exportResult.isWorking,
-      exportStatus: exportResult.exportStatus,
-      exportError: exportResult.exportError,
-      exportedData: exportResult.exportedData
-    });
-  });
-
-  return vm;
+  }
+  function cellToString(cell) {
+    if (cell == null) {
+      return "";
+    } else if (typeof cell == "object" && cell.attributes && cell.attributes.type) {
+      return "[" + cell.attributes.type + "]";
+    } else {
+      return "" + cell;
+    }
+  }
+  let isVisible = (row, filter) => !filter || row.some(cell => cellToString(cell).toLowerCase().includes(filter.toLowerCase()));
+  let rt = {
+    records: [],
+    table: [],
+    rowVisibilities: [],
+    colVisibilities: [true],
+    isTooling: false,
+    totalSize: -1,
+    addToTable(expRecords) {
+      rt.records = rt.records.concat(expRecords);
+      if (rt.table.length == 0 && expRecords.length > 0) {
+        rt.table.push(header);
+        rt.rowVisibilities.push(true);
+      }
+      let filter = vm.resultsFilter();
+      for (let record of expRecords) {
+        let row = new Array(header.length);
+        row[0] = record;
+        rt.table.push(row);
+        rt.rowVisibilities.push(isVisible(row, filter));
+        discoverColumns(record, "", row);
+      }
+    },
+    csvSerialize: separator => rt.table.map(row => row.map(cell => "\"" + cellToString(cell).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n"),
+    updateVisibility() {
+      let filter = vm.resultsFilter();
+      for (let r = 1/* always show header */; r < rt.table.length; r++) {
+        rt.rowVisibilities[r] = isVisible(rt.table[r], filter);
+      }
+    }
+  };
+  return rt;
 }
