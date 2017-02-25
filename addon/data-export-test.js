@@ -4,14 +4,19 @@
 /* eslint-enable no-unused-vars */
 "use strict";
 function* dataExportTest(test) {
-  console.log("TEST dataExportVm");
+  console.log("TEST data-export");
   let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
 
   localStorage.removeItem("insextQueryHistory");
   localStorage.removeItem("insextSavedQueryHistory");
 
   let win = yield loadPage("data-export.html");
-  let {testData: {queryInput, queryAutocompleteEvent, vm}} = win;
+  let {testData: {model}} = win;
+  let vm = model;
+  let queryInput = model.queryInput.queryInput;
+  function queryAutocompleteEvent() {
+    model.queryAutocompleteHandler();
+  }
 
   function setQuery(a, b, c) {
     queryInput.value = a + b + c;

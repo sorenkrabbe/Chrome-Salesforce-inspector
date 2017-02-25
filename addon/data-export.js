@@ -5,89 +5,6 @@
 /* global Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";
-{
-
-  let args = new URLSearchParams(location.search.slice(1));
-  let sfHost = args.get("host");
-  initButton(sfHost, true);
-  sfConn.getSession(sfHost).then(() => {
-
-    let queryInput = document.querySelector("#query");
-
-    // TODO not needed anymore, since unit tests no longer uses mock queryInput
-    let queryInputVm = {
-      setValue(v) { queryInput.value = v; },
-      getValue() { return queryInput.value; },
-      getSelStart() { return queryInput.selectionStart; },
-      getSelEnd() { return queryInput.selectionEnd; },
-      insertText(text, selStart, selEnd) {
-        queryInput.focus();
-        queryInput.setRangeText(text, selStart, selEnd, "end");
-      }
-    };
-
-    let vm = new Model({sfHost, args, queryInput: queryInputVm});
-    ko.applyBindings(vm, document.documentElement);
-
-    function queryAutocompleteEvent() {
-      vm.queryAutocompleteHandler();
-    }
-    queryInput.addEventListener("input", queryAutocompleteEvent);
-    queryInput.addEventListener("select", queryAutocompleteEvent);
-    // There is no event for when caret is moved without any selection or value change, so use keyup and mouseup for that.
-    queryInput.addEventListener("keyup", queryAutocompleteEvent);
-    queryInput.addEventListener("mouseup", queryAutocompleteEvent);
-
-    // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
-    // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown. Might be https://code.google.com/p/chromium/issues/detail?id=13891#c50
-    queryInput.addEventListener("keydown", e => {
-      if (e.which == 32 /* space */ && e.ctrlKey) {
-        e.preventDefault();
-        vm.queryAutocompleteHandler({ctrlSpace: true});
-      }
-    });
-
-    initScrollTable(
-      document.querySelector("#result-table"),
-      ko.computed(() => vm.exportResult().exportedData),
-      ko.computed(() => vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth())
-    );
-
-    let resultBox = document.querySelector("#result-box");
-    function recalculateHeight() {
-      vm.resultBoxOffsetTop(resultBox.offsetTop);
-    }
-    if (!window.webkitURL) {
-      // Firefox
-      // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
-      new MutationObserver(recalculateHeight).observe(queryInput, {attributes: true});
-    } else {
-      // Chrome
-      // Chrome does not fire a resize event and does not allow us to get notified when the browser changes the style.height attribute.
-      // Instead we listen to a few events which are often fired at the same time.
-      // This is not required in Firefox, and Mozilla reviewers don't like it for performance reasons, so we only do this in Chrome via browser detection.
-      queryInput.addEventListener("mousemove", recalculateHeight);
-      addEventListener("mouseup", recalculateHeight);
-    }
-    vm.showHelp.subscribe(recalculateHeight);
-    vm.autocompleteResults.subscribe(recalculateHeight);
-    vm.expandAutocomplete.subscribe(recalculateHeight);
-    function resize() {
-      vm.winInnerHeight(innerHeight);
-      vm.winInnerWidth(innerWidth);
-      recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
-    }
-    addEventListener("resize", resize);
-    resize();
-
-    if (parent && parent.isUnitTest) { // for unit tests
-      window.testData = {queryInput, queryAutocompleteEvent, vm};
-      parent.postMessage({insextTestLoaded: true}, "*");
-    }
-
-  });
-
-}
 
 class QueryHistory {
   constructor(storageKey, max) {
@@ -143,9 +60,10 @@ class QueryHistory {
 }
 
 class Model {
-  constructor({sfHost, args, queryInput}) {
+  constructor({sfHost, args}) {
     this.sfHost = sfHost;
-    this.queryInput = queryInput;
+    this.queryInput = null;
+    this.initialQuery = "";
     this.sobjectAllDescribes = ko.observable({});
     this.describeInfo = new DescribeInfo(this.spinFor.bind(this), () => {
       this.sobjectAllDescribes.valueHasMutated();
@@ -179,13 +97,13 @@ class Model {
     }));
 
     if (args.has("query")) {
-      queryInput.setValue(args.get("query"));
+      this.initialQuery = args.get("query");
       this.queryTooling(args.has("useToolingApi"));
     } else if (this.queryHistory.list()[0]) {
-      queryInput.setValue(this.queryHistory.list()[0].query);
+      this.initialQuery = this.queryHistory.list()[0].query;
       this.queryTooling(this.queryHistory.list()[0].useToolingApi);
     } else {
-      queryInput.setValue("select Id from Account");
+      this.initialQuery = "select Id from Account";
       this.queryTooling(false);
     }
 
@@ -207,6 +125,11 @@ class Model {
       });
     });
 
+  }
+  setQueryInput(queryInput) {
+    this.queryInput = queryInput;
+    queryInput.setValue(this.initialQuery);
+    this.initialQuery = null;
   }
   toggleHelp() {
     this.showHelp(!this.showHelp());
@@ -890,4 +813,95 @@ function RecordTable(vm) {
     }
   };
   return rt;
+}
+
+function componentDidMount(vm) {
+  let queryInput = document.querySelector("#query");
+
+  // TODO not needed anymore, since unit tests no longer uses mock queryInput
+  let queryInputVm = {
+    queryInput,
+    setValue(v) { queryInput.value = v; },
+    getValue() { return queryInput.value; },
+    getSelStart() { return queryInput.selectionStart; },
+    getSelEnd() { return queryInput.selectionEnd; },
+    insertText(text, selStart, selEnd) {
+      queryInput.focus();
+      queryInput.setRangeText(text, selStart, selEnd, "end");
+    }
+  };
+
+  vm.setQueryInput(queryInputVm);
+
+  function queryAutocompleteEvent() {
+    vm.queryAutocompleteHandler();
+  }
+  queryInput.addEventListener("input", queryAutocompleteEvent);
+  queryInput.addEventListener("select", queryAutocompleteEvent);
+  // There is no event for when caret is moved without any selection or value change, so use keyup and mouseup for that.
+  queryInput.addEventListener("keyup", queryAutocompleteEvent);
+  queryInput.addEventListener("mouseup", queryAutocompleteEvent);
+
+  // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
+  // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown. Might be https://code.google.com/p/chromium/issues/detail?id=13891#c50
+  queryInput.addEventListener("keydown", e => {
+    if (e.which == 32 /* space */ && e.ctrlKey) {
+      e.preventDefault();
+      vm.queryAutocompleteHandler({ctrlSpace: true});
+    }
+  });
+
+  initScrollTable(
+    document.querySelector("#result-table"),
+    ko.computed(() => vm.exportResult().exportedData),
+    ko.computed(() => vm.resultBoxOffsetTop() + "-" + vm.winInnerHeight() + "-" + vm.winInnerWidth())
+  );
+
+  let resultBox = document.querySelector("#result-box");
+  function recalculateHeight() {
+    vm.resultBoxOffsetTop(resultBox.offsetTop);
+  }
+  if (!window.webkitURL) {
+    // Firefox
+    // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
+    new MutationObserver(recalculateHeight).observe(queryInput, {attributes: true});
+  } else {
+    // Chrome
+    // Chrome does not fire a resize event and does not allow us to get notified when the browser changes the style.height attribute.
+    // Instead we listen to a few events which are often fired at the same time.
+    // This is not required in Firefox, and Mozilla reviewers don't like it for performance reasons, so we only do this in Chrome via browser detection.
+    queryInput.addEventListener("mousemove", recalculateHeight);
+    addEventListener("mouseup", recalculateHeight);
+  }
+  vm.showHelp.subscribe(recalculateHeight);
+  vm.autocompleteResults.subscribe(recalculateHeight);
+  vm.expandAutocomplete.subscribe(recalculateHeight);
+  function resize() {
+    vm.winInnerHeight(innerHeight);
+    vm.winInnerWidth(innerWidth);
+    recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes vm.resultBoxOffsetTop
+  }
+  addEventListener("resize", resize);
+  resize();
+}
+
+{
+
+  let args = new URLSearchParams(location.search.slice(1));
+  let sfHost = args.get("host");
+  initButton(sfHost, true);
+  sfConn.getSession(sfHost).then(() => {
+
+    let model = new Model({sfHost, args});
+    ko.applyBindings(model, document.documentElement);
+
+    componentDidMount(model);
+
+    if (parent && parent.isUnitTest) { // for unit tests
+      window.testData = {model};
+      parent.postMessage({insextTestLoaded: true}, "*");
+    }
+
+  });
+
 }
