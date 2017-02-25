@@ -679,8 +679,9 @@ class App extends React.Component {
     e.preventDefault();
     let {model} = this.props;
     model.showHelp = !model.showHelp;
-    this.resizeObs.update(null);
-    model.didUpdate();
+    model.didUpdate(() => {
+      this.resizeObs.update(null);
+    });
   }
   onDoImportClick(e) {
     e.preventDefault();

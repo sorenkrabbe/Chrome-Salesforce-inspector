@@ -143,6 +143,9 @@ h1 {
   text-align: center;
   margin: 1px 0 0 3px;
 }
+.char-btn[hidden] {
+  display: none;
+}
 .result-status {
   float: right;
 }

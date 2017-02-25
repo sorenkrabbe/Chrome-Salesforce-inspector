@@ -32,12 +32,13 @@ function* dataExportTest(test) {
 
   function waitForSpinner() {
     return new Promise(resolve => {
-      let subs = vm.spinnerCount.subscribe(count => {
-        if (count == 0) {
-          subs.dispose();
+      assertEquals(undefined, model.testCallback);
+      model.testCallback = () => {
+        if (model.spinnerCount == 0) {
+          model.testCallback = undefined;
           resolve();
         }
-      });
+      };
     });
   }
 
