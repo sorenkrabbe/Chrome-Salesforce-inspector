@@ -269,34 +269,34 @@ function* dataExportTest(test) {
 
   // Export data
   queryInput.value = "select Name, Checkbox__c, Number__c from Inspector_Test__c order by Name";
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("Ready", vm.exportResult().exportStatus);
-  assertEquals(null, vm.exportResult().exportedData);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(false, vm.isWorking);
+  assertEquals("Ready", vm.exportStatus);
+  assertEquals(null, vm.exportedData);
+  assertEquals(null, vm.exportError);
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
+  assertEquals(false, vm.isWorking);
+  assertEquals("Exported 4 record(s).", vm.exportStatus);
   assertEquals([
     ["_", "Name", "Checkbox__c", "Number__c"],
     [{type: "Inspector_Test__c"}, "test1", false, 100.01],
     [{type: "Inspector_Test__c"}, "test2", true, 200.02],
     [{type: "Inspector_Test__c"}, "test3", false, 300.03],
     [{type: "Inspector_Test__c"}, "test4", true, 400.04]
-  ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
-  assertEquals(null, vm.exportResult().exportError);
-  assertEquals([true, true, true, true, true], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
+  ], vm.exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
+  assertEquals(null, vm.exportError);
+  assertEquals([true, true, true, true, true], vm.exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportedData.colVisibilities);
 
   // Copy Excel
   assertEquals(true, vm.canCopy());
@@ -313,133 +313,133 @@ function* dataExportTest(test) {
 
   // Filter results
   vm.setResultsFilter("TRU");
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
+  assertEquals(false, vm.isWorking);
+  assertEquals("Exported 4 record(s).", vm.exportStatus);
   assertEquals([
     ["_", "Name", "Checkbox__c", "Number__c"],
     [{type: "Inspector_Test__c"}, "test1", false, 100.01],
     [{type: "Inspector_Test__c"}, "test2", true, 200.02],
     [{type: "Inspector_Test__c"}, "test3", false, 300.03],
     [{type: "Inspector_Test__c"}, "test4", true, 400.04]
-  ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
-  assertEquals(null, vm.exportResult().exportError);
-  assertEquals([true, false, true, false, true], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
+  ], vm.exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
+  assertEquals(null, vm.exportError);
+  assertEquals([true, false, true, false, true], vm.exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportedData.colVisibilities);
 
   // Clear filter
   vm.setResultsFilter("");
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
+  assertEquals(false, vm.isWorking);
+  assertEquals("Exported 4 record(s).", vm.exportStatus);
   assertEquals([
     ["_", "Name", "Checkbox__c", "Number__c"],
     [{type: "Inspector_Test__c"}, "test1", false, 100.01],
     [{type: "Inspector_Test__c"}, "test2", true, 200.02],
     [{type: "Inspector_Test__c"}, "test3", false, 300.03],
     [{type: "Inspector_Test__c"}, "test4", true, 400.04]
-  ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
-  assertEquals(null, vm.exportResult().exportError);
-  assertEquals([true, true, true, true, true], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
+  ], vm.exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
+  assertEquals(null, vm.exportError);
+  assertEquals([true, true, true, true, true], vm.exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportedData.colVisibilities);
 
   // Export relationships
   queryInput.value = "select Name, Lookup__r.Name from Inspector_Test__c order by Name";
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
+  assertEquals(false, vm.isWorking);
+  assertEquals("Exported 4 record(s).", vm.exportStatus);
   assertEquals([
     ["_", "Name", "Lookup__r", "Lookup__r.Name"],
     [{type: "Inspector_Test__c"}, "test1", null, null],
     [{type: "Inspector_Test__c"}, "test2", {type: "Inspector_Test__c"}, "test1"],
     [{type: "Inspector_Test__c"}, "test3", null, null],
     [{type: "Inspector_Test__c"}, "test4", {type: "Inspector_Test__c"}, "test3"]
-  ], vm.exportResult().exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
-  assertEquals(null, vm.exportResult().exportError);
-  assertEquals([true, true, true, true, true], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
+  ], vm.exportedData.table.map(row => row.map(cell => cell && cell.attributes ? {type: cell.attributes.type} : cell)));
+  assertEquals(null, vm.exportError);
+  assertEquals([true, true, true, true, true], vm.exportedData.rowVisibilities);
+  assertEquals([true, true, true, true], vm.exportedData.colVisibilities);
 
   // Export error
   queryInput.value = "select UnknownField from Inspector_Test__c";
   vm.doExport();
   yield waitForSpinner();
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("Error", vm.exportResult().exportStatus);
-  assertEquals(null, vm.exportResult().exportedData);
-  assert(vm.exportResult().exportError.indexOf("UnknownField") > -1);
+  assertEquals(false, vm.isWorking);
+  assertEquals("Error", vm.exportStatus);
+  assertEquals(null, vm.exportedData);
+  assert(vm.exportError.indexOf("UnknownField") > -1);
 
   // Export no data
   queryInput.value = "select Id from Inspector_Test__c where name = 'no such name'";
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("No data exported.", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(false, vm.isWorking);
+  assertEquals("No data exported.", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   // Export count
   queryInput.value = "select count() from Inspector_Test__c";
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("No data exported. 4 record(s).", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(false, vm.isWorking);
+  assertEquals("No data exported. 4 record(s).", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   // Stop export
   queryInput.value = "select count() from Inspector_Test__c";
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   vm.stopExport();
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("No data exported.", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(false, vm.isWorking);
+  assertEquals("No data exported.", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   // Set up test records
   yield* anonApex(`
@@ -456,21 +456,21 @@ function* dataExportTest(test) {
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assertEquals("Exported 3000 record(s).", vm.exportResult().exportStatus);
-  assertEquals(3001, vm.exportResult().exportedData.table.length);
-  assertEquals(3001, vm.exportResult().exportedData.rowVisibilities.length);
-  assertEquals(2, vm.exportResult().exportedData.colVisibilities.length);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(false, vm.isWorking);
+  assertEquals("Exported 3000 record(s).", vm.exportStatus);
+  assertEquals(3001, vm.exportedData.table.length);
+  assertEquals(3001, vm.exportedData.rowVisibilities.length);
+  assertEquals(2, vm.exportedData.colVisibilities.length);
+  assertEquals(null, vm.exportError);
 
   // Set up test records
   yield* anonApex("delete [select Id from Inspector_Test__c];");
@@ -481,21 +481,21 @@ function* dataExportTest(test) {
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assert(vm.exportResult().exportStatus.indexOf("Exported") > -1);
-  assert(vm.exportResult().exportedData.table.length > 3000);
-  assert(vm.exportResult().exportedData.rowVisibilities.length > 3000);
-  assertEquals(2, vm.exportResult().exportedData.colVisibilities.length);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(false, vm.isWorking);
+  assert(vm.exportStatus.indexOf("Exported") > -1);
+  assert(vm.exportedData.table.length > 3000);
+  assert(vm.exportedData.rowVisibilities.length > 3000);
+  assertEquals(2, vm.exportedData.colVisibilities.length);
+  assertEquals(null, vm.exportError);
 
   vm.queryAll(false);
 
@@ -506,21 +506,21 @@ function* dataExportTest(test) {
 
   vm.doExport();
 
-  assertEquals(true, vm.exportResult().isWorking);
-  assertEquals("Exporting...", vm.exportResult().exportStatus);
-  assertEquals([], vm.exportResult().exportedData.table);
-  assertEquals([], vm.exportResult().exportedData.rowVisibilities);
-  assertEquals([true], vm.exportResult().exportedData.colVisibilities);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(true, vm.isWorking);
+  assertEquals("Exporting...", vm.exportStatus);
+  assertEquals([], vm.exportedData.table);
+  assertEquals([], vm.exportedData.rowVisibilities);
+  assertEquals([true], vm.exportedData.colVisibilities);
+  assertEquals(null, vm.exportError);
 
   yield waitForSpinner();
 
-  assertEquals(false, vm.exportResult().isWorking);
-  assert(vm.exportResult().exportStatus.indexOf("Exported") > -1);
-  assert(vm.exportResult().exportedData.table.length > 1);
-  assert(vm.exportResult().exportedData.rowVisibilities.length > 1);
-  assertEquals(2, vm.exportResult().exportedData.colVisibilities.length);
-  assertEquals(null, vm.exportResult().exportError);
+  assertEquals(false, vm.isWorking);
+  assert(vm.exportStatus.indexOf("Exported") > -1);
+  assert(vm.exportedData.table.length > 1);
+  assert(vm.exportedData.rowVisibilities.length > 1);
+  assertEquals(2, vm.exportedData.colVisibilities.length);
+  assertEquals(null, vm.exportError);
 
   vm.queryTooling(false);
   vm.queryAutocompleteHandler();

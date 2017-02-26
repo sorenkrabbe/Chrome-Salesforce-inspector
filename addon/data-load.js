@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global sfConn apiVersion async */
-/* exported Enumerable DescribeInfo copyToClipboard initScrollTable legacyKnockoutObservable */
+/* exported Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";
 
@@ -265,9 +265,7 @@ We do the exact same logic for columns, as we do for rows.
 We assume that the size of a cell is not influenced by the size of other cells. Therefore we style cells with `white-space: pre`.
 
 @param element A scrollable DOM element to render the table within.
-@param dataObs An observable that changes whenever data in the table changes.
-
-ScrollTable initScrollTable(DOMElement element, Observable<Table> dataObs);
+ScrollTable initScrollTable(DOMElement element);
 interface Table {
   Cell[][] table; // a two-dimensional array of table rows and cells
   boolean[] rowVisibilities; // For each row, true if it is visible, or false if it is hidden
@@ -283,9 +281,11 @@ interface Cell {
 }
 interface ScrollTable {
   void viewportChange(); // Must be called whenever the size of viewport changes.
+  void dataChange(Table newData); // Must be called whenever the data changes. (even if it is the same object)
 }
 */
-function initScrollTable(scroller, dataObs) {
+function initScrollTable(scroller) {
+  let data = null;
   let scrolled = document.createElement("div");
   scrolled.className = "scrolltable-scrolled";
   scroller.appendChild(scrolled);
@@ -314,8 +314,8 @@ function initScrollTable(scroller, dataObs) {
   let lastColIdx = 0; // The index of the column to the right of the last rendered column
   let lastColLeft = 0; // The distance from the left of the table to the right of the last rendered column (the left of the column after the last rendered column)
 
-  function dataChange() {
-    let data = dataObs();
+  function dataChange(newData) {
+    data = newData;
     if (data == null || data.rowVisibilities.length == 0 || data.colVisibilities.length == 0) {
       // First render, or table was cleared
       rowHeights = [];
@@ -335,7 +335,7 @@ function initScrollTable(scroller, dataObs) {
       firstColLeft = 0;
       lastColIdx = 0;
       lastColLeft = 0;
-      render(data, {force: true});
+      renderData({force: true});
     } else {
       // Data or visibility was changed
       let newRowCount = data.rowVisibilities.length;
@@ -368,7 +368,7 @@ function initScrollTable(scroller, dataObs) {
         }
         colVisible[c] = newVisible;
       }
-      render(data, {force: true});
+      renderData({force: true});
     }
   }
 
@@ -380,14 +380,14 @@ function initScrollTable(scroller, dataObs) {
     if (scrollTop == scroller.scrollTop
       && scrollLeft == scroller.scrollLeft
       && offsetHeight == scroller.offsetHeight
-      && offsetWidth == scroller.offsetWidth)
-    {
+      && offsetWidth == scroller.offsetWidth
+    ) {
       return;
     }
-    render(dataObs(), {force: false});
+    renderData({force: false});
   }
 
-  function render(data, {force}) {
+  function renderData({force}) {
     scrollTop = scroller.scrollTop;
     scrollLeft = scroller.scrollLeft;
     offsetHeight = scroller.offsetHeight;
@@ -499,27 +499,10 @@ function initScrollTable(scroller, dataObs) {
     }
   }
 
-  dataChange();
-  dataObs.subscribe(dataChange);
+  dataChange(null);
   scroller.addEventListener("scroll", viewportChange);
   return {
-    viewportChange
-  }
-}
-
-function legacyKnockoutObservable(value) {
-  let subscriber;
-  function obs() {
-    return value;
-  }
-  obs.subscribe = newSubscriber => {
-    subscriber = newSubscriber;
+    viewportChange,
+    dataChange
   };
-  obs.update = newValue => {
-    value = newValue;
-    if (subscriber) {
-      subscriber();
-    }
-  };
-  return obs;
 }

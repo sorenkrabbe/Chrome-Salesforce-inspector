@@ -3,7 +3,7 @@
 /* global sfConn apiVersion async */
 /* global initButton */
 /* global csvParse */
-/* global Enumerable DescribeInfo copyToClipboard initScrollTable legacyKnockoutObservable */
+/* global Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";
 
@@ -37,7 +37,7 @@ class Model {
       Failed: true
     };
 
-    this.importTableResult = legacyKnockoutObservable(null);
+    this.importTableResult = null;
     this.updateResult(null);
 
     this.describeInfo = new DescribeInfo(this.spinFor.bind(this), () => {});
@@ -259,22 +259,27 @@ class Model {
   }
 
   // Must be called whenever any of its inputs changes.
-  // Knockout.js legacy, should be refactored into somthing more React-like.
   updateImportTableResult() {
     if (this.importData.taggedRows == null) {
-      this.importTableResult.update(null);
+      this.importTableResult = null;
+      if (this.resultTableCallback) {
+        this.resultTableCallback(this.importTableResult);
+      }
       return;
     }
     let header = this.importData.importTable.header.map(c => c.columnValue);
     let data = this.importData.taggedRows.map(row => row.cells);
-    this.importTableResult.update({
+    this.importTableResult = {
       table: [header, ...data],
       isTooling: this.useToolingApi,
       describeInfo: this.describeInfo,
       sfHost: this.sfHost,
       rowVisibilities: [true, ...this.importData.taggedRows.map(row => this.showStatus[row.status])],
       colVisibilities: header.map(() => true)
-    });
+    };
+    if (this.resultTableCallback) {
+      this.resultTableCallback(this.importTableResult);
+    }
   }
 
   confirmPopupYes() {
@@ -729,10 +734,9 @@ class App extends React.Component {
 
     addEventListener("resize", () => { this.scrollTable.viewportChange(); });
 
-    this.scrollTable = initScrollTable(
-      this.refs.scroller,
-      model.importTableResult
-    );
+    this.scrollTable = initScrollTable(this.refs.scroller);
+    model.resultTableCallback = this.scrollTable.dataChange;
+    model.updateImportTableResult();
   }
   componentDidUpdate() {
     let {model} = this.props;

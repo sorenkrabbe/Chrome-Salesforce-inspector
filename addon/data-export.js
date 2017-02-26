@@ -3,7 +3,7 @@
 /* global ko */
 /* global sfConn apiVersion async */
 /* global initButton */
-/* global Enumerable DescribeInfo copyToClipboard initScrollTable legacyKnockoutObservable */
+/* global Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";
 
@@ -79,7 +79,10 @@ class Model {
     this.queryTooling = ko.observable(false);
     this.autocompleteResults = ko.observable({sobjectName: "", title: "\u00A0", results: []});
     this.autocompleteClick = null;
-    this.exportResult = ko.observable({isWorking: false, exportStatus: "Ready", exportError: null, exportedData: null});
+    this.isWorking = false;
+    this.exportStatus = "Ready";
+    this.exportError = null;
+    this.exportedData = null;
     this.queryHistory = new QueryHistory("insextQueryHistory", 20);
     this.selectedHistoryEntry = ko.observable(null);
     this.savedHistory = new QueryHistory("insextSavedQueryHistory", 50);
@@ -106,21 +109,17 @@ class Model {
     }
 
   }
+  updatedExportedData() {
+    this.resultTableCallback(this.exportedData);
+  }
   setResultsFilter(value) {
     this.resultsFilter(value);
-    let exportResult = this.exportResult();
-    if (exportResult.exportedData == null) {
+    if (this.exportedData == null) {
       return;
     }
     // Recalculate visibility
-    exportResult.exportedData.updateVisibility();
-    // Notify about the change
-    this.exportResult({
-      isWorking: exportResult.isWorking,
-      exportStatus: exportResult.exportStatus,
-      exportError: exportResult.exportError,
-      exportedData: exportResult.exportedData
-    });
+    this.exportedData.updateVisibility();
+    this.updatedExportedData();
   }
   setQueryInput(queryInput) {
     this.queryInput = queryInput;
@@ -174,16 +173,16 @@ class Model {
     this.describeInfo.reloadAll();
   }
   canCopy() {
-    return this.exportResult().exportedData != null;
+    return this.exportedData != null;
   }
   copyAsExcel() {
-    copyToClipboard(this.exportResult().exportedData.csvSerialize("\t"));
+    copyToClipboard(this.exportedData.csvSerialize("\t"));
   }
   copyAsCsv() {
-    copyToClipboard(this.exportResult().exportedData.csvSerialize(","));
+    copyToClipboard(this.exportedData.csvSerialize(","));
   }
   copyAsJson() {
-    copyToClipboard(JSON.stringify(this.exportResult().exportedData.records, null, "  "));
+    copyToClipboard(JSON.stringify(this.exportedData.records, null, "  "));
   }
   /**
    * Notify React that we changed something, so it will rerender the view.
@@ -691,31 +690,28 @@ class Model {
         }
         if (!data.done) {
           let pr = batchHandler(sfConn.rest(data.nextRecordsUrl, {progressHandler: vm.exportProgress}));
-          vm.exportResult({
-            isWorking: true,
-            exportStatus: "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).",
-            exportError: null,
-            exportedData
-          });
+          vm.isWorking = true;
+          vm.exportStatus = "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).";
+          vm.exportError = null;
+          vm.exportedData = exportedData;
+          vm.updatedExportedData();
           vm.didUpdate();
           return pr;
         }
         vm.queryHistory.add({query, useToolingApi: exportedData.isTooling});
         if (exportedData.records.length == 0) {
-          vm.exportResult({
-            isWorking: false,
-            exportStatus: data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.",
-            exportError: null,
-            exportedData
-          });
+          vm.isWorking = false;
+          vm.exportStatus = data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.";
+          vm.exportError = null;
+          vm.exportedData = exportedData;
+          vm.updatedExportedData();
           return null;
         }
-        vm.exportResult({
-          isWorking: false,
-          exportStatus: "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s).",
-          exportError: null,
-          exportedData
-        });
+        vm.isWorking = false;
+        vm.exportStatus = "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s).";
+        vm.exportError = null;
+        vm.exportedData = exportedData;
+        vm.updatedExportedData();
         return null;
       }, err => {
         if (!err || !err.sfConnError) {
@@ -723,40 +719,36 @@ class Model {
         }
         if (exportedData.totalSize != -1) {
           // We already got some data. Show it, and indicate that not all data was exported
-          vm.exportResult({
-            isWorking: false,
-            exportStatus: "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " record(s). Stopped by error.",
-            exportError: null,
-            exportedData
-          });
+          vm.isWorking = false;
+          vm.exportStatus = "Exported " + exportedData.records.length + " of " + exportedData.totalSize + " record(s). Stopped by error.";
+          vm.exportError = null;
+          vm.exportedData = exportedData;
+          vm.updatedExportedData();
           return null;
         }
-        vm.exportResult({
-          isWorking: false,
-          exportStatus: "Error",
-          exportError: err.sfConnError,
-          exportedData: null
-        });
+        vm.isWorking = false;
+        vm.exportStatus = "Error";
+        vm.exportError = err.sfConnError;
+        vm.exportedData = null;
+        vm.updatedExportedData();
         return null;
       });
     }
     vm.spinFor(batchHandler(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), {progressHandler: vm.exportProgress}))
       .catch(error => {
         console.error(error);
-        vm.exportResult({
-          isWorking: false,
-          exportStatus: "Error",
-          exportError: "UNEXPECTED EXCEPTION:" + error,
-          exportedData: null
-        });
+        vm.isWorking = false;
+        vm.exportStatus = "Error";
+        vm.exportError = "UNEXPECTED EXCEPTION:" + error;
+        vm.exportedData = null;
+        vm.updatedExportedData();
       }));
     vm.setResultsFilter("");
-    vm.exportResult({
-      isWorking: true,
-      exportStatus: "Exporting...",
-      exportError: null,
-      exportedData
-    });
+    vm.isWorking = true;
+    vm.exportStatus = "Exporting...";
+    vm.exportError = null;
+    vm.exportedData = exportedData;
+    vm.updatedExportedData();
   }
   stopExport() {
     this.exportProgress.abort({records: [], done: true, totalSize: -1});
@@ -988,10 +980,8 @@ class App extends React.Component {
       }
     });
 
-    this.scrollTable = initScrollTable(
-      this.refs.scroller,
-      ko.computed(() => model.exportResult().exportedData)
-    );
+    this.scrollTable = initScrollTable(this.refs.scroller);
+    model.resultTableCallback = this.scrollTable.dataChange;
 
     let recalculateHeight = this.recalculateSize.bind(this);
     if (!window.webkitURL) {
@@ -1082,7 +1072,7 @@ class App extends React.Component {
         )
       ),
       h("div", {className: "action-arrow"},
-        h("div", {className: "arrow-body"}, h("button", {disabled: model.exportResult().isWorking, onClick: this.onExport}, "Export")),
+        h("div", {className: "arrow-body"}, h("button", {disabled: model.isWorking, onClick: this.onExport}, "Export")),
         h("div", {className: "arrow-head"})
       ),
       h("div", {className: "area", id: "result-area"},
@@ -1096,12 +1086,12 @@ class App extends React.Component {
           " ",
           h("input", {placeholder: "Filter results", value: model.resultsFilter(), onInput: this.onResultsFilterInput}),
           h("span", {className: "result-status"},
-            h("span", {}, model.exportResult().exportStatus),
-            h("button", {className: "cancel-btn", disabled: !model.exportResult().isWorking, onClick: this.onStopExport}, "Stop")
+            h("span", {}, model.exportStatus),
+            h("button", {className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport}, "Stop")
           )
         ),
-        h("textarea", {id: "result-text", readOnly: true, value: model.exportResult().exportError || "", hidden: model.exportResult().exportError == null}),
-        h("div", {id: "result-table", ref: "scroller", hidden: model.exportResult().exportError != null}
+        h("textarea", {id: "result-text", readOnly: true, value: model.exportError || "", hidden: model.exportError == null}),
+        h("div", {id: "result-table", ref: "scroller", hidden: model.exportError != null}
           /* the scroll table goes here */
         )
       )
