@@ -680,7 +680,7 @@ class App extends React.Component {
     let {model} = this.props;
     model.showHelp = !model.showHelp;
     model.didUpdate(() => {
-      this.resizeObs.update(null);
+      this.scrollTable.viewportChange();
     });
   }
   onDoImportClick(e) {
@@ -727,14 +727,11 @@ class App extends React.Component {
   componentDidMount() {
     let {model} = this.props;
 
-    // Knockout.js legacy, should be refactored into somthing more React-like.
-    this.resizeObs = legacyKnockoutObservable(null);
-    addEventListener("resize", () => { this.resizeObs.update(null); });
+    addEventListener("resize", () => { this.scrollTable.viewportChange(); });
 
-    initScrollTable(
+    this.scrollTable = initScrollTable(
       this.refs.scroller,
-      model.importTableResult,
-      this.resizeObs
+      model.importTableResult
     );
   }
   componentDidUpdate() {

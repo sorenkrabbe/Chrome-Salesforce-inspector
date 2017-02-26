@@ -266,9 +266,8 @@ We assume that the size of a cell is not influenced by the size of other cells. 
 
 @param element A scrollable DOM element to render the table within.
 @param dataObs An observable that changes whenever data in the table changes.
-@param resizeObs An observable that changes whenever the size of viewport changes.
 
-initScrollTable(DOMElement element, Observable<Table> dataObs, Observable<void> resizeObs);
+ScrollTable initScrollTable(DOMElement element, Observable<Table> dataObs);
 interface Table {
   Cell[][] table; // a two-dimensional array of table rows and cells
   boolean[] rowVisibilities; // For each row, true if it is visible, or false if it is hidden
@@ -282,8 +281,11 @@ void renderCell(Table table, Cell cell, DOMElement element); // Render cell with
 interface Cell {
   // Anything, passed to the renderCell function
 }
+interface ScrollTable {
+  void viewportChange(); // Must be called whenever the size of viewport changes.
+}
 */
-function initScrollTable(scroller, dataObs, resizeObs) {
+function initScrollTable(scroller, dataObs) {
   let scrolled = document.createElement("div");
   scrolled.className = "scrolltable-scrolled";
   scroller.appendChild(scrolled);
@@ -370,22 +372,33 @@ function initScrollTable(scroller, dataObs, resizeObs) {
     }
   }
 
+  let scrollTop = 0;
+  let scrollLeft = 0;
+  let offsetHeight = 0;
+  let offsetWidth = 0;
   function viewportChange() {
-    render(dataObs(), {});
+    if (scrollTop == scroller.scrollTop
+      && scrollLeft == scroller.scrollLeft
+      && offsetHeight == scroller.offsetHeight
+      && offsetWidth == scroller.offsetWidth)
+    {
+      return;
+    }
+    render(dataObs(), {force: false});
   }
 
   function render(data, {force}) {
+    scrollTop = scroller.scrollTop;
+    scrollLeft = scroller.scrollLeft;
+    offsetHeight = scroller.offsetHeight;
+    offsetWidth = scroller.offsetWidth;
+
     if (rowCount == 0 || colCount == 0) {
       scrolled.textContent = ""; // Delete previously rendered content
       scrolled.style.height = "0px";
       scrolled.style.width = "0px";
       return;
     }
-
-    let scrollTop = scroller.scrollTop;
-    let scrollLeft = scroller.scrollLeft;
-    let offsetHeight = scroller.offsetHeight;
-    let offsetWidth = scroller.offsetWidth;
 
     if (!force && firstRowTop <= scrollTop && (lastRowTop >= scrollTop + offsetHeight || lastRowIdx == rowCount) && firstColLeft <= scrollLeft && (lastColLeft >= scrollLeft + offsetWidth || lastColIdx == colCount)) {
       return;
@@ -488,8 +501,10 @@ function initScrollTable(scroller, dataObs, resizeObs) {
 
   dataChange();
   dataObs.subscribe(dataChange);
-  resizeObs.subscribe(viewportChange);
   scroller.addEventListener("scroll", viewportChange);
+  return {
+    viewportChange
+  }
 }
 
 function legacyKnockoutObservable(value) {

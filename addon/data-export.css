@@ -1,6 +1,13 @@
 * {
   box-sizing: border-box;
 }
+html, body, #root, [data-reactroot] {
+  height: 100%;
+}
+[data-reactroot] {
+  display: flex;
+  flex-direction: column;
+}
 body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 11px;
@@ -45,22 +52,27 @@ textarea {
 textarea[hidden] {
   display: none;
 }
-#result-box {
-  margin-top: 3px;
-  clear: both;
-}
 #query {
   height: 5em;
   margin-top: 3px;
 }
+#result-area {
+  flex: 1 1 0;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+}
+.result-bar {
+  margin-bottom: 3px;
+}
 #result-text {
-  height: 100%;
+  flex: 1 1 0;
   resize: none;
   white-space: pre;
 }
 #result-table {
   overflow: auto;
-  height: 100%;
+  flex: 1 1 0;
 }
 .area {
   background-color: #F8F8F8;
@@ -116,8 +128,7 @@ h1 {
   white-space: normal;
 }
 .autocomplete-results {
-  flex-basis: 0;
-  flex-grow: 1;
+  flex: 1 1 0;
   overflow: hidden;
 }
 #spinner {

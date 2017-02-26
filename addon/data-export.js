@@ -75,8 +75,6 @@ class Model {
     this.showHelp = ko.observable(false);
     this.userInfo = ko.observable("...");
     this.winInnerHeight = ko.observable(0);
-    this.winInnerWidth = ko.observable({});
-    this.resultBoxOffsetTop = ko.observable(0);
     this.queryAll = ko.observable(false);
     this.queryTooling = ko.observable(false);
     this.autocompleteResults = ko.observable({sobjectName: "", title: "\u00A0", results: []});
@@ -107,25 +105,22 @@ class Model {
       this.queryTooling(false);
     }
 
-    this.queryTooling.subscribe(() => { this.queryAutocompleteHandler(); this.didUpdate(); });
-
-    this.resultsFilter.subscribe(() => {
-      let exportResult = this.exportResult();
-      if (exportResult.exportedData == null) {
-        return;
-      }
-      // Recalculate visibility
-      exportResult.exportedData.updateVisibility();
-      // Notify about the change
-      this.exportResult({
-        isWorking: exportResult.isWorking,
-        exportStatus: exportResult.exportStatus,
-        exportError: exportResult.exportError,
-        exportedData: exportResult.exportedData
-      });
-      this.didUpdate();
+  }
+  setResultsFilter(value) {
+    this.resultsFilter(value);
+    let exportResult = this.exportResult();
+    if (exportResult.exportedData == null) {
+      return;
+    }
+    // Recalculate visibility
+    exportResult.exportedData.updateVisibility();
+    // Notify about the change
+    this.exportResult({
+      isWorking: exportResult.isWorking,
+      exportStatus: exportResult.exportStatus,
+      exportError: exportResult.exportError,
+      exportedData: exportResult.exportedData
     });
-
   }
   setQueryInput(queryInput) {
     this.queryInput = queryInput;
@@ -151,6 +146,7 @@ class Model {
     if (this.selectedHistoryEntry() != null) {
       this.queryInput.setValue(this.selectedHistoryEntry().query);
       this.queryTooling(this.selectedHistoryEntry().useToolingApi);
+      this.queryAutocompleteHandler();
       this.selectedHistoryEntry(null);
     }
   }
@@ -161,6 +157,7 @@ class Model {
     if (this.selectedSavedEntry() != null) {
       this.queryInput.setValue(this.selectedSavedEntry());
       this.queryTooling(this.selectedSavedEntry().useToolingApi);
+      this.queryAutocompleteHandler();
       this.selectedSavedEntry(null);
     }
   }
@@ -753,7 +750,7 @@ class Model {
           exportedData: null
         });
       }));
-    vm.resultsFilter("");
+    vm.setResultsFilter("");
     vm.exportResult({
       isWorking: true,
       exportStatus: "Exporting...",
@@ -871,6 +868,7 @@ class App extends React.Component {
   onQueryToolingChange(e) {
     let {model} = this.props;
     model.queryTooling(e.target.checked);
+    model.queryAutocompleteHandler();
     model.didUpdate();
   }
   onSelectHistoryEntry(e) {
@@ -943,7 +941,7 @@ class App extends React.Component {
   }
   onResultsFilterInput(e) {
     let {model} = this.props;
-    model.resultsFilter(e.target.value);
+    model.setResultsFilter(e.target.value);
     model.didUpdate();
   }
   onStopExport() {
@@ -990,22 +988,12 @@ class App extends React.Component {
       }
     });
 
-    // Knockout.js legacy, should be refactored into somthing more React-like.
-    this.resizeObs = legacyKnockoutObservable(null);
-
-    initScrollTable(
+    this.scrollTable = initScrollTable(
       this.refs.scroller,
-      ko.computed(() => model.exportResult().exportedData),
-      this.resizeObs
+      ko.computed(() => model.exportResult().exportedData)
     );
 
-    let resultBox = this.refs.resultBox;
-    let recalculateHeight = () => {
-      model.resultBoxOffsetTop(resultBox.offsetTop);
-      model.didUpdate(() => {
-        this.resizeObs.update(null);
-      });
-    };
+    let recalculateHeight = this.recalculateSize.bind(this);
     if (!window.webkitURL) {
       // Firefox
       // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
@@ -1018,16 +1006,19 @@ class App extends React.Component {
       queryInput.addEventListener("mousemove", recalculateHeight);
       addEventListener("mouseup", recalculateHeight);
     }
-    model.showHelp.subscribe(recalculateHeight);
-    model.autocompleteResults.subscribe(recalculateHeight);
-    model.expandAutocomplete.subscribe(recalculateHeight);
     function resize() {
       model.winInnerHeight(innerHeight);
-      model.winInnerWidth(innerWidth);
-      recalculateHeight(); // a resize event is fired when the window is opened after resultBox.offsetTop has been initialized, so initializes model.resultBoxOffsetTop
+      model.didUpdate(); // Will call recalculateSize
     }
     addEventListener("resize", resize);
     resize();
+  }
+  componentDidUpdate() {
+    this.recalculateSize();
+  }
+  recalculateSize() {
+    // Investigate if we can use the IntersectionObserver API here instead, once it is available.
+    this.scrollTable.viewportChange();
   }
   render() {
     let {model} = this.props;
@@ -1095,23 +1086,23 @@ class App extends React.Component {
         h("div", {className: "arrow-head"})
       ),
       h("div", {className: "area", id: "result-area"},
-        h("h1", {}, "Export result"),
-        h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcel, title: "Copy exported data to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
-        " ",
-        h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsv, title: "Copy exported data to clipboard for saving as a CSV file"}, "Copy (CSV)"),
-        " ",
-        h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard"}, "Copy (JSON)"),
-        " ",
-        h("input", {placeholder: "Filter results", value: model.resultsFilter(), onInput: this.onResultsFilterInput}),
-        h("span", {className: "result-status"},
-          h("span", {}, model.exportResult().exportStatus),
-          h("button", {className: "cancel-btn", disabled: !model.exportResult().isWorking, onClick: this.onStopExport}, "Stop")
-        ),
-        h("div", {id: "result-box", ref: "resultBox", style: {height: Math.max(model.winInnerHeight() - model.resultBoxOffsetTop() - 25, 0) + "px"}},
-          h("textarea", {id: "result-text", readOnly: true, value: model.exportResult().exportError || "", hidden: model.exportResult().exportError == null}),
-          h("div", {id: "result-table", ref: "scroller"}
-            /* the scroll table goes here */
+        h("div", {className: "result-bar"},
+          h("h1", {}, "Export result"),
+          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcel, title: "Copy exported data to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
+          " ",
+          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsv, title: "Copy exported data to clipboard for saving as a CSV file"}, "Copy (CSV)"),
+          " ",
+          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard"}, "Copy (JSON)"),
+          " ",
+          h("input", {placeholder: "Filter results", value: model.resultsFilter(), onInput: this.onResultsFilterInput}),
+          h("span", {className: "result-status"},
+            h("span", {}, model.exportResult().exportStatus),
+            h("button", {className: "cancel-btn", disabled: !model.exportResult().isWorking, onClick: this.onStopExport}, "Stop")
           )
+        ),
+        h("textarea", {id: "result-text", readOnly: true, value: model.exportResult().exportError || "", hidden: model.exportResult().exportError == null}),
+        h("div", {id: "result-table", ref: "scroller", hidden: model.exportResult().exportError != null}
+          /* the scroll table goes here */
         )
       )
     );

@@ -245,6 +245,7 @@ function* dataExportTest(test) {
   // Autocomplete tooling API
   setQuery("select Id from ApexCla", "", "");
   vm.queryTooling(true);
+  vm.queryAutocompleteHandler();
   yield waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults().title);
   assertEquals(["ApexClass", "ApexClassMember"], getValues(vm.autocompleteResults().results));
@@ -252,6 +253,7 @@ function* dataExportTest(test) {
   assertEquals("select Id from ApexClass ", queryInput.value);
   yield waitForSpinner();
   vm.queryTooling(false);
+  vm.queryAutocompleteHandler();
 
   // Show describe
   assertEquals("ApexClass", vm.autocompleteResults().sobjectName);
@@ -310,7 +312,7 @@ function* dataExportTest(test) {
   assert(clipboardValue.indexOf("Inspector_Test__c") > -1);
 
   // Filter results
-  vm.resultsFilter("TRU");
+  vm.setResultsFilter("TRU");
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
   assertEquals([
@@ -325,7 +327,7 @@ function* dataExportTest(test) {
   assertEquals([true, true, true, true], vm.exportResult().exportedData.colVisibilities);
 
   // Clear filter
-  vm.resultsFilter("");
+  vm.setResultsFilter("");
   assertEquals(false, vm.exportResult().isWorking);
   assertEquals("Exported 4 record(s).", vm.exportResult().exportStatus);
   assertEquals([
@@ -499,6 +501,7 @@ function* dataExportTest(test) {
 
   // Query tooling
   vm.queryTooling(true);
+  vm.queryAutocompleteHandler();
   queryInput.value = "select Name from ApexClass";
 
   vm.doExport();
@@ -520,6 +523,7 @@ function* dataExportTest(test) {
   assertEquals(null, vm.exportResult().exportError);
 
   vm.queryTooling(false);
+  vm.queryAutocompleteHandler();
 
   // Query history
   assertEquals([
