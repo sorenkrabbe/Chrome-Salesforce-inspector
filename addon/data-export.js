@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global ko */
 /* global sfConn apiVersion async */
 /* global initButton */
 /* global Enumerable DescribeInfo copyToClipboard initScrollTable */
@@ -11,7 +10,7 @@ class QueryHistory {
   constructor(storageKey, max) {
     this.storageKey = storageKey;
     this.max = max;
-    this.list = ko.observable(this._get());
+    this.list = this._get();
   }
 
   _get() {
@@ -40,7 +39,7 @@ class QueryHistory {
       history.pop();
     }
     localStorage[this.storageKey] = JSON.stringify(history);
-    this.list(history);
+    this.list = history;
   }
 
   remove(entry) {
@@ -50,12 +49,12 @@ class QueryHistory {
       history.splice(historyIndex, 1);
     }
     localStorage[this.storageKey] = JSON.stringify(history);
-    this.list(history);
+    this.list = history;
   }
 
   clear() {
     localStorage.removeItem(this.storageKey);
-    this.list([]);
+    this.list = [];
   }
 
 }
@@ -72,40 +71,40 @@ class Model {
 
     this.sfLink = "https://" + sfHost;
     this.spinnerCount = 0;
-    this.showHelp = ko.observable(false);
-    this.userInfo = ko.observable("...");
-    this.winInnerHeight = ko.observable(0);
-    this.queryAll = ko.observable(false);
-    this.queryTooling = ko.observable(false);
-    this.autocompleteResults = ko.observable({sobjectName: "", title: "\u00A0", results: []});
+    this.showHelp = false;
+    this.userInfo = "...";
+    this.winInnerHeight = 0;
+    this.queryAll = false;
+    this.queryTooling = false;
+    this.autocompleteResults = {sobjectName: "", title: "\u00A0", results: []};
     this.autocompleteClick = null;
     this.isWorking = false;
     this.exportStatus = "Ready";
     this.exportError = null;
     this.exportedData = null;
     this.queryHistory = new QueryHistory("insextQueryHistory", 20);
-    this.selectedHistoryEntry = ko.observable(null);
+    this.selectedHistoryEntry = null;
     this.savedHistory = new QueryHistory("insextSavedQueryHistory", 50);
-    this.selectedSavedEntry = ko.observable(null);
-    this.expandAutocomplete = ko.observable(false);
-    this.resultsFilter = ko.observable("");
+    this.selectedSavedEntry = null;
+    this.expandAutocomplete = false;
+    this.resultsFilter = "";
     this.autocompleteState = "";
     this.autocompleteProgress = {};
     this.exportProgress = {};
 
     this.spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
-      this.userInfo(res.userFullName + " / " + res.userName + " / " + res.organizationName);
+      this.userInfo = res.userFullName + " / " + res.userName + " / " + res.organizationName;
     }));
 
     if (args.has("query")) {
       this.initialQuery = args.get("query");
-      this.queryTooling(args.has("useToolingApi"));
-    } else if (this.queryHistory.list()[0]) {
-      this.initialQuery = this.queryHistory.list()[0].query;
-      this.queryTooling(this.queryHistory.list()[0].useToolingApi);
+      this.queryTooling = args.has("useToolingApi");
+    } else if (this.queryHistory.list[0]) {
+      this.initialQuery = this.queryHistory.list[0].query;
+      this.queryTooling = this.queryHistory.list[0].useToolingApi;
     } else {
       this.initialQuery = "select Id from Account";
-      this.queryTooling(false);
+      this.queryTooling = false;
     }
 
   }
@@ -113,7 +112,7 @@ class Model {
     this.resultTableCallback(this.exportedData);
   }
   setResultsFilter(value) {
-    this.resultsFilter(value);
+    this.resultsFilter = value;
     if (this.exportedData == null) {
       return;
     }
@@ -127,47 +126,47 @@ class Model {
     this.initialQuery = null;
   }
   toggleHelp() {
-    this.showHelp(!this.showHelp());
+    this.showHelp = !this.showHelp;
   }
   toggleExpand() {
-    this.expandAutocomplete(!this.expandAutocomplete());
+    this.expandAutocomplete = !this.expandAutocomplete;
   }
   showDescribeUrl() {
     let args = new URLSearchParams();
     args.set("host", this.sfHost);
-    args.set("objectType", this.autocompleteResults().sobjectName);
-    if (this.queryTooling()) {
+    args.set("objectType", this.autocompleteResults.sobjectName);
+    if (this.queryTooling) {
       args.set("useToolingApi", "1");
     }
     return "inspect.html?" + args;
   }
   selectHistoryEntry() {
-    if (this.selectedHistoryEntry() != null) {
-      this.queryInput.setValue(this.selectedHistoryEntry().query);
-      this.queryTooling(this.selectedHistoryEntry().useToolingApi);
+    if (this.selectedHistoryEntry != null) {
+      this.queryInput.setValue(this.selectedHistoryEntry.query);
+      this.queryTooling = this.selectedHistoryEntry.useToolingApi;
       this.queryAutocompleteHandler();
-      this.selectedHistoryEntry(null);
+      this.selectedHistoryEntry = null;
     }
   }
   clearHistory() {
     this.queryHistory.clear();
   }
   selectSavedEntry() {
-    if (this.selectedSavedEntry() != null) {
-      this.queryInput.setValue(this.selectedSavedEntry());
-      this.queryTooling(this.selectedSavedEntry().useToolingApi);
+    if (this.selectedSavedEntry != null) {
+      this.queryInput.setValue(this.selectedSavedEntry);
+      this.queryTooling = this.selectedSavedEntry.useToolingApi;
       this.queryAutocompleteHandler();
-      this.selectedSavedEntry(null);
+      this.selectedSavedEntry = null;
     }
   }
   clearSavedHistory() {
     this.savedHistory.clear();
   }
   addToHistory() {
-    this.savedHistory.add({query: this.queryInput.getValue(), useToolingApi: this.queryTooling()});
+    this.savedHistory.add({query: this.queryInput.getValue(), useToolingApi: this.queryTooling});
   }
   removeFromHistory() {
-    this.savedHistory.remove({query: this.queryInput.getValue(), useToolingApi: this.queryTooling()});
+    this.savedHistory.remove({query: this.queryInput.getValue(), useToolingApi: this.queryTooling});
   }
   autocompleteReload() {
     this.describeInfo.reloadAll();
@@ -232,7 +231,7 @@ class Model {
    */
   queryAutocompleteHandler(e = {}) {
     let vm = this; // eslint-disable-line consistent-this
-    let useToolingApi = vm.queryTooling();
+    let useToolingApi = vm.queryTooling;
     let query = vm.queryInput.getValue();
     let selStart = vm.queryInput.getSelStart();
     let selEnd = vm.queryInput.getSelEnd();
@@ -303,30 +302,30 @@ class Model {
       if (!globalDescribe) {
         switch (globalStatus) {
           case "loading":
-            vm.autocompleteResults({
+            vm.autocompleteResults = {
               sobjectName: "",
               title: "Loading metadata...",
               results: []
-            });
+            };
             return;
           case "loadfailed":
-            vm.autocompleteResults({
+            vm.autocompleteResults = {
               sobjectName: "",
               title: "Loading metadata failed.",
               results: [{value: "Retry", title: "Retry"}]
-            });
+            };
             vm.autocompleteClick = vm.autocompleteReload.bind(vm);
             return;
           default:
-            vm.autocompleteResults({
+            vm.autocompleteResults = {
               sobjectName: "",
               title: "Unexpected error: " + globalStatus,
               results: []
-            });
+            };
             return;
         }
       }
-      vm.autocompleteResults({
+      vm.autocompleteResults = {
         sobjectName: "",
         title: "Objects:",
         results: new Enumerable(globalDescribe.sobjects)
@@ -334,7 +333,7 @@ class Model {
           .map(sobjectDescribe => ({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " ", rank: 1}))
           .toArray()
           .sort(resultsSort)
-      });
+      };
       return;
     }
 
@@ -352,11 +351,11 @@ class Model {
         sobjectName = fromKeywordMatch[1];
         isAfterFrom = false;
       } else {
-        vm.autocompleteResults({
+        vm.autocompleteResults = {
           sobjectName: "",
           title: "\"from\" keyword not found",
           results: []
-        });
+        };
         return;
       }
     }
@@ -374,33 +373,33 @@ class Model {
     if (!sobjectDescribe) {
       switch (sobjectStatus) {
         case "loading":
-          vm.autocompleteResults({
+          vm.autocompleteResults = {
             sobjectName,
             title: "Loading " + sobjectName + " metadata...",
             results: []
-          });
+          };
           return;
         case "loadfailed":
-          vm.autocompleteResults({
+          vm.autocompleteResults = {
             sobjectName,
             title: "Loading " + sobjectName + " metadata failed.",
             results: [{value: "Retry", title: "Retry"}]
-          });
+          };
           vm.autocompleteClick = vm.autocompleteReload.bind(vm);
           return;
         case "notfound":
-          vm.autocompleteResults({
+          vm.autocompleteResults = {
             sobjectName,
             title: "Unknown object: " + sobjectName,
             results: []
-          });
+          };
           return;
         default:
-          vm.autocompleteResults({
+          vm.autocompleteResults = {
             sobjectName,
             title: "Unexpected error for object: " + sobjectName + ": " + sobjectStatus,
             results: []
-          });
+          };
           return;
       }
     }
@@ -460,43 +459,43 @@ class Model {
 
     if (!contextSobjectDescribes.some()) {
       if (sobjectStatuses.has("loading")) {
-        vm.autocompleteResults({
+        vm.autocompleteResults = {
           sobjectName,
           title: "Loading " + sobjectStatuses.get("loading") + " metadata...",
           results: []
-        });
+        };
         return;
       }
       if (sobjectStatuses.has("loadfailed")) {
-        vm.autocompleteResults({
+        vm.autocompleteResults = {
           sobjectName,
           title: "Loading " + sobjectStatuses.get("loadfailed") + " metadata failed.",
           results: [{value: "Retry", title: "Retry"}]
-        });
+        };
         vm.autocompleteClick = vm.autocompleteReload.bind(vm);
         return;
       }
       if (sobjectStatuses.has("notfound")) {
-        vm.autocompleteResults({
+        vm.autocompleteResults = {
           sobjectName,
           title: "Unknown object: " + sobjectStatuses.get("notfound"),
           results: []
-        });
+        };
         return;
       }
       if (sobjectStatuses.size > 0) {
-        vm.autocompleteResults({
+        vm.autocompleteResults = {
           sobjectName,
           title: "Unexpected error: " + sobjectStatus,
           results: []
-        });
+        };
         return;
       }
-      vm.autocompleteResults({
+      vm.autocompleteResults = {
         sobjectName,
         title: "Unknown field: " + sobjectName + "." + contextPath,
         results: []
-      });
+      };
       return;
     }
 
@@ -509,34 +508,34 @@ class Model {
         )
         .toArray();
       if (contextValueFields.length == 0) {
-        vm.autocompleteResults({
+        vm.autocompleteResults = {
           sobjectName,
           title: "Unknown field: " + sobjectDescribe.name + "." + contextPath + fieldName,
           results: []
-        });
+        };
         return;
       }
       let fieldNames = contextValueFields.map(contextValueField => contextValueField.sobjectDescribe.name + "." + contextValueField.field.name).join(", ");
       if (ctrlSpace) {
         // Since this performs a Salesforce API call, we ask the user to opt in by pressing Ctrl+Space
         if (contextValueFields.length > 1) {
-          vm.autocompleteResults({
+          vm.autocompleteResults = {
             sobjectName,
             title: "Multiple possible fields: " + fieldNames,
             results: []
-          });
+          };
           return;
         }
         let contextValueField = contextValueFields[0];
-        let queryMethod = useToolingApi ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+        let queryMethod = useToolingApi ? "tooling/query" : vm.queryAll ? "queryAll" : "query";
         let acQuery = "select " + contextValueField.field.name + " from " + contextValueField.sobjectDescribe.name + " where " + contextValueField.field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + contextValueField.field.name + " limit 100";
         vm.spinFor(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), {progressHandler: vm.autocompleteProgress})
           .catch(err => {
-            vm.autocompleteResults({
+            vm.autocompleteResults = {
               sobjectName,
               title: "Error: " + ((err && err.sfConnError) || err),
               results: []
-            });
+            };
             return null;
           })
           .then(data => {
@@ -544,7 +543,7 @@ class Model {
             if (!data) {
               return;
             }
-            vm.autocompleteResults({
+            vm.autocompleteResults = {
               sobjectName,
               title: fieldNames + " values:",
               results: new Enumerable(data.records)
@@ -553,13 +552,13 @@ class Model {
                 .map(value => ({value: "'" + value + "'", title: value, suffix: " ", rank: 1}))
                 .toArray()
                 .sort(resultsSort)
-            });
+            };
           }));
-        vm.autocompleteResults({
+        vm.autocompleteResults = {
           sobjectName,
           title: "Loading " + fieldNames + " values...",
           results: []
-        });
+        };
         return;
       }
       let ar = new Enumerable(contextValueFields).flatMap(function*({field}) {
@@ -631,11 +630,11 @@ class Model {
       .filter(res => res.value.toLowerCase().includes(searchTerm.toLowerCase()) || res.title.toLowerCase().includes(searchTerm.toLowerCase()))
       .toArray()
       .sort(resultsSort);
-      vm.autocompleteResults({
+      vm.autocompleteResults = {
         sobjectName,
         title: fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"),
         results: ar
-      });
+      };
       return;
     } else {
       // Autocomplete field names and functions
@@ -651,7 +650,7 @@ class Model {
         vm.queryAutocompleteHandler();
         return;
       }
-      vm.autocompleteResults({
+      vm.autocompleteResults = {
         sobjectName,
         title: contextSobjectDescribes.map(sobjectDescribe => sobjectDescribe.name).toArray().join(", ") + " fields:",
         results: contextSobjectDescribes
@@ -670,18 +669,18 @@ class Model {
           )
           .toArray()
           .sort(resultsSort)
-      });
+      };
       return;
     }
   }
   doExport() {
     let vm = this; // eslint-disable-line consistent-this
     let exportedData = new RecordTable(vm);
-    exportedData.isTooling = vm.queryTooling();
+    exportedData.isTooling = vm.queryTooling;
     exportedData.describeInfo = vm.describeInfo;
     exportedData.sfHost = vm.sfHost;
     let query = vm.queryInput.getValue();
-    let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll() ? "queryAll" : "query";
+    let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll ? "queryAll" : "query";
     function batchHandler(batch) {
       return batch.then(data => {
         exportedData.addToTable(data.records);
@@ -810,7 +809,7 @@ function RecordTable(vm) {
         rt.table.push(header);
         rt.rowVisibilities.push(true);
       }
-      let filter = vm.resultsFilter();
+      let filter = vm.resultsFilter;
       for (let record of expRecords) {
         let row = new Array(header.length);
         row[0] = record;
@@ -821,7 +820,7 @@ function RecordTable(vm) {
     },
     csvSerialize: separator => rt.table.map(row => row.map(cell => "\"" + cellToString(cell).split("\"").join("\"\"") + "\"").join(separator)).join("\r\n"),
     updateVisibility() {
-      let filter = vm.resultsFilter();
+      let filter = vm.resultsFilter;
       for (let r = 1/* always show header */; r < rt.table.length; r++) {
         rt.rowVisibilities[r] = isVisible(rt.table[r], filter);
       }
@@ -854,18 +853,18 @@ class App extends React.Component {
   }
   onQueryAllChange(e) {
     let {model} = this.props;
-    model.queryAll(e.target.checked);
+    model.queryAll = e.target.checked;
     model.didUpdate();
   }
   onQueryToolingChange(e) {
     let {model} = this.props;
-    model.queryTooling(e.target.checked);
+    model.queryTooling = e.target.checked;
     model.queryAutocompleteHandler();
     model.didUpdate();
   }
   onSelectHistoryEntry(e) {
     let {model} = this.props;
-    model.selectedHistoryEntry(JSON.parse(e.target.value));
+    model.selectedHistoryEntry = JSON.parse(e.target.value);
     model.selectHistoryEntry();
     model.didUpdate();
   }
@@ -877,7 +876,7 @@ class App extends React.Component {
   }
   onSelectSavedEntry(e) {
     let {model} = this.props;
-    model.selectedSavedEntry(JSON.parse(e.target.value));
+    model.selectedSavedEntry = JSON.parse(e.target.value);
     model.selectSavedEntry();
     model.didUpdate();
   }
@@ -997,7 +996,7 @@ class App extends React.Component {
       addEventListener("mouseup", recalculateHeight);
     }
     function resize() {
-      model.winInnerHeight(innerHeight);
+      model.winInnerHeight = innerHeight;
       model.didUpdate(); // Will call recalculateSize
     }
     addEventListener("resize", resize);
@@ -1022,50 +1021,50 @@ class App extends React.Component {
           " Salesforce Home"
         ),
         " \xa0 ",
-        h("span", {}, model.userInfo())
+        h("span", {}, model.userInfo)
       ),
       h("div", {className: "area"},
         h("h1", {}, "Export query"),
         h("label", {},
-          h("input", {type: "checkbox", checked: model.queryAll(), onChange: this.onQueryAllChange, disabled: model.queryTooling()}),
+          h("input", {type: "checkbox", checked: model.queryAll, onChange: this.onQueryAllChange, disabled: model.queryTooling}),
           " ",
           h("span", {}, "Include deleted and archived records?")
         ),
         h("label", {title: "With the tooling API you can query more metadata, but you cannot query regular data"},
-          h("input", {type: "checkbox", checked: model.queryTooling(), onChange: this.onQueryToolingChange, disabled: model.queryAll()}),
+          h("input", {type: "checkbox", checked: model.queryTooling, onChange: this.onQueryToolingChange, disabled: model.queryAll}),
           " ",
           h("span", {}, "Use Tooling API?")
         ),
         h("label", {},
-          h("select", {value: JSON.stringify(model.selectedHistoryEntry()), onChange: this.onSelectHistoryEntry, className: "query-history"},
+          h("select", {value: JSON.stringify(model.selectedHistoryEntry), onChange: this.onSelectHistoryEntry, className: "query-history"},
             h("option", {value: JSON.stringify(null)}, "Query history"),
-            model.queryHistory.list().map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+            model.queryHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
           ),
           h("a", {href: "about:blank", onClick: this.onClearHistory, title: "Clear query history", className: "char-btn"}, "X")
         ),
         h("label", {},
-          h("select", {value: JSON.stringify(model.selectedSavedEntry()), onChange: this.onSelectSavedEntry, className: "query-history"},
+          h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
             h("option", {value: JSON.stringify(null)}, "Saved queries"),
-            model.savedHistory.list().map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+            model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
           ),
           h("a", {href: "about:blank", onClick: this.onAddToHistory, title: "Add query to saved history", className: "char-btn"}, "+"),
           h("a", {href: "about:blank", onClick: this.onRemoveFromHistory, title: "Remove query from saved history", className: "char-btn"}, "X"),
           h("a", {href: "about:blank", onClick: this.onClearSavedHistory, title: "Clear saved history", className: "char-btn"}, "XX")
         ),
         h("a", {href: "about:blank", id: "export-help-btn", onClick: this.onToggleHelp}, "Export help"),
-        h("textarea", {id: "query", ref: "query", style: {maxHeight: (model.winInnerHeight() - 200) + "px"}}),
-        h("div", {className: "autocomplete-box" + (model.expandAutocomplete() ? " expanded" : "")},
+        h("textarea", {id: "query", ref: "query", style: {maxHeight: (model.winInnerHeight - 200) + "px"}}),
+        h("div", {className: "autocomplete-box" + (model.expandAutocomplete ? " expanded" : "")},
           h("span", {className: "autocomplete-results"},
-            h("span", {}, model.autocompleteResults().title),
+            h("span", {}, model.autocompleteResults.title),
             " ",
-            model.autocompleteResults().results.map(r =>
+            model.autocompleteResults.results.map(r =>
               h("span", {key: r.value}, h("a", {title: r.title, onClick: e => { e.preventDefault(); model.autocompleteClick(r); model.didUpdate(); }, href: "about:blank"}, r.value), " ")
             )
           ),
-          h("a", {className: "char-btn", hidden: !model.autocompleteResults().sobjectName, href: model.showDescribeUrl(), title: "Show field info for the " + model.autocompleteResults().sobjectName + " object"}, "i"),
-          h("a", {href: "about:blank", className: "char-btn", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, model.expandAutocomplete() ? "-" : "+")
+          h("a", {className: "char-btn", hidden: !model.autocompleteResults.sobjectName, href: model.showDescribeUrl(), title: "Show field info for the " + model.autocompleteResults.sobjectName + " object"}, "i"),
+          h("a", {href: "about:blank", className: "char-btn", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, model.expandAutocomplete ? "-" : "+")
         ),
-        h("div", {hidden: !model.showHelp()},
+        h("div", {hidden: !model.showHelp},
           h("p", {}, "Use for quick one-off data exports. Enter a ", h("a", {href: "http://www.salesforce.com/us/developer/docs/soql_sosl/", target: "_blank"}, "SOQL query"), " in the box above and press Export."),
           h("p", {}, "Press Ctrl+Space to insert all field name autosuggestions or to load suggestions for field values."),
           h("p", {}, "Supports the full SOQL language. The columns in the CSV output depend on the returned data. Using subqueries may cause the output to grow rapidly. Bulk API is not supported. Large data volumes may freeze or crash your browser.")
@@ -1084,7 +1083,7 @@ class App extends React.Component {
           " ",
           h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard"}, "Copy (JSON)"),
           " ",
-          h("input", {placeholder: "Filter results", value: model.resultsFilter(), onInput: this.onResultsFilterInput}),
+          h("input", {placeholder: "Filter results", value: model.resultsFilter, onInput: this.onResultsFilterInput}),
           h("span", {className: "result-status"},
             h("span", {}, model.exportStatus),
             h("button", {className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport}, "Stop")
