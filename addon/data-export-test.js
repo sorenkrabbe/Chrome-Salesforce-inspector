@@ -13,7 +13,7 @@ function* dataExportTest(test) {
   let win = yield loadPage("data-export.html");
   let {testData: {model}} = win;
   let vm = model;
-  let queryInput = model.queryInput.queryInput;
+  let queryInput = model.queryInput;
   function queryAutocompleteEvent() {
     model.queryAutocompleteHandler();
   }

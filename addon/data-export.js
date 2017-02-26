@@ -122,7 +122,7 @@ class Model {
   }
   setQueryInput(queryInput) {
     this.queryInput = queryInput;
-    queryInput.setValue(this.initialQuery);
+    queryInput.value = this.initialQuery;
     this.initialQuery = null;
   }
   toggleHelp() {
@@ -142,7 +142,7 @@ class Model {
   }
   selectHistoryEntry() {
     if (this.selectedHistoryEntry != null) {
-      this.queryInput.setValue(this.selectedHistoryEntry.query);
+      this.queryInput.value = this.selectedHistoryEntry.query;
       this.queryTooling = this.selectedHistoryEntry.useToolingApi;
       this.queryAutocompleteHandler();
       this.selectedHistoryEntry = null;
@@ -153,7 +153,7 @@ class Model {
   }
   selectSavedEntry() {
     if (this.selectedSavedEntry != null) {
-      this.queryInput.setValue(this.selectedSavedEntry);
+      this.queryInput.value = this.selectedSavedEntry;
       this.queryTooling = this.selectedSavedEntry.useToolingApi;
       this.queryAutocompleteHandler();
       this.selectedSavedEntry = null;
@@ -163,10 +163,10 @@ class Model {
     this.savedHistory.clear();
   }
   addToHistory() {
-    this.savedHistory.add({query: this.queryInput.getValue(), useToolingApi: this.queryTooling});
+    this.savedHistory.add({query: this.queryInput.value, useToolingApi: this.queryTooling});
   }
   removeFromHistory() {
-    this.savedHistory.remove({query: this.queryInput.getValue(), useToolingApi: this.queryTooling});
+    this.savedHistory.remove({query: this.queryInput.value, useToolingApi: this.queryTooling});
   }
   autocompleteReload() {
     this.describeInfo.reloadAll();
@@ -232,9 +232,9 @@ class Model {
   queryAutocompleteHandler(e = {}) {
     let vm = this; // eslint-disable-line consistent-this
     let useToolingApi = vm.queryTooling;
-    let query = vm.queryInput.getValue();
-    let selStart = vm.queryInput.getSelStart();
-    let selEnd = vm.queryInput.getSelEnd();
+    let query = vm.queryInput.value;
+    let selStart = vm.queryInput.selectionStart;
+    let selEnd = vm.queryInput.selectionEnd;
     let ctrlSpace = e.ctrlSpace;
 
     // Skip the calculation when no change is made. This improves performance and prevents async operations (Ctrl+Space) from being canceled when they should not be.
@@ -250,7 +250,8 @@ class Model {
     }
 
     vm.autocompleteClick = ({value, suffix}) => {
-      vm.queryInput.insertText(value + suffix, selStart, selEnd);
+      vm.queryInput.focus();
+      vm.queryInput.setRangeText(value + suffix, selStart, selEnd, "end");
       vm.queryAutocompleteHandler();
     };
 
@@ -645,7 +646,8 @@ class Model {
           .map(field => contextPath + field.name)
           .toArray();
         if (ar.length > 0) {
-          vm.queryInput.insertText(ar.join(", ") + (isAfterFrom ? " " : ", "), selStart - contextPath.length, selEnd);
+          vm.queryInput.focus();
+          vm.queryInput.setRangeText(ar.join(", ") + (isAfterFrom ? " " : ", "), selStart - contextPath.length, selEnd, "end");
         }
         vm.queryAutocompleteHandler();
         return;
@@ -679,7 +681,7 @@ class Model {
     exportedData.isTooling = vm.queryTooling;
     exportedData.describeInfo = vm.describeInfo;
     exportedData.sfHost = vm.sfHost;
-    let query = vm.queryInput.getValue();
+    let query = vm.queryInput.value;
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll ? "queryAll" : "query";
     function batchHandler(batch) {
       return batch.then(data => {
@@ -944,20 +946,7 @@ class App extends React.Component {
     let {model} = this.props;
     let queryInput = this.refs.query;
 
-    // TODO not needed anymore, since unit tests no longer uses mock queryInput
-    let queryInputVm = {
-      queryInput,
-      setValue(v) { queryInput.value = v; },
-      getValue() { return queryInput.value; },
-      getSelStart() { return queryInput.selectionStart; },
-      getSelEnd() { return queryInput.selectionEnd; },
-      insertText(text, selStart, selEnd) {
-        queryInput.focus();
-        queryInput.setRangeText(text, selStart, selEnd, "end");
-      }
-    };
-
-    model.setQueryInput(queryInputVm);
+    model.setQueryInput(queryInput);
 
     function queryAutocompleteEvent() {
       model.queryAutocompleteHandler();
