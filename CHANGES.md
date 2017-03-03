@@ -1,3 +1,10 @@
+Version 1.3
+===========
+
+General
+-------
+* Rewritten the implementation of Data Export and Data Import, in order to comply with the updated version of Mozilla's add-ons policy.
+
 Version 1.2
 ===========
 
