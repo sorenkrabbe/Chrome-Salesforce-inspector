@@ -910,10 +910,10 @@ class App extends React.Component {
             ),
             " Salesforce Home"
           ),
-          h("span", {className: "object-tab" + (model.useTab == "all" ? " active-tab": "")},
+          h("span", {className: "object-tab" + (model.useTab == "all" ? " active-tab" : "")},
             h("a", {href: "about:blank", onClick: this.onUseAllTab}, "All")
           ),
-          h("span", {className: "object-tab" + (model.useTab == "fields" ? " active-tab": "")},
+          h("span", {className: "object-tab" + (model.useTab == "fields" ? " active-tab" : "")},
             h("a", {href: "about:blank", className: "tab-with-icon", onClick: this.onUseFieldsTab}, "Fields"),
             h(ColumnsVisibiltyBox, {
               rowList: model.fieldRows,
@@ -930,7 +930,7 @@ class App extends React.Component {
               ]
             })
           ),
-          h("span", {className: "object-tab" + (model.useTab == "childs" ? " active-tab": "")},
+          h("span", {className: "object-tab" + (model.useTab == "childs" ? " active-tab" : "")},
             h("a", {href: "about:blank", className: "tab-with-icon", onClick: this.onUseChildsTab}, "Relations"),
             h(ColumnsVisibiltyBox, {
               rowList: model.childRows,
@@ -977,7 +977,7 @@ class App extends React.Component {
             classNameForRow: row => (row.fieldIsCalculated() ? "fieldCalculated " : "") + (row.fieldIsHidden() ? "fieldHidden " : "")
           }) : null,
           model.useTab == "all" ? h("hr", {}) : null,
-          model.useTab == "all" || model.useTab =="childs" ? h(RowTable, {
+          model.useTab == "all" || model.useTab == "childs" ? h(RowTable, {
             rowList: model.childRows,
             actionsColumn: {className: "child-actions", reactElement: ChildActionsCell},
             classNameForRow: () => ""
