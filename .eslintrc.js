@@ -4,6 +4,9 @@ module.exports = {
     "es6": true,
     "webextensions": true
   },
+  "parserOptions": {
+    "ecmaVersion": 8
+  },
   "root": true,
   "extends": "eslint:recommended",
   "rules": {

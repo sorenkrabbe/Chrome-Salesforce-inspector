@@ -46,39 +46,40 @@ class Model {
   }
 
   startLoading() {
-    let self = this;
-    let logger = new Logger(self);
-    async(function*() {
+    let logWait = this.logWait.bind(this);
+    (async () => {
       try {
-        self.progress = "working";
-        self.didUpdate();
+        this.progress = "working";
+        this.didUpdate();
 
         // Code below is originally from forcecmd
         let metadataApi = sfConn.wsdl(apiVersion, "Metadata");
-        let res = yield logger.monitor(
+        let res = await logWait(
           "DescribeMetadata",
           sfConn.soap(metadataApi, "describeMetadata", {apiVersion})
         );
         let availableMetadataObjects = res.metadataObjects
           .filter(metadataObject => metadataObject.xmlName != "InstalledPackage");
         // End of forcecmd code
-        self.metadataObjects = availableMetadataObjects;
-        for (let metadataObject of self.metadataObjects) {
+        this.metadataObjects = availableMetadataObjects;
+        for (let metadataObject of this.metadataObjects) {
           metadataObject.selected = true;
         }
-        self.progress = "ready";
-        self.didUpdate();
+        this.progress = "ready";
+        this.didUpdate();
       } catch (e) {
-        self.progress = "error";
-        logger.error(e);
+        this.logError(e);
       }
     })();
   }
 
   startDownloading() {
-    let self = this;
-    let logger = new Logger(self);
-    async(function*() {
+    let logMsg = msg => {
+      this.logMessages.push({level: "info", text: msg});
+      this.didUpdate();
+    };
+    let logWait = this.logWait.bind(this);
+    (async () => {
       function flattenArray(x) {
         return [].concat(...x);
       }
@@ -95,10 +96,10 @@ class Model {
       }
 
       try {
-        let metadataObjects = self.metadataObjects;
-        self.metadataObjects = null;
-        self.progress = "working";
-        self.didUpdate();
+        let metadataObjects = this.metadataObjects;
+        this.metadataObjects = null;
+        this.progress = "working";
+        this.didUpdate();
 
         let metadataApi = sfConn.wsdl(apiVersion, "Metadata");
         let res;
@@ -122,26 +123,26 @@ class Model {
               return xmlName;
             });
           });
-        res = yield Promise.all(groupByThree(flattenArray(x)).map(async(function*(xmlNames) {
-          let someItems = sfConn.asArray(yield logger.monitor(
+        res = await Promise.all(groupByThree(flattenArray(x)).map(async xmlNames => {
+          let someItems = sfConn.asArray(await logWait(
             "ListMetadata " + xmlNames.join(", "),
             sfConn.soap(metadataApi, "listMetadata", {queries: xmlNames.map(xmlName => ({type: xmlName}))})
           ));
           let folders = someItems.filter(folder => folderMap[folder.type]);
           let nonFolders = someItems.filter(folder => !folderMap[folder.type]);
-          let p = yield Promise
-            .all(groupByThree(folders).map(async(function*(folderGroup) {
-              return sfConn.asArray(yield logger.monitor(
+          let p = await Promise
+            .all(groupByThree(folders).map(async folderGroup =>
+              sfConn.asArray(await logWait(
                 "ListMetadata " + folderGroup.map(folder => folderMap[folder.type] + "/" + folder.fullName).join(", "),
                 sfConn.soap(metadataApi, "listMetadata", {queries: folderGroup.map(folder => ({type: folderMap[folder.type], folder: folder.fullName}))})
-              ));
-            })));
+              ))
+            ));
           return flattenArray(p).concat(
             folders.map(folder => ({type: folderMap[folder.type], fullName: folder.fullName})),
             nonFolders,
             xmlNames.map(xmlName => ({type: xmlName, fullName: "*"}))
           );
-        })));
+        }));
         let types = flattenArray(res);
         if (types.filter(x => x.type == "StandardValueSet").map(x => x.fullName).join(",") == "*") {
           // We are using an API version that supports the StandardValueSet type, but it didn't list its contents.
@@ -163,32 +164,25 @@ class Model {
           return 0;
         });
         types = types.map(x => ({name: x.type, members: decodeURIComponent(x.fullName)}));
-        //logger.log(types);
-        let retrieve = async(function*() {
-          let result = yield logger.monitor(
-            "Retrieve",
-            sfConn.soap(metadataApi, "retrieve", {retrieveRequest: {apiVersion, unpackaged: {types, version: apiVersion}}})
+        //console.log(types);
+        let result = await logWait(
+          "Retrieve",
+          sfConn.soap(metadataApi, "retrieve", {retrieveRequest: {apiVersion, unpackaged: {types, version: apiVersion}}})
+        );
+        logMsg("(Id: " + result.id + ")");
+        for (let interval = 2000; ;) {
+          await logWait(
+            "(Waiting)",
+            timeout(interval)
           );
-          logger.log({id: result.id});
-          let res;
-          for (;;) {
-            yield timeout(2000);
-            res = yield logger.monitor(
-              "CheckRetrieveStatus",
-              sfConn.soap(metadataApi, "checkRetrieveStatus", {id: result.id})
-            );
-            if (res.done !== "false") {
-              break;
-            }
+          res = await logWait(
+            "CheckRetrieveStatus",
+            sfConn.soap(metadataApi, "checkRetrieveStatus", {id: result.id})
+          );
+          if (res.done !== "false") {
+            break;
           }
-          if (res.errorStatusCode == "UNKNOWN_EXCEPTION" && typeof res.errorMessage == "string" && res.errorMessage.includes("Please include this ErrorId if you contact support")) {
-            // Try again, from the beginning, https://developer.salesforce.com/forums/?feedtype=RECENT#!/feedtype=SINGLE_QUESTION_DETAIL&dc=APIs_and_Integration&criteria=OPENQUESTIONS&id=906F0000000AidVIAS
-            logger.error(res);
-            return yield retrieve();
-          }
-          return res;
-        });
-        res = yield retrieve();
+        }
         if (res.success != "true") {
           throw res;
         }
@@ -198,63 +192,49 @@ class Model {
             .sort((fp1, fp2) => fp1.fileName < fp2.fileName ? -1 : fp1.fileName > fp2.fileName ? 1 : 0),
           messages: res.messages
         }, null, "    ");
-        //logger.log("(Reading response and writing files)");
+        //console.log("(Reading response and writing files)");
         // End of forcecmd code
-        logger.log("Finished");
+        logMsg("Finished");
         let zipBin = Uint8Array.from(atob(res.zipFile), c => c.charCodeAt(0));
-        self.downloadLink = URL.createObjectURL(new Blob([zipBin], {type: "application/zip"}));
-        self.statusLink = URL.createObjectURL(new Blob([statusJson], {type: "application/json"}));
-        self.progress = "done";
-        self.didUpdate();
+        this.downloadLink = URL.createObjectURL(new Blob([zipBin], {type: "application/zip"}));
+        this.statusLink = URL.createObjectURL(new Blob([statusJson], {type: "application/json"}));
+        this.progress = "done";
+        this.didUpdate();
       } catch (e) {
-        self.progress = "error";
-        logger.error(e);
+        this.logError(e);
       }
     })();
   }
-}
 
-let timeout = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-class Logger {
-  constructor(model) {
-    this.model = model;
-  }
-
-  log(msg) {
-    if (typeof msg != "string") {
-      msg = JSON.stringify(msg, null, "  ");
-    }
-    this.model.logMessages.push({level: "info", text: msg});
-    this.model.didUpdate();
-  }
-
-  monitor(msg, promise) {
+  logWait(msg, promise) {
     let message = {level: "working", text: msg};
-    this.model.logMessages.push(message);
-    this.model.didUpdate();
+    this.logMessages.push(message);
+    this.didUpdate();
     promise.then(res => {
       message.level = "info";
-      this.model.didUpdate();
+      this.didUpdate();
       return res;
     }, err => {
       message.level = "error";
-      this.model.didUpdate();
+      this.didUpdate();
       throw err;
     });
     return promise;
   }
 
-  error(msg) {
+  logError(msg) {
+    this.progress = "error";
     console.error(msg);
     if (typeof msg != "string") {
       msg = JSON.stringify(msg, null, "  ");
     }
-    this.model.logMessages.push({level: "error", text: msg});
-    this.model.didUpdate();
+    this.logMessages.push({level: "error", text: msg});
+    this.didUpdate();
   }
 
 }
+
+let timeout = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 let h = React.createElement;
 
