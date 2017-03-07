@@ -27,7 +27,7 @@ class Model {
     this.spinnerCount = 0;
     this.errorMessages = [];
     this.rowsFilter = "";
-    this.useAdvancedFilter = false;
+    this.useTab = "all";
     this.fieldRows = new FieldRowList(this);
     this.childRows = new ChildRowList(this);
     this.detailsFilter = "";
@@ -383,7 +383,7 @@ class RowList {
     let value = filterValue == null ? "" : "" + filterValue;
     this.showHideColumn(true, col);
     if (value) {
-      this.model.useAdvancedFilter = true;
+      this.model.useTab = this.listName;
       this.selectedColumnMap.get(col).columnFilter = value;
     }
   }
@@ -392,6 +392,7 @@ class RowList {
 class FieldRowList extends RowList {
   constructor(model) {
     super(FieldRow, model);
+    this.listName = "fields";
     this.initColumns(["name", "label", "type"]);
     this.fetchFieldDescriptions = true;
   }
@@ -426,6 +427,7 @@ class FieldRowList extends RowList {
 class ChildRowList extends RowList {
   constructor(model) {
     super(ChildRow, model);
+    this.listName = "childs";
     this.initColumns(["name", "object", "field", "label"]);
   }
   createColumn(col) {
@@ -451,7 +453,7 @@ class TableRow {
       let s = this.sortKey(col.name);
       return s != null && ("" + s).toLowerCase().includes(term);
     };
-    if (this.rowList.model.useAdvancedFilter) {
+    if (this.rowList.model.useTab != "all") {
       return selectedColumns.every(col =>
         !col.columnFilter || split(col.columnFilter).every(term => search(term, col))
       );
@@ -831,7 +833,9 @@ let h = React.createElement;
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.onToggleAdvancedFilter = this.onToggleAdvancedFilter.bind(this);
+    this.onUseAllTab = this.onUseAllTab.bind(this);
+    this.onUseFieldsTab = this.onUseFieldsTab.bind(this);
+    this.onUseChildsTab = this.onUseChildsTab.bind(this);
     this.onRowsFilterInput = this.onRowsFilterInput.bind(this);
     this.onClearAndFocusFilter = this.onClearAndFocusFilter.bind(this);
     this.onShowObjectMetadata = this.onShowObjectMetadata.bind(this);
@@ -842,10 +846,22 @@ class App extends React.Component {
   componentDidMount() {
     this.refs.rowsFilter.focus();
   }
-  onToggleAdvancedFilter(e) {
+  onUseAllTab(e) {
     let {model} = this.props;
     e.preventDefault();
-    model.useAdvancedFilter = !model.useAdvancedFilter;
+    model.useTab = "all";
+    model.didUpdate();
+  }
+  onUseFieldsTab(e) {
+    let {model} = this.props;
+    e.preventDefault();
+    model.useTab = "fields";
+    model.didUpdate();
+  }
+  onUseChildsTab(e) {
+    let {model} = this.props;
+    e.preventDefault();
+    model.useTab = "childs";
     model.didUpdate();
   }
   onRowsFilterInput(e) {
@@ -894,33 +910,11 @@ class App extends React.Component {
             ),
             " Salesforce Home"
           ),
-          model.useAdvancedFilter ? null : h("span", {className: "filter-box"},
-            h("input", {className: "filter-input", placeholder: "Filter", value: model.rowsFilter, onChange: this.onRowsFilterInput, ref: "rowsFilter"}),
-            h("a", {href: "about:blank", className: "char-btn", onClick: this.onClearAndFocusFilter}, "X")
+          h("span", {className: "object-tab" + (model.useTab == "all" ? " active-tab": "")},
+            h("a", {href: "about:blank", onClick: this.onUseAllTab}, "All")
           ),
-          h("a", {href: "about:blank", onClick: this.onToggleAdvancedFilter}, model.useAdvancedFilter ? "Simple filter" : "Advanced filter"),
-          h("h1", {className: "object-name"},
-            h("span", {className: "quick-select"}, model.objectName()),
-            " ",
-            model.recordHeading()
-          ),
-          h("span", {className: "object-actions"},
-            !model.isEditing ? h("button", {title: "Inline edit the values of this record", disabled: !model.canEdit() || !model.fieldRows.selectedColumnMap.has("value"), onClick: this.onDoEdit}, "Edit") : null,
-            " ",
-            model.isEditing ? h("button", {title: "Inline edit the values of this record", onClick: this.onDoSave}, "Save") : null,
-            " ",
-            model.isEditing ? h("button", {title: "Inline edit the values of this record", onClick: this.onCancelEdit}, "Cancel") : null,
-            " ",
-            model.exportLink() ? h("a", {href: model.exportLink(), title: "Export data from this object"}, "Export") : null,
-            " ",
-            model.viewLink() ? h("a", {href: model.viewLink(), title: "View this record in Salesforce"}, "View") : null,
-            " ",
-            model.editLayoutLink() ? h("a", {href: model.editLayoutLink(), title: "Open the page layout editor"}, "Edit layout") : null,
-            " ",
-            model.objectName() ? h("a", {href: "about:blank", onClick: this.onShowObjectMetadata}, "More") : null,
-            " ",
-            model.objectName() ? h("a", {href: model.openSetup()}, "Setup") : null,
-            " ",
+          h("span", {className: "object-tab" + (model.useTab == "fields" ? " active-tab": "")},
+            h("a", {href: "about:blank", className: "tab-with-icon", onClick: this.onUseFieldsTab}, "Fields"),
             h(ColumnsVisibiltyBox, {
               rowList: model.fieldRows,
               label: "Field columns",
@@ -934,8 +928,10 @@ class App extends React.Component {
                 h("hr", {key: "---"}),
                 model.fieldRows.availableColumns.map(col => h(ColumnVisibiltyToggle, {key: col, name: col, label: col, rowList: model.fieldRows}))
               ]
-            }),
-            " ",
+            })
+          ),
+          h("span", {className: "object-tab" + (model.useTab == "childs" ? " active-tab": "")},
+            h("a", {href: "about:blank", className: "tab-with-icon", onClick: this.onUseChildsTab}, "Relations"),
             h(ColumnsVisibiltyBox, {
               rowList: model.childRows,
               label: "Relationship columns",
@@ -945,21 +941,47 @@ class App extends React.Component {
                 model.childRows.availableColumns.map(col => h(ColumnVisibiltyToggle, {key: col, rowList: model.childRows, name: col}))
               ]
             })
+          ),
+          model.useTab != "all" ? null : h("div", {className: "filter-box"},
+            h("svg", {className: "filter-icon"},
+              h("use", {xlinkHref: "symbols.svg#search"})
+            ),
+            h("input", {className: "filter-input", placeholder: "Filter", value: model.rowsFilter, onChange: this.onRowsFilterInput, ref: "rowsFilter"}),
+            h("a", {href: "about:blank", className: "filter-clear", onClick: this.onClearAndFocusFilter},
+              h("svg", {className: "filter-clear-icon"},
+                h("use", {xlinkHref: "symbols.svg#clear"})
+              )
+            )
+          ),
+          h("h1", {className: "object-name"},
+            h("span", {className: "quick-select"}, model.objectName()),
+            " ",
+            model.recordHeading()
+          ),
+          h("span", {className: "object-actions"},
+            !model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", disabled: !model.canEdit() || !model.fieldRows.selectedColumnMap.has("value"), onClick: this.onDoEdit}, "Edit") : null,
+            model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", onClick: this.onDoSave}, "Save") : null,
+            model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", onClick: this.onCancelEdit}, "Cancel") : null,
+            model.exportLink() ? h("a", {href: model.exportLink(), title: "Export data from this object", className: "button"}, "Export") : null,
+            model.viewLink() ? h("a", {href: model.viewLink(), title: "View this record in Salesforce", className: "button"}, "View") : null,
+            model.editLayoutLink() ? h("a", {href: model.editLayoutLink(), title: "Open the page layout editor", className: "button"}, "Edit layout") : null,
+            model.objectName() ? h("a", {href: "about:blank", onClick: this.onShowObjectMetadata, className: "button"}, "More") : null,
+            model.objectName() ? h("a", {href: model.openSetup(), className: "button"}, "Setup") : null
           )
         ),
         h("div", {className: "body " + (model.fieldRows.selectedColumnMap.size < 2 && model.childRows.selectedColumnMap.size < 2 ? "empty " : "")},
           h("div", {hidden: model.errorMessages.length == 0, className: "error-message"}, model.errorMessages.map((data, index) => h("div", {key: index}, data))),
-          h(RowTable, {
+          model.useTab == "all" || model.useTab == "fields" ? h(RowTable, {
             rowList: model.fieldRows,
             actionsColumn: {className: "field-actions", reactElement: FieldActionsCell},
             classNameForRow: row => (row.fieldIsCalculated() ? "fieldCalculated " : "") + (row.fieldIsHidden() ? "fieldHidden " : "")
-          }),
-          h("hr", {}),
-          h(RowTable, {
+          }) : null,
+          model.useTab == "all" ? h("hr", {}) : null,
+          model.useTab == "all" || model.useTab =="childs" ? h(RowTable, {
             rowList: model.childRows,
             actionsColumn: {className: "child-actions", reactElement: ChildActionsCell},
             classNameForRow: () => ""
-          })
+          }) : null
         ),
         model.detailsBox ? h(DetailsBox, {model}) : null
       )
@@ -981,11 +1003,16 @@ class ColumnsVisibiltyBox extends React.Component {
   render() {
     let {rowList, label, content} = this.props;
     return h("span", {className: "column-button-outer"},
-      h("a", {href: "about:blank", onClick: this.onAvailableColumnsClick},
-        label
+      h("a", {href: "about:blank", onClick: this.onAvailableColumnsClick, className: "button-icon-link"},
+        h("svg", {className: "button-icon"},
+          h("use", {xlinkHref: "symbols.svg#chevrondown"})
+        )
       ),
       rowList.availableColumns ? h("div", {className: "column-popup"},
-        content()
+        h("div", {className: "column-popup-inner"},
+          h("span", {className: "menu-item"}, label),
+          content()
+        )
       ) : null
     );
   }
@@ -1003,7 +1030,7 @@ class ColumnVisibiltyToggle extends React.Component {
   }
   render() {
     let {rowList, name, disabled} = this.props;
-    return h("label", {},
+    return h("label", {className: "menu-item"},
       h("input", {
         type: "checkbox",
         checked: rowList.selectedColumnMap.has(name),
@@ -1027,7 +1054,7 @@ class RowTable extends React.Component {
           ),
           h("th", {className: actionsColumn.className}, "Actions")
         ),
-        rowList.model.useAdvancedFilter ? h("tr", {},
+        rowList.model.useTab != "all" ? h("tr", {},
           selectedColumns.map(col =>
             h(FilterCell, {key: col.name, col, rowList})
           ),
