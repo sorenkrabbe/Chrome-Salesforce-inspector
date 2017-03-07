@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-/* global sfConn apiVersion async */
+/* global sfConn apiVersion */
 /* global popupTest csvParseTest dataImportTest dataExportTest */
 /* eslint-enable no-unused-vars */
 "use strict";
@@ -83,9 +83,9 @@ class Test {
     });
   }
 
-  *anonApex(apex) {
+  async anonApex(apex) {
     window.anonApex.removeAttribute("hidden");
-    let res = yield sfConn.rest("/services/data/v" + apiVersion + "/tooling/executeAnonymous/?anonymousBody=" + encodeURIComponent(apex));
+    let res = await sfConn.rest("/services/data/v" + apiVersion + "/tooling/executeAnonymous/?anonymousBody=" + encodeURIComponent(apex));
     window.anonApex.setAttribute("hidden", "");
     this.assert(res.success, res);
   }
@@ -95,16 +95,16 @@ class Test {
 this.isUnitTest = true;
 
 addEventListener("load", () => {
-  async(function*() {
+  (async () => {
     try {
       let args = new URLSearchParams(location.search.slice(1));
       let sfHost = args.get("host");
-      yield sfConn.getSession(sfHost);
+      await sfConn.getSession(sfHost);
       let test = new Test(sfHost);
-      yield* popupTest(test);
-      yield* csvParseTest(test);
-      yield* dataImportTest(test);
-      yield* dataExportTest(test);
+      await popupTest(test);
+      await csvParseTest(test);
+      await dataImportTest(test);
+      await dataExportTest(test);
       test.assert(!seenError, "Expected no error");
       console.log("Salesforce Inspector unit test finished successfully");
       window.result.textContent = "Salesforce Inspector unit test finished successfully";

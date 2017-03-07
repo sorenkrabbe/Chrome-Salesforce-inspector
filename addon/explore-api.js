@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion async */
+/* global sfConn apiVersion */
 /* global initButton */
 /* eslint-enable no-unused-vars */
 "use strict";
@@ -491,4 +491,3 @@ class App extends React.Component {
   });
 
 }
-

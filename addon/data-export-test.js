@@ -1,16 +1,16 @@
 /* eslint-disable no-unused-vars */
-/* global sfConn apiVersion async */
+/* global sfConn apiVersion */
 /* exported dataExportTest */
 /* eslint-enable no-unused-vars */
 "use strict";
-function* dataExportTest(test) {
+async function dataExportTest(test) {
   console.log("TEST data-export");
   let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
 
   localStorage.removeItem("insextQueryHistory");
   localStorage.removeItem("insextSavedQueryHistory");
 
-  let win = yield loadPage("data-export.html");
+  let win = await loadPage("data-export.html");
   let {testData: {model}} = win;
   let vm = model;
   let queryInput = model.queryInput;
@@ -51,7 +51,7 @@ function* dataExportTest(test) {
   vm.queryAutocompleteHandler();
 
   // Load global describe and user info
-  yield waitForSpinner();
+  await waitForSpinner();
 
   // Autocomplete object names
   assertEquals("Objects:", vm.autocompleteResults.title);
@@ -66,7 +66,7 @@ function* dataExportTest(test) {
   assertEquals([], vm.autocompleteResults.results);
 
   // Load Account field describe
-  yield waitForSpinner();
+  await waitForSpinner();
 
   // Autocomplete field name in SELECT, sould automatically update when describe call completes
   assertEquals("Account fields:", vm.autocompleteResults.title);
@@ -98,7 +98,7 @@ function* dataExportTest(test) {
   assertEquals([], vm.autocompleteResults.results);
 
   // Load User field describe
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("User fields:", vm.autocompleteResults.title);
 
   // Autocomplete related field in SELECT
@@ -190,13 +190,13 @@ function* dataExportTest(test) {
   setQuery("select Id from Account where owner.profile.name = admini", "", "");
   assertEquals("Loading Profile metadata...", vm.autocompleteResults.title);
   assertEquals([], getValues(vm.autocompleteResults.results));
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Profile.Name values (Press Ctrl+Space):", vm.autocompleteResults.title);
   assertEquals([], getValues(vm.autocompleteResults.results));
   vm.queryAutocompleteHandler({ctrlSpace: true});
   assertEquals("Loading Profile.Name values...", vm.autocompleteResults.title);
   assertEquals([], getValues(vm.autocompleteResults.results));
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Profile.Name values:", vm.autocompleteResults.title);
   assertEquals(["'System Administrator'"], getValues(vm.autocompleteResults.results));
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
@@ -209,7 +209,7 @@ function* dataExportTest(test) {
   vm.queryAutocompleteHandler({ctrlSpace: true});
   assertEquals("Loading Account.Id values...", vm.autocompleteResults.title);
   assertEquals([], getValues(vm.autocompleteResults.results));
-  yield waitForSpinner();
+  await waitForSpinner();
   assert(vm.autocompleteResults.title.indexOf("Error:") == 0);
   assertEquals([], getValues(vm.autocompleteResults.results));
 
@@ -230,12 +230,12 @@ function* dataExportTest(test) {
 
   // Autocomplete before subquery
   setQuery("select Id from Opportunity where AccountId", "", " in (select AccountId from Asset where Price = null) and StageName = 'Closed Won'");
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Opportunity fields:", vm.autocompleteResults.title);
 
   // Autocomplete in subquery
   setQuery("select Id from Opportunity where AccountId in (select AccountId from Asset where Price", "", " = null) and StageName = 'Closed Won'");
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Asset fields:", vm.autocompleteResults.title);
 
   // Autocomplete after subquery
@@ -246,12 +246,12 @@ function* dataExportTest(test) {
   setQuery("select Id from ApexCla", "", "");
   vm.queryTooling = true;
   vm.queryAutocompleteHandler();
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults.title);
   assertEquals(["ApexClass", "ApexClassMember"], getValues(vm.autocompleteResults.results));
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id from ApexClass ", queryInput.value);
-  yield waitForSpinner();
+  await waitForSpinner();
   vm.queryTooling = false;
   vm.queryAutocompleteHandler();
 
@@ -259,7 +259,7 @@ function* dataExportTest(test) {
   assertEquals("ApexClass", vm.autocompleteResults.sobjectName);
 
   // Set up test records
-  yield* anonApex(`
+  await anonApex(`
     delete [select Id from Inspector_Test__c];
     insert new Inspector_Test__c(Name = 'test1', Checkbox__c = false, Number__c = 100.01);
     insert new Inspector_Test__c(Name = 'test2', Checkbox__c = true, Number__c = 200.02, Lookup__r = new Inspector_Test__c(Name = 'test1'));
@@ -283,7 +283,7 @@ function* dataExportTest(test) {
   assertEquals([true], vm.exportedData.colVisibilities);
   assertEquals(null, vm.exportError);
 
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assertEquals("Exported 4 record(s).", vm.exportStatus);
@@ -353,7 +353,7 @@ function* dataExportTest(test) {
   assertEquals([true], vm.exportedData.colVisibilities);
   assertEquals(null, vm.exportError);
 
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assertEquals("Exported 4 record(s).", vm.exportStatus);
@@ -371,7 +371,7 @@ function* dataExportTest(test) {
   // Export error
   queryInput.value = "select UnknownField from Inspector_Test__c";
   vm.doExport();
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals(false, vm.isWorking);
   assertEquals("Error", vm.exportStatus);
   assertEquals(null, vm.exportedData);
@@ -389,7 +389,7 @@ function* dataExportTest(test) {
   assertEquals([true], vm.exportedData.colVisibilities);
   assertEquals(null, vm.exportError);
 
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assertEquals("No data exported.", vm.exportStatus);
@@ -410,7 +410,7 @@ function* dataExportTest(test) {
   assertEquals([true], vm.exportedData.colVisibilities);
   assertEquals(null, vm.exportError);
 
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assertEquals("No data exported. 4 record(s).", vm.exportStatus);
@@ -432,7 +432,7 @@ function* dataExportTest(test) {
   assertEquals(null, vm.exportError);
 
   vm.stopExport();
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assertEquals("No data exported.", vm.exportStatus);
@@ -442,7 +442,7 @@ function* dataExportTest(test) {
   assertEquals(null, vm.exportError);
 
   // Set up test records
-  yield* anonApex(`
+  await anonApex(`
     delete [select Id from Inspector_Test__c];
     List<Inspector_Test__c> records = new List<Inspector_Test__c>();
     for (Integer i = 0; i < 3000; i++) { // More than one batch when exporting (a batch is 2000)
@@ -463,7 +463,7 @@ function* dataExportTest(test) {
   assertEquals([true], vm.exportedData.colVisibilities);
   assertEquals(null, vm.exportError);
 
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assertEquals("Exported 3000 record(s).", vm.exportStatus);
@@ -473,7 +473,7 @@ function* dataExportTest(test) {
   assertEquals(null, vm.exportError);
 
   // Set up test records
-  yield* anonApex("delete [select Id from Inspector_Test__c];");
+  await anonApex("delete [select Id from Inspector_Test__c];");
 
   // Query all
   vm.queryAll = true;
@@ -488,7 +488,7 @@ function* dataExportTest(test) {
   assertEquals([true], vm.exportedData.colVisibilities);
   assertEquals(null, vm.exportError);
 
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assert(vm.exportStatus.indexOf("Exported") > -1);
@@ -513,7 +513,7 @@ function* dataExportTest(test) {
   assertEquals([true], vm.exportedData.colVisibilities);
   assertEquals(null, vm.exportError);
 
-  yield waitForSpinner();
+  await waitForSpinner();
 
   assertEquals(false, vm.isWorking);
   assert(vm.exportStatus.indexOf("Exported") > -1);
@@ -550,14 +550,14 @@ function* dataExportTest(test) {
   vm.autocompleteReload();
   assertEquals("Loading metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Loading metadata failed.", vm.autocompleteResults.title);
   assertEquals(1, vm.autocompleteResults.results.length);
   win.sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("Loading metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults.title);
 
   // Autocomplete load errors for object describe
@@ -565,14 +565,14 @@ function* dataExportTest(test) {
   setQuery("select Id", "", " from Account");
   assertEquals("Loading Account metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Loading Account metadata failed.", vm.autocompleteResults.title);
   assertEquals(1, vm.autocompleteResults.results.length);
   win.sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Account fields:", vm.autocompleteResults.title);
 
   // Autocomplete load errors for relationship object describe
@@ -580,14 +580,14 @@ function* dataExportTest(test) {
   setQuery("select Id, OWNER.USERN", "", " from Account");
   assertEquals("Loading User metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("Loading User metadata failed.", vm.autocompleteResults.title);
   assertEquals(1, vm.autocompleteResults.results.length);
   win.sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
-  yield waitForSpinner();
+  await waitForSpinner();
   assertEquals("User fields:", vm.autocompleteResults.title);
 
 }

@@ -1,13 +1,13 @@
 /* eslint-disable no-unused-vars */
-/* global sfConn apiVersion async */
+/* global sfConn apiVersion */
 /* exported csvParseTest */
 /* eslint quotes: ["error", "single", {"avoidEscape": true}] */
 /* eslint-enable no-unused-vars */
 'use strict';
-function* csvParseTest(test) {
+async function csvParseTest(test) {
   console.log('TEST csvParse');
   let {assertEquals, assertThrows, loadPage} = test;
-  let {csvParse} = yield loadPage('data-import.html');
+  let {csvParse} = await loadPage('data-import.html');
   // Quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d', ',')); // without quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a","b"\n"c","d"', ',')); // with quotes

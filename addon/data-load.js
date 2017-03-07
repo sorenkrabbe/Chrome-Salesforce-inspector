@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-/* global sfConn apiVersion async */
+/* global sfConn apiVersion */
 /* exported Enumerable DescribeInfo copyToClipboard initScrollTable */
 /* eslint-enable no-unused-vars */
 "use strict";

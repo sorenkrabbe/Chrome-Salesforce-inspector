@@ -1,4 +1,4 @@
-/* exported sfConn apiVersion async */
+/* exported sfConn apiVersion */
 "use strict";
 
 var apiVersion = "39.0"; // eslint-disable-line no-var
@@ -210,19 +210,3 @@ var sfConn = { // eslint-disable-line no-var
   },
 
 };
-
-function async(generator) {
-  return function(...args) {
-    let iterator = generator.apply(this, args);
-    return new Promise((resolve, reject) => {
-      function await(step) {
-        if (step.done) {
-          resolve(step.value);
-          return;
-        }
-        Promise.resolve(step.value).then(iterator.next.bind(iterator), iterator.throw.bind(iterator)).then(await, reject);
-      }
-      await(iterator.next());
-    });
-  };
-}

@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion async */
+/* global sfConn apiVersion */
 /* global initButton */
 /* global csvParse */
 /* global Enumerable DescribeInfo copyToClipboard initScrollTable */
