@@ -184,7 +184,9 @@ class Model {
           }
         }
         if (res.success != "true") {
-          throw res;
+          let err = new Error("Retrieve failed");
+          err.result = res;
+          throw err;
         }
         let statusJson = JSON.stringify({
           fileProperties: sfConn.asArray(res.fileProperties)
@@ -222,11 +224,14 @@ class Model {
     return promise;
   }
 
-  logError(msg) {
+  logError(err) {
     this.progress = "error";
-    console.error(msg);
-    if (typeof msg != "string") {
-      msg = JSON.stringify(msg, null, "  ");
+    console.error(err);
+    let msg;
+    if (err.message == "Retrieve failed") {
+      msg = "(Error: Retrieve failed: " + JSON.stringify(err.result) + ")";
+    } else {
+      msg = "(Error: " + err.message + ")";
     }
     this.logMessages.push({level: "error", text: msg});
     this.didUpdate();
