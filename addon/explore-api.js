@@ -16,33 +16,21 @@ class Model {
     this.apiResponse = null;
     this.selectedTextView = null;
 
-    this.editMode = false;
-    this.editType = "REST";
-    this.editUrl = "";
-    this.editMethod = "GET";
-    this.editNamespace = "";
-    this.editBody = "";
-
     if (args.has("apiUrls")) {
       let apiUrls = args.getAll("apiUrls");
       this.title = apiUrls.length + " API requests, e.g. " + apiUrls[0];
       let apiPromise = Promise.all(apiUrls.map(url => sfConn.rest(url)));
       this.performRequest(apiPromise);
     } else if (args.has("checkDeployStatus")) {
-      this.editMode = true;
-      this.editType = "SOAP";
-      this.setSoapType("Metadata");
-      this.editBody = "<checkDeployStatus>\n  <id>" + args.get("checkDeployStatus") + "</id>\n  <includeDetails>true</includeDetails>\n</checkDeployStatus>";
+      let wsdl = sfConn.wsdl(apiVersion, "Metadata");
+      this.title = "checkDeployStatus: " + args.get("checkDeployStatus");
+      let apiPromise = sfConn.soap(wsdl, "checkDeployStatus", {id: args.get("checkDeployStatus"), includeDetails: true});
+      this.performRequest(apiPromise);
     } else {
       let apiUrl = args.get("apiUrl") || "/services/data/";
-      if (args.has("edit")) {
-        this.editMode = true;
-        this.editUrl = apiUrl;
-      } else {
-        this.title = apiUrl;
-        let apiPromise = sfConn.rest(apiUrl);
-        this.performRequest(apiPromise);
-      }
+      this.title = apiUrl;
+      let apiPromise = sfConn.rest(apiUrl);
+      this.performRequest(apiPromise);
     }
 
     this.spinFor(sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
@@ -87,13 +75,6 @@ class Model {
     args.set("apiUrl", subUrl.apiUrl);
     return "explore-api.html?" + args;
   }
-  editSubUrl(subUrl) {
-    let args = new URLSearchParams();
-    args.set("host", this.sfHost);
-    args.set("apiUrl", subUrl.apiUrl);
-    args.set("edit", "1");
-    return "explore-api.html?" + args;
-  }
   openGroupUrl(groupUrl) {
     let args = new URLSearchParams();
     args.set("host", this.sfHost);
@@ -102,38 +83,14 @@ class Model {
     }
     return "explore-api.html?" + args;
   }
-  sendClick() {
-    if (this.editType == "REST") {
-      let apiUrl = this.editUrl;
-      this.title = apiUrl;
-      let apiPromise = sfConn.rest(apiUrl, {method: this.editMethod, bodyText: this.editBody});
-      this.performRequest(apiPromise);
-    } else if (this.editType == "SOAP") {
-      let apiUrl = this.editUrl;
-      this.title = "SOAP " + apiUrl;
-      let apiPromise = sfConn.rawSoap({servicePortAddress: apiUrl, targetNamespace: this.editNamespace}, this.editBody);
-      this.performSoapRequest(apiPromise);
-    } else {
-      console.error("Unknown type");
-    }
-  }
-  setSoapType(soapType) {
-    let soapBody = "<methodName></methodName>";
-    let wsdl = sfConn.wsdl(apiVersion, soapType);
-    this.editUrl = wsdl.servicePortAddress;
-    this.editNamespace = wsdl.targetNamespace;
-    this.editBody = soapBody;
-  }
   performRequest(apiPromise) {
     this.spinFor(apiPromise.then(result => {
-      this.parseResponse(result);
-    }).catch(err => {
-      console.error(err);
-      this.apiResponse = {textViews: [{name: "Error", value: (err && err.sfConnError) || err}]};
+      this.parseResponse(result, "Success");
+    }, err => {
+      this.parseResponse(err.detail || err.message, "Error");
     }));
   }
-  parseResponse(result) {
-
+  parseResponse(result, status) {
     /*
     Transform an arbitrary JSON structure (the `result` vaiable) into a list of two-dimensional TSV tables (the `textViews` variable), that can easily be copied into for example Excel.
     Each two-dimensional table corresponds to an array or set of related arrays in the JSON data.
@@ -176,6 +133,10 @@ class Model {
       String[] apiUrls; // The related URLs
       String label; // A label describing the URLs
     }
+
+    TODO: This transformation does not work in an ideal way on SOAP responses, since for those we can only detect an array if it has two or more elements.
+    For example, "@.x.*.y.*" in the following shows two rows "2" and "3", where it should show three rows "1", "2", and "3":
+    display(XML.parse(new DOMParser().parseFromString("<root><x><y>1</y></x><x><y>2</y><y>3</y></x></root>", "text/xml").documentElement))
     */
 
     // Recursively explore the JSON structure, discovering tables and their rows and columns.
@@ -266,7 +227,7 @@ class Model {
         table.push(row.cells);
       }
       let csvSignature = csvSerialize([
-        ["Salesforce Inspector - REST API Explorer"],
+        ["Salesforce Inspector - API Explorer"],
         ["URL", this.title],
         ["Rows", tView.name],
         ["Extract time", new Date().toISOString()]
@@ -275,6 +236,7 @@ class Model {
       textViews.push({name: "Rows: " + tView.name + " (for viewing)", table});
     }
     this.apiResponse = {
+      status,
       textViews,
       // URLs to further explore the REST API, not grouped
       apiSubUrls,
@@ -283,31 +245,6 @@ class Model {
     };
     // Don't update selectedTextView. No radio button will be selected, leaving the text area blank.
     // The results can be quite large and take a long time to render, so we only want to render a result once the user has explicitly selected it.
-  }
-  performSoapRequest(apiPromise) {
-    this.spinFor(apiPromise.then(result => {
-      let textViews = [
-        {name: "Raw XML", value: new XMLSerializer().serializeToString(result)}
-      ];
-      this.apiResponse = {
-        textViews,
-        apiSubUrls: null,
-        apiGroupUrls: null,
-      };
-    }).catch(err => {
-      console.error(err);
-      let textViews = [];
-      if (err && err.sfConnError) {
-        textViews.push({name: "Error", value: err.sfConnError});
-      }
-      if (err && err.rawSoapError) {
-        textViews.push({name: "Error (Raw XML)", value: new XMLSerializer().serializeToString(err.rawSoapError)});
-      }
-      if (textViews.length == 0) {
-        textViews.push({name: "Error", value: err});
-      }
-      this.apiResponse = {textViews};
-    }));
   }
 }
 
@@ -319,59 +256,6 @@ let h = React.createElement;
 
 class App extends React.Component {
 
-  constructor(props) {
-    super(props);
-    this.onEditTypeChange = this.onEditTypeChange.bind(this);
-    this.onEditSoapChange = this.onEditSoapChange.bind(this);
-    this.onEditUrlChange = this.onEditUrlChange.bind(this);
-    this.onEditMethodChange = this.onEditMethodChange.bind(this);
-    this.onEditNamespaceChange = this.onEditNamespaceChange.bind(this);
-    this.onEditBodyChange = this.onEditBodyChange.bind(this);
-    this.onSendClick = this.onSendClick.bind(this);
-  }
-
-  onEditTypeChange(e) {
-    let {model} = this.props;
-    model.editType = e.target.value;
-    model.didUpdate();
-  }
-
-  onEditSoapChange(e) {
-    let {model} = this.props;
-    model.setSoapType(e.target.value);
-    model.didUpdate();
-  }
-
-  onEditUrlChange(e) {
-    let {model} = this.props;
-    model.editUrl = e.target.value;
-    model.didUpdate();
-  }
-
-  onEditMethodChange(e) {
-    let {model} = this.props;
-    model.editMethod = e.target.value;
-    model.didUpdate();
-  }
-
-  onEditNamespaceChange(e) {
-    let {model} = this.props;
-    model.editNamespace = e.target.value;
-    model.didUpdate();
-  }
-
-  onEditBodyChange(e) {
-    let {model} = this.props;
-    model.editBody = e.target.value;
-    model.didUpdate();
-  }
-
-  onSendClick() {
-    let {model} = this.props;
-    model.sendClick();
-    model.didUpdate();
-  }
-
   render() {
     let {model} = this.props;
     document.title = model.title;
@@ -380,51 +264,9 @@ class App extends React.Component {
       h("a", {href: model.sfLink}, "Salesforce Home"),
       " \xa0 ",
       h("span", {}, model.userInfo),
-      model.editMode && h("div", {className: "edit-form"},
-        h("label", {},
-          h("span", {}, "Type"),
-          h("select", {value: model.editType, onChange: this.onEditTypeChange},
-            h("option", {}, "REST"),
-            h("option", {}, "SOAP")
-          )
-        ),
-        model.editType == "SOAP" && h("label", {},
-          h("span", {}, "API"),
-          h("select", {value: "--Select--", onChange: this.onEditSoapChange},
-            h("option", {}, "--Select--"),
-            h("option", {}, "Enterprise"),
-            h("option", {}, "Partner"),
-            h("option", {}, "Apex"),
-            h("option", {}, "Metadata"),
-            h("option", {}, "Tooling")
-          )
-        ),
-        h("label", {},
-          h("span", {}, "URL"),
-          h("input", {value: model.editUrl, onChange: this.onEditUrlChange})
-        ),
-        model.editType == "REST" && h("label", {},
-          h("span", {}, "Method"),
-          h("select", {value: model.editMethod, onChange: this.onEditMethodChange},
-            h("option", {}, "GET"),
-            h("option", {}, "POST"),
-            h("option", {}, "PUT"),
-            h("option", {}, "PATCH"),
-            h("option", {}, "DELETE")
-          )
-        ),
-        model.editType == "SOAP" && h("label", {},
-          h("span", {}, "Namespace"),
-          h("input", {value: model.editNamespace, onChange: this.onEditNamespaceChange})
-        ),
-        h("label", {},
-          h("span", {}, "Body"),
-          h("textarea", {value: model.editBody, onChange: this.onEditBodyChange})
-        ),
-        h("button", {onClick: this.onSendClick, disabled: model.spinnerCount != 0}, "Send")
-      ),
       model.apiResponse && h("div", {},
         h("ul", {},
+          h("li", {className: model.apiResponse.status == "Error" ? "status-error" : "status-success"}, "Status: " + model.apiResponse.status),
           model.apiResponse.textViews.map(textView =>
             h("li", {key: textView.name},
               h("label", {},
@@ -462,13 +304,17 @@ class App extends React.Component {
           model.apiResponse.apiSubUrls.map((apiSubUrl, key) =>
             h("li", {key},
               h("a", {href: model.openSubUrl(apiSubUrl)}, apiSubUrl.jsonPath),
-              " - " + apiSubUrl.label + " ",
-              h("a", {href: model.editSubUrl(apiSubUrl)}, "Edit")
+              " - " + apiSubUrl.label
             )
           )
         )
       ),
-      h("a", {href: "https://www.salesforce.com/us/developer/docs/api_rest/", target: "_blank"}, "REST API documentation")
+      h("a", {href: "https://www.salesforce.com/us/developer/docs/api_rest/", target: "_blank"}, "REST API documentation"),
+      " Open your browser's ",
+      h("b", {}, "F12 Developer Tools"),
+      " and select the ",
+      h("b", {}, "Console"),
+      " tab to make your own API calls."
     );
   }
 
@@ -483,6 +329,12 @@ class App extends React.Component {
 
     let root = document.getElementById("root");
     let model = new Model(sfHost, args);
+    window.display = apiPromise => {
+      if (model.spinnerCount > 0) {
+        throw new Error("API call already in progress");
+      }
+      model.performRequest(Promise.resolve(apiPromise));
+    };
     model.reactCallback = cb => {
       ReactDOM.render(h(App, {model}), root, cb);
     };
@@ -491,3 +343,84 @@ class App extends React.Component {
   });
 
 }
+
+console.log("%cMake Salesforce API calls", "font-size: 3em; font-weight: bold");
+console.groupCollapsed("How to make REST API calls");
+console.log(`%cExample:
+%c  display(sfConn.rest("/services/data/v${apiVersion}/query/?q=" + encodeURIComponent("select Id, Name from Account where CreatedDate = LAST_WEEK")));
+
+  https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/dome_query.htm
+
+%cExample:
+%c  var myNewAccount = {Name: "test"};
+  display(sfConn.rest("/services/data/v${apiVersion}/sobjects/Account", {method: "POST", body: myNewAccount}));
+
+  https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/dome_sobject_create.htm
+
+%cUsage:
+%c  var responsePromise = sfConn.rest(url, {method, api, body, bodyType, headers});
+  display(responsePromise);
+
+    path (required): The relative URL to request.
+    method (default "GET"): The HTTP method to use.
+    api (default "normal"): The type of REST api, either "normal" or "bulk".
+    body (optional): An object that will be converted to JSON.
+    bodyType (default "json"): Set to "raw" to use use a body other than JSON.
+    headers (optional): An object with HTTP headers, example {"Sforce-Query-Options": "batchSize=1000"}. https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/headers.htm
+    responsePromise: A Promise for a Salesforce API response.
+
+%cDocumentation:
+%c  Bulk: https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/
+  Chatter: https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/
+  REST: https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/
+  Tooling: https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/
+  Reports and Dashboards: https://developer.salesforce.com/docs/atlas.en-us.api_analytics.meta/api_analytics/
+`,
+  "font-weight: bold; font-style: italic",
+  "",
+  "font-weight: bold; font-style: italic",
+  "",
+  "font-weight: bold; font-style: italic",
+  "",
+  "font-weight: bold; font-style: italic",
+  ""
+);
+console.groupEnd();
+console.groupCollapsed("How to make SOAP API calls");
+console.log(`%cExample:
+%c  let enterpriseWsdl = sfConn.wsdl("${apiVersion}").Enterprise;
+  let contacts = [
+    {$type: "Contact", FirstName: "John", LastName: "Smith", Email: "john.smith@example.com"},
+    {$type: "Contact", FirstName: "Jane", LastName: "Smith", Email: "jane.smith@example.com"},
+  ];
+  let upsertResults = sfConn.soap(enterpriseWsdl, "upsert", {externalIdFieldName: "Email", sObjects: contacts});
+  display(upsertResults);
+
+  https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_upsert.htm
+
+%cUsage:
+%c  var wsdl = sfConn.wsdl(apiVersion)[apiName];
+  var responsePromise = sfConn.soap(wsdl, method, args, {headers});
+  display(responsePromise);
+
+    apiVersion (required): The Salesforce API version.
+    apiName (required): One of "Enterprise", "Partner", "Apex", "Metadata" and "Tooling".
+    method (required): The name of the SOAP method to be called, as found in the Salesforce documentation.
+    args (required): The arguments to the called SOAP method. Pass an object where each property corresponds to a SOAP method argument by name, or an empty object for no arguments.
+    headers (optional): SOAP headers, e.g. {AllOrNoneHeader: {allOrNone: false}}.
+    responsePromise: A Promise for a Salesforce API response.
+
+%cDocumentation:
+%c  "Enterprise": https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/
+  "Partner": https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/
+  "Metadata": https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/
+  "Tooling": https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/
+`,
+  "font-weight: bold; font-style: italic",
+  "",
+  "font-weight: bold; font-style: italic",
+  "",
+  "font-weight: bold; font-style: italic",
+  ""
+);
+console.groupEnd();

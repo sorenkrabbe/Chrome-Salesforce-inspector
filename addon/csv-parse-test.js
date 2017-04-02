@@ -12,10 +12,10 @@ async function csvParseTest(test) {
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d', ',')); // without quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a","b"\n"c","d"', ',')); // with quotes
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('"a",b\nc,"d"', ',')); // mixed with and without quotes
-  assertThrows({message: 'Quote not closed', offsetStart: 4, offsetEnd: 5}, () => csvParse('"a","b\nc,d', ',')); // unclosed quote
+  assertThrows({name: 'CSVParseError', message: 'Quote not closed', offsetStart: 4, offsetEnd: 5}, () => csvParse('"a","b\nc,d', ',')); // unclosed quote
   assertEquals([['aa', 'b"b'], ['c""c', 'dd"']], csvParse('aa,b"b\nc""c,dd"', ',')); // unquoted values may contain quotes, as long as they are not at the beginning of the value. These should not be unescaped.
   assertEquals([['a"a', 'bb'], ['c""c', 'dd']], csvParse('"a""a","bb"\n"c""""c","dd"', ',')); // quoted values may contain escaped quotes. These should be unescaped (by replacing each pair of quotes with a single quote).
-  assertThrows({message: "unexpected token 'c'", offsetStart: 15, offsetEnd: 16}, () => csvParse('"a""a","bb"\n"c"c","dd"', ',')); // quoted values cannot contain unescaped quotes
+  assertThrows({name: 'CSVParseError', message: "unexpected token 'c'", offsetStart: 15, offsetEnd: 16}, () => csvParse('"a""a","bb"\n"c"c","dd"', ',')); // quoted values cannot contain unescaped quotes
   // Line breaks
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\nc,d', ',')); // LF
   assertEquals([['a', 'b'], ['c', 'd']], csvParse('a,b\r\nc,d', ',')); // CRLF
@@ -39,6 +39,6 @@ async function csvParseTest(test) {
   assertEquals([['a']], csvParse('a', ',')); // 1x1
   assertEquals([['']], csvParse('\n', ',')); // 1x1 empty
   assertEquals([['a', ' '], ['', '']], csvParse('a, \n,', ',')); // empty and spaces
-  assertThrows({message: 'no data', offsetStart: 0, offsetEnd: 0}, () => csvParse('', ',')); // no data
-  assertThrows({message: 'row 3 has 2 cells, expected 3', offsetStart: 12, offsetEnd: 15}, () => csvParse('a,b,c\nd,e,f\ng,h\ni,j,k', ',')); // 3+3+2+3 not all rows have same length
+  assertThrows({name: 'CSVParseError', message: 'no data', offsetStart: 0, offsetEnd: 0}, () => csvParse('', ',')); // no data
+  assertThrows({name: 'CSVParseError', message: 'row 3 has 2 cells, expected 3', offsetStart: 12, offsetEnd: 15}, () => csvParse('a,b,c\nd,e,f\ng,h\ni,j,k', ',')); // 3+3+2+3 not all rows have same length
 }

@@ -4,203 +4,166 @@
 var apiVersion = "39.0"; // eslint-disable-line no-var
 var sfConn = { // eslint-disable-line no-var
 
-  getSession(sfHost) {
-    return new Promise(resolve => {
-      chrome.runtime.sendMessage({message: "getSession", sfHost}, message => {
-        if (message) {
-          this.instanceHostname = message.hostname;
-          this.sessionId = message.key;
-        }
-        resolve();
-      });
-    });
+  async getSession(sfHost) {
+    let message = await new Promise(resolve =>
+      chrome.runtime.sendMessage({message: "getSession", sfHost}, resolve));
+    if (message) {
+      this.instanceHostname = message.hostname;
+      this.sessionId = message.key;
+    }
   },
 
-  rest(url, options) {
-    return new Promise((resolve, reject) => {
-      options = options || {};
-      if (!sfConn.instanceHostname || !sfConn.sessionId) {
-        reject(new Error("Session not found"));
-        return;
+  async rest(url, {method = "GET", api = "normal", body = undefined, bodyType = "json", headers = {}, progressHandler = null} = {}) {
+    if (!this.instanceHostname || !this.sessionId) {
+      throw new Error("Session not found");
+    }
+
+    let xhr = new XMLHttpRequest();
+    url += (url.includes("?") ? "&" : "?") + "cache=" + Math.random();
+    xhr.open(method, "https://" + this.instanceHostname + url, true);
+
+    xhr.setRequestHeader("Accept", "application/json; charset=UTF-8");
+
+    if (api == "bulk") {
+      xhr.setRequestHeader("X-SFDC-Session", this.sessionId);
+    } else if (api == "normal") {
+      xhr.setRequestHeader("Authorization", "Bearer " + this.sessionId);
+    } else {
+      throw new Error("Unknown api");
+    }
+
+    if (body !== undefined) {
+      if (bodyType == "json") {
+        body = JSON.stringify(body);
+        xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+      } else if (bodyType == "raw") {
+        // Do nothing
+      } else {
+        throw new Error("Unknown bodyType");
       }
-      url += (url.includes("?") ? "&" : "?") + "cache=" + Math.random();
-      let xhr = new XMLHttpRequest();
-      if (options.progressHandler) {
-        options.progressHandler.abort = result => {
-          resolve(result);
+    }
+
+    for (let [name, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(name, value);
+    }
+
+    xhr.responseType = "json";
+    await new Promise((resolve, reject) => {
+      if (progressHandler) {
+        progressHandler.abort = () => {
+          let err = new Error("The request was aborted.");
+          err.name = "AbortError";
+          reject(err);
           xhr.abort();
         };
       }
-      xhr.open(options.method || "GET", "https://" + sfConn.instanceHostname + url, true);
-      xhr.setRequestHeader("Authorization", "OAuth " + sfConn.sessionId);
-      xhr.setRequestHeader("Accept", "application/json");
-      if (options.body || options.bodyText) {
-        xhr.setRequestHeader("Content-Type", "application/json");
-      }
-      xhr.responseType = "json";
+
       xhr.onreadystatechange = () => {
         if (xhr.readyState == 4) {
-          if (xhr.status == 200) {
-            resolve(xhr.response);
-          } else if (xhr.status == 204) {
-            resolve(null);
-          } else {
-            console.error("Received error response from Salesforce REST API", xhr);
-            let text;
-            if (xhr.status == 400 && xhr.response) {
-              try {
-                text = xhr.response.map(err => err.errorCode + ": " + err.message).join("\n");
-              } catch (ex) {
-                // empty
-              }
-            }
-            if (xhr.status == 0) {
-              text = "Network error, offline or timeout";
-            }
-            if (!text) {
-              text = "HTTP error " + xhr.status + " " + xhr.statusText + (xhr.response ? "\n\n" + JSON.stringify(xhr.response) : "");
-            }
-            reject({sfConnError: text});
-          }
+          resolve();
         }
       };
-      xhr.send(JSON.stringify(options.body) || options.bodyText);
+      xhr.send(body);
     });
+    if (xhr.status >= 200 && xhr.status < 300) {
+      return xhr.response;
+    } else if (xhr.status == 0) {
+      console.error("Received no response from Salesforce REST API", xhr);
+      let err = new Error();
+      err.name = "SalesforceRestError";
+      err.message = "Network error, offline or timeout";
+      throw err;
+    } else {
+      console.error("Received error response from Salesforce REST API", xhr);
+      let err = new Error();
+      err.name = "SalesforceRestError";
+      err.detail = xhr.response;
+      try {
+        err.message = err.detail.map(err => err.errorCode + ": " + err.message).join("\n");
+      } catch (ex) {
+        err.message = JSON.stringify(xhr.response);
+      }
+      if (!err.message) {
+        err.message = "HTTP error " + xhr.status + " " + xhr.statusText;
+      }
+      throw err;
+    }
   },
 
   wsdl(apiVersion, apiName) {
-    return {
+    let wsdl = {
       Enterprise: {
         servicePortAddress: "/services/Soap/c/" + apiVersion,
-        targetNamespace: "urn:enterprise.soap.sforce.com"
+        targetNamespaces: ' xmlns="urn:enterprise.soap.sforce.com" xmlns:sf="urn:sobject.enterprise.soap.sforce.com"'
       },
       Partner: {
         servicePortAddress: "/services/Soap/u/" + apiVersion,
-        targetNamespace: "urn:partner.soap.sforce.com"
+        targetNamespaces: ' xmlns="urn:partner.soap.sforce.com" xmlns:sf="urn:sobject.partner.soap.sforce.com"'
       },
       Apex: {
         servicePortAddress: "/services/Soap/s/" + apiVersion,
-        targetNamespace: "http://soap.sforce.com/2006/08/apex"
+        targetNamespaces: ' xmlns="http://soap.sforce.com/2006/08/apex"'
       },
       Metadata: {
         servicePortAddress: "/services/Soap/m/" + apiVersion,
-        targetNamespace: "http://soap.sforce.com/2006/04/metadata"
+        targetNamespaces: ' xmlns="http://soap.sforce.com/2006/04/metadata"'
       },
       Tooling: {
         servicePortAddress: "/services/Soap/T/" + apiVersion,
-        targetNamespace: "urn:tooling.soap.sforce.com"
+        targetNamespaces: ' xmlns="urn:tooling.soap.sforce.com" xmlns:sf="urn:sobject.tooling.soap.sforce.com" xmlns:mns="urn:metadata.tooling.soap.sforce.com"'
       }
-    }[apiName];
+    };
+    if (apiName) {
+      wsdl = wsdl[apiName];
+    }
+    return wsdl;
   },
 
-  soap(wsdl, method, args) {
-    return Promise.resolve()
-      .then(() => {
-        function buildRequest(el, params) {
-          if (params == null) {
-            el.setAttribute("xsi:nil", "true");
-          } else if (typeof params == "object") {
-            for (let [key, value] of Object.entries(params)) {
-              if (key == "$xsi:type") {
-                el.setAttribute("xsi:type", value);
-              } else if (value === undefined) {
-                // ignore
-              } else if (Array.isArray(value)) {
-                for (let element of value) {
-                  let x = doc.createElement(key);
-                  buildRequest(x, element);
-                  el.appendChild(x);
-                }
-              } else {
-                let x = doc.createElement(key);
-                buildRequest(x, value);
-                el.appendChild(x);
-              }
-            }
-          } else {
-            el.textContent = params;
-          }
-        }
-        let doc = document.implementation.createDocument("", method);
-        buildRequest(doc.documentElement, args);
-        let req = new XMLSerializer().serializeToString(doc);
-        return sfConn.rawSoap(wsdl, req);
-      })
-      .then(res => {
-        function parseResponse(element) {
-          let str = ""; // XSD Simple Type value
-          let obj = null; // XSD Complex Type value
-          // If the element has child elements, it is a complex type. Otherwise we assume it is a simple type.
-          if (element.getAttribute("xsi:nil") == "true") {
-            return null;
-          }
-          let type = element.getAttribute("xsi:type");
-          if (type) {
-            // Salesforce never sets the xsi:type attribute on simple types. It is only used on sObjects.
-            obj = {
-              "$xsi:type": type
-            };
-          }
-          for (let child = element.firstChild; child != null; child = child.nextSibling) {
-            if (child instanceof CharacterData) {
-              str += child.data;
-            } else if (child instanceof Element) {
-              if (obj == null) {
-                obj = {};
-              }
-              let name = child.localName;
-              let content = parseResponse(child);
-              if (name in obj) {
-                if (obj[name] instanceof Array) {
-                  obj[name].push(content);
-                } else {
-                  obj[name] = [obj[name], content];
-                }
-              } else {
-                obj[name] = content;
-              }
-            } else {
-              throw new Error("Unknown child node type");
-            }
-          }
-          return obj || str;
-        }
-        let body = res.querySelector(method + "Response");
-        let parsed = parseResponse(body).result;
-        return parsed;
-      });
-  },
+  async soap(wsdl, method, args, {headers} = {}) {
+    if (!this.instanceHostname || !this.sessionId) {
+      throw new Error("Session not found");
+    }
 
-  rawSoap(wsdl, xmlBody) {
-    return new Promise((resolve, reject) => {
-      if (!sfConn.instanceHostname || !sfConn.sessionId) {
-        reject(new Error("Session not found"));
-        return;
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://" + this.instanceHostname + wsdl.servicePortAddress + "?cache=" + Math.random(), true);
+    xhr.setRequestHeader("Content-Type", "text/xml");
+    xhr.setRequestHeader("SOAPAction", '""');
+
+    let sessionHeader = {SessionHeader: {sessionId: this.sessionId}};
+    let requestBody = XML.stringify({
+      name: "soapenv:Envelope",
+      attributes: ` xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"${wsdl.targetNamespaces}`,
+      value: {
+        "soapenv:Header": Object.assign({}, sessionHeader, headers),
+        "soapenv:Body": {[method]: args}
       }
-      let xhr = new XMLHttpRequest();
-      xhr.open("POST", "https://" + sfConn.instanceHostname + wsdl.servicePortAddress + "?cache=" + Math.random(), true);
-      xhr.setRequestHeader("Content-Type", "text/xml");
-      xhr.setRequestHeader("SOAPAction", '""');
+    });
+
+    xhr.responseType = "document";
+    await new Promise(resolve => {
       xhr.onreadystatechange = () => {
         if (xhr.readyState == 4) {
           resolve(xhr);
         }
       };
-      xhr.send('<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><soapenv:Header xmlns="' + wsdl.targetNamespace + '"><SessionHeader><sessionId>' + sfConn.sessionId + '</sessionId></SessionHeader></soapenv:Header><soapenv:Body xmlns="' + wsdl.targetNamespace + '">' + xmlBody + '</soapenv:Body></soapenv:Envelope>'); // eslint-disable-line quotes
-    }).then(xhr => {
-      if (xhr.status == 200) {
-        return xhr.responseXML;
-      } else {
-        console.error("Received error response from Salesforce SOAP API", xhr);
-        let errorText;
-        if (xhr.responseXML != null) {
-          errorText = xhr.responseXML.querySelector("faultstring").textContent;
-        } else {
-          errorText = "Connection to Salesforce failed" + (xhr.status != 0 ? " (HTTP " + xhr.status + ")" : "");
-        }
-        throw {sfConnError: errorText, rawSoapError: xhr.responseXML};
-      }
+      xhr.send(requestBody);
     });
+    if (xhr.status == 200) {
+      let responseBody = xhr.response.querySelector(method + "Response");
+      let parsed = XML.parse(responseBody).result;
+      return parsed;
+    } else {
+      console.error("Received error response from Salesforce SOAP API", xhr);
+      let err = new Error();
+      err.name = "SalesforceSoapError";
+      err.detail = xhr.response;
+      try {
+        err.message = xhr.response.querySelector("faultstring").textContent;
+      } catch (ex) {
+        err.message = "HTTP error " + xhr.status + " " + xhr.statusText;
+      }
+      throw err;
+    }
   },
 
   asArray(x) {
@@ -210,3 +173,78 @@ var sfConn = { // eslint-disable-line no-var
   },
 
 };
+
+class XML {
+  static stringify({name, attributes, value}) {
+    function buildRequest(el, params) {
+      if (params == null) {
+        el.setAttribute("xsi:nil", "true");
+      } else if (typeof params == "object") {
+        for (let [key, value] of Object.entries(params)) {
+          if (key == "$xsi:type") {
+            el.setAttribute("xsi:type", value);
+          } else if (value === undefined) {
+            // ignore
+          } else if (Array.isArray(value)) {
+            for (let element of value) {
+              let x = doc.createElement(key);
+              buildRequest(x, element);
+              el.appendChild(x);
+            }
+          } else {
+            let x = doc.createElement(key);
+            buildRequest(x, value);
+            el.appendChild(x);
+          }
+        }
+      } else {
+        el.textContent = params;
+      }
+    }
+    let doc = new DOMParser().parseFromString("<" + name + attributes + "/>", "text/xml");
+    buildRequest(doc.documentElement, value);
+    return '<?xml version="1.0" encoding="UTF-8"?>' + new XMLSerializer().serializeToString(doc);
+  }
+
+  static parse(element) {
+    function parseResponse(element) {
+      let str = ""; // XSD Simple Type value
+      let obj = null; // XSD Complex Type value
+      // If the element has child elements, it is a complex type. Otherwise we assume it is a simple type.
+      if (element.getAttribute("xsi:nil") == "true") {
+        return null;
+      }
+      let type = element.getAttribute("xsi:type");
+      if (type) {
+        // Salesforce never sets the xsi:type attribute on simple types. It is only used on sObjects.
+        obj = {
+          "$xsi:type": type
+        };
+      }
+      for (let child = element.firstChild; child != null; child = child.nextSibling) {
+        if (child instanceof CharacterData) {
+          str += child.data;
+        } else if (child instanceof Element) {
+          if (obj == null) {
+            obj = {};
+          }
+          let name = child.localName;
+          let content = parseResponse(child);
+          if (name in obj) {
+            if (obj[name] instanceof Array) {
+              obj[name].push(content);
+            } else {
+              obj[name] = [obj[name], content];
+            }
+          } else {
+            obj[name] = content;
+          }
+        } else {
+          throw new Error("Unknown child node type");
+        }
+      }
+      return obj || str;
+    }
+    return parseResponse(element);
+  }
+}

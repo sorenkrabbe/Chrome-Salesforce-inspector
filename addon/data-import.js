@@ -577,10 +577,10 @@ class Model {
       }
       this.consecutiveFailures = 0;
     }, err => {
-      let errorText = err && err.sfConnError;
-      if (!errorText) {
+      if (err.name != "SalesforceSoapError") {
         throw err; // Not an HTTP error response
       }
+      let errorText = err.message;
       for (let row of batchRows) {
         row[statusColumnIndex] = "Failed";
         row[resultIdColumnIndex] = "";

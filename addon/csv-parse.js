@@ -11,7 +11,12 @@ function csvParse(csv, separator) {
       let text = "";
       for (;;) {
         if (next == -1) {
-          throw {message: "Quote not closed", offsetStart: offset, offsetEnd: offset + 1};
+          throw Object.assign(new Error(), {
+            name: "CSVParseError",
+            message: "Quote not closed",
+            offsetStart: offset,
+            offsetEnd: offset + 1
+          });
         }
         text += csv.substring(offset + 1, next);
         offset = next + 1;
@@ -47,16 +52,22 @@ function csvParse(csv, separator) {
         table.push(row); // the input did not end with a line break - include the last line
       }
       if (table.length == 0) {
-        throw {message: "no data", offsetStart: 0, offsetEnd: csv.length};
+        throw Object.assign(new Error(), {
+          name: "CSVParseError",
+          message: "no data",
+          offsetStart: 0,
+          offsetEnd: csv.length
+        });
       }
       let len = table[0].length;
       for (let i = 0; i < table.length; i++) {
         if (table[i].length != len) {
-          throw {
+          throw Object.assign(new Error(), {
+            name: "CSVParseError",
             message: "row " + (i + 1) + " has " + table[i].length + " cells, expected " + len,
             offsetStart: csv.split("\n").slice(0, i).join("\n").length + 1,
             offsetEnd: csv.split("\n").slice(0, i + 1).join("\n").length
-          };
+          });
         }
       }
       return table;
@@ -71,7 +82,12 @@ function csvParse(csv, separator) {
     } else if (csv[offset] == separator) {
       offset++;
     } else {
-      throw {message: "unexpected token '" + csv[offset] + "'", offsetStart: offset, offsetEnd: offset + 1};
+      throw Object.assign(new Error(), {
+        name: "CSVParseError",
+        message: "unexpected token '" + csv[offset] + "'",
+        offsetStart: offset,
+        offsetEnd: offset + 1
+      });
     }
   }
 }

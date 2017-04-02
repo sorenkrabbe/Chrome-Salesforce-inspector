@@ -30,7 +30,7 @@ class Model {
       })
       .catch(err => {
         console.error(err);
-        this.errorMessages.push("Error " + actionName + ": " + ((err && err.sfConnError) || err));
+        this.errorMessages.push("Error " + actionName + ": " + err.message);
         this.spinnerCount--;
         this.didUpdate();
       })

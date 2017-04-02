@@ -532,11 +532,13 @@ class Model {
         let acQuery = "select " + contextValueField.field.name + " from " + contextValueField.sobjectDescribe.name + " where " + contextValueField.field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + contextValueField.field.name + " limit 100";
         vm.spinFor(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), {progressHandler: vm.autocompleteProgress})
           .catch(err => {
-            vm.autocompleteResults = {
-              sobjectName,
-              title: "Error: " + ((err && err.sfConnError) || err),
-              results: []
-            };
+            if (err.name != "AbortError") {
+              vm.autocompleteResults = {
+                sobjectName,
+                title: "Error: " + err.message,
+                results: []
+              };
+            }
             return null;
           })
           .then(data => {
@@ -684,7 +686,12 @@ class Model {
     let query = vm.queryInput.value;
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll ? "queryAll" : "query";
     function batchHandler(batch) {
-      return batch.then(data => {
+      return batch.catch(err => {
+        if (err.name == "AbortError") {
+          return {records: [], done: true, totalSize: -1};
+        }
+        throw err;
+      }).then(data => {
         exportedData.addToTable(data.records);
         if (data.totalSize != -1) {
           exportedData.totalSize = data.totalSize;
@@ -715,8 +722,8 @@ class Model {
         vm.updatedExportedData();
         return null;
       }, err => {
-        if (!err || !err.sfConnError) {
-          throw err; // not a sfConnError
+        if (err.name != "SalesforceRestError") {
+          throw err; // not a SalesforceRestError
         }
         if (exportedData.totalSize != -1) {
           // We already got some data. Show it, and indicate that not all data was exported
@@ -729,7 +736,7 @@ class Model {
         }
         vm.isWorking = false;
         vm.exportStatus = "Error";
-        vm.exportError = err.sfConnError;
+        vm.exportError = err.message;
         vm.exportedData = null;
         vm.updatedExportedData();
         return null;
@@ -752,7 +759,7 @@ class Model {
     vm.updatedExportedData();
   }
   stopExport() {
-    this.exportProgress.abort({records: [], done: true, totalSize: -1});
+    this.exportProgress.abort();
   }
 }
 

@@ -22,7 +22,7 @@ if (browser == "firefox") {
   target = "target/chrome/dist/addon";
 
 } else {
-  throw "Unknown browser: " + browser;
+  throw new Error("Unknown browser: " + browser);
 }
 
 fs.copySync("addon", target, {
@@ -73,7 +73,7 @@ if (browser == "firefox") {
   });
 
   if (process.env.ZIP_FILE_NAME) {
-    throw "ZIP_FILE_NAME not supported";
+    throw new Error("ZIP_FILE_NAME not supported");
   }
 
   childProcess.execSync("web-ext build --source-dir target/firefox/dist --artifacts-dir target/firefox");
@@ -91,5 +91,5 @@ if (browser == "firefox") {
   });
 
 } else {
-  throw "Unknown browser: " + browser;
+  throw new Error("Unknown browser: " + browser);
 }

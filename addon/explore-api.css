@@ -29,6 +29,7 @@ table {
 }
 td,th {
   border: 1px solid gray;
+  white-space: pre;
 }
 .edit-form label {
   display: flex;
@@ -41,4 +42,8 @@ td,th {
 }
 .edit-form label > * {
   flex: 1;
+}
+.status-error {
+  font-weight: bold;
+  color: red;
 }
