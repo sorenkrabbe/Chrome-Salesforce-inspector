@@ -196,7 +196,7 @@ class Model {
         }, null, "    ");
         //console.log("(Reading response and writing files)");
         // End of forcecmd code
-        logMsg("Finished");
+        logMsg("(Finished)");
         let zipBin = Uint8Array.from(atob(res.zipFile), c => c.charCodeAt(0));
         this.downloadLink = URL.createObjectURL(new Blob([zipBin], {type: "application/zip"}));
         this.statusLink = URL.createObjectURL(new Blob([statusJson], {type: "application/json"}));

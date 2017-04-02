@@ -203,7 +203,7 @@ class XML {
     }
     let doc = new DOMParser().parseFromString("<" + name + attributes + "/>", "text/xml");
     buildRequest(doc.documentElement, value);
-    return '<?xml version="1.0" encoding="UTF-8"?>' + new XMLSerializer().serializeToString(doc);
+    return '<?xml version="1.0" encoding="UTF-8"?>' + new XMLSerializer().serializeToString(doc).replace(/ xmlns=""/g, "");
   }
 
   static parse(element) {
