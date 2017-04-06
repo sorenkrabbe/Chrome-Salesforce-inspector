@@ -290,6 +290,7 @@ th[tabindex] {
   display: flex;
   align-items: center;
   padding: 0 1.5rem;
+  flex-wrap: wrap;
 }
 .object-tab {
   position: relative;
