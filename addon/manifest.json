@@ -43,7 +43,8 @@
     "explore-api.html",
     "open-field-setup.html",
     "open-object-setup.html",
-    "limits.html"
+    "limits.html",
+    "doc-generator.html"
   ],
   "incognito": "split",
   "manifest_version": 2
