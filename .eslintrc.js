@@ -5,7 +5,10 @@ module.exports = {
     "webextensions": true
   },
   "parserOptions": {
-    "ecmaVersion": 8
+    "ecmaVersion": 8,
+    "ecmaFeatures": {
+      "jsx": true
+    }
   },
   "root": true,
   "extends": "eslint:recommended",

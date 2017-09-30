@@ -1,0 +1,24 @@
+.doc-artefacts label {
+	color: grey;
+	margin-top: 10px;
+	display: block;
+}
+
+.doc-artefacts textarea {
+	width: 100%;
+	display: block;
+	border: solid 1px grey;
+	font-size: 90%;
+	background-color: #eeeeee;
+}
+
+.code {
+	font-family: Monaco, Consolas, "Andale Mono", "DejaVu Sans Mono", monospace;
+	font-size: 95%;
+	color: #16325c;
+}
+
+.button {
+	margin-top: 15px;
+	margin-bottom: 15px;
+}

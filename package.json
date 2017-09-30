@@ -6,10 +6,11 @@
     "chrome-release-build": "node scripts/release-build.js chrome"
   },
   "devDependencies": {
-    "eslint": "3.11.0",
+    "eslint": "4.7.2",
     "fs-extra": "2.0.0",
     "replace-in-file": "2.2.2",
     "web-ext": "1.8.1",
-    "zip-dir": "1.0.2"
+    "zip-dir": "1.0.2",
+    "babel-plugin-transform-react-jsx": "6.24.1"
   }
 }
