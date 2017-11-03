@@ -6,6 +6,15 @@
 /* eslint-enable no-unused-vars */
 "use strict";
 
+//TODO: Display errors
+//TODO: Complete logic:
+//        * Filter off where Particles = null
+//        * Flatten where particles[]>1
+//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details
+//        * Complete progress bar
+//        * Improve header (add env. details)
+
+
 class Model extends SILib.SIPageModel {
   constructor(sfHost) {
     super(sfHost);
@@ -15,36 +24,120 @@ class Model extends SILib.SIPageModel {
     this.fieldDefinitions = new FieldDefinitions();
 
     // Processed data and UI state
-    this.selectedSObjects = ["Account", "Case", "Opportunity"];
-    this.selectedDescribeFields = ["QualifiedApiName", "Label", "Length", "NamespacePrefix", "DataType", "Precision", "Scale", "InlineHelpText", "IsNillable", "IsUnique", "IsAutonumber", "IsCalculated", "DefaultValueFormula", "ValueTypeId", "FieldDefinition.QualifiedApiName", "IsFieldHistoryTracked", "IsEncrypted", "ExtraTypeInfo", "FieldDefinition.IsIndexed"];
-  }
-  //TODO: Support description of fields.
-  //TODO: Display errors
+    this.selectedSObjects = ["Lead"];
+    this.selectedDescribeFields = ["QualifiedApiName", "Label", "DataType", "Metadata.description", "InlineHelpText", "NamespacePrefix", "Length", "Precision", "Scale", "IsCalculated", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo"]; //Metadata.*
+    this.selectedSoqlParticleFields = ["DurableId, QualifiedApiName, DataType"];
+    this.selectedSoqlFieldDefinitionMultiRecordFields = ["EntityDefinition.FullName", "DurableId", "QualifiedApiName", "Label", "DataType", "Length", "NamespacePrefix", "Precision", "Scale", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo", "IsCalculated"]; //MasterLabel, ValueTypeId, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, IsCompactLayoutable, , , , , IsApiFilterable, IsApiSortable, IsListFilterable, IsListSortable, IsApiGroupable, IsListVisible, IsFlsEnabled, ControllingFieldDefinitionId, LastModifiedDate, LastModifiedById, PublisherId, RunningUserFieldAccessId, RelationshipName, ReferenceTo, ReferenceTargetField, IsCompound 
+    this.selectedSoqlFieldDefinitionSingleRecordFields = ["Metadata"]; //FullName
 
-  startLoading() {
-
-    let allSObjectsPromise = sfConn.rest(`/services/data/v${apiVersion}/sobjects`);
-    this.spinFor("Listing sobjects", allSObjectsPromise, res => {
-      this.allSObjects = res.sobjects;
-      //console.log(this.allSObjects)
-      //this.loadSelectedSObjects();
-    });
+    this.progressControl = null;
   }
 
+  startLoading() {}
+  //let allSObjectsPromise = sfConn.rest(`/services/data/v${apiVersion}/sobjects`);
+  //this.spinFor("Listing sobjects", allSObjectsPromise, (res) => {
+  //  this.allSObjects = res.sobjects;
+  //  console.log(this.allSObjects)
+  //  this.loadSelectedSObjects();
+  //});
+
+
+  /**
+  * Will query field details for all fields on sobjects mentioned in this.selectedSObjects. Due to nature of Salesforce tooling api, the following approach is used:
+  *   1) Query from FieldDefinition filtered by sobject name. Subquery from Particles for some details. 1 query per sobject. ("multiRecordFields")
+  *   1a note that FieldDefinitions can have have 0-n particles (e.g. UserRecordAccessId on most objects and Lead.CreatedByID have 0 particles. Lead.address and Lead.name have >1 particle)
+  *   2) Query from FieldDefinition filtered by field DurableId. This allows query for Metadata structure (which includes Description and much more). 1 query per field!!! ("singleRecordFields")
+  */
   loadSelectedSObjects() {
-    //TODO: Query more...
     this.fieldDefinitions.clear();
-    const soqlPartFields = [...new Set(this.selectedDescribeFields).add("EntityDefinition.FullName").add("QualifiedApiName").add("DurableId")].join(","); //Add required fields to query and remove dupes (by converting to Set)
+    //const soqlPartFields = [...new Set(this.selectedDescribeFields).add("EntityDefinition.FullName").add("QualifiedApiName").add("DurableId")].join(","); //Add required fields to query and remove dupes (by converting to Set)
 
-    for (let sobjectName of this.selectedSObjects) {
-      let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${soqlPartFields} from EntityParticle where EntityDefinition.QualifiedApiName = '${sobjectName}'`));
-      this.spinFor("Query tooling API to get fields", apiCallPromise, queryRes => {
+    let allFieldDetailsPromise = this._loadSObjectFields(this.selectedSObjects).then(() => this._loadSObjectFieldDetails(this.fieldDefinitions.getDurableIds()));
+
+    this.spinFor("Querying full details for all fields for all objects", allFieldDetailsPromise, () => {});
+  }
+
+  _loadSObjectFields(sobjects) {
+    //TODO: Query more...
+
+    let soqlPartFields = `${this.selectedSoqlFieldDefinitionMultiRecordFields.join(",")}`;
+    soqlPartFields += `,(select ${this.selectedSoqlParticleFields.join(",")} From Particles)`;
+
+    let promises = [];
+    for (let sobjectName of sobjects) {
+
+      let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${soqlPartFields} from FieldDefinition where EntityDefinition.QualifiedApiName = '${sobjectName}'`));
+      apiCallPromise.then(queryRes => {
+        console.log(queryRes.records);
         this.fieldDefinitions.addDescribes(queryRes.records);
-        //console.log(queryRes);
       });
+      promises.push(apiCallPromise);
+    }
+
+    return Promise.all(promises);
+  }
+
+  _loadSObjectFieldDetails(durableIds) {
+
+    if (!confirm(`Basic field details (name, label, type and more) is not available. In order to get more details (like field description) a large number of API calls against Salesforce will be made.\n\nDo you want to continue and make the additional ${durableIds.length} API calls required?`)) {
+      return undefined;
+    }
+
+    let promises = [];
+    for (let durableId of durableIds) {
+      let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${this.selectedSoqlFieldDefinitionSingleRecordFields.join(",")} from FieldDefinition where DurableId = '${durableId}'`));
+      apiCallPromise.then(queryRes => {
+        //this.fieldDefinitions.addDescribes(queryRes.records);
+        //console.log("Got", queryRes.records);
+        queryRes.records.map(elm => elm.DurableId = durableId);
+        this.fieldDefinitions.addDescribes(queryRes.records);
+      });
+      promises.push(apiCallPromise);
+    }
+
+    this.progressControl = new ProgressControl(promises);
+    this.didUpdate();
+    return this.progressControl.getPromiseAll();
+  }
+
+}
+
+/**
+* Takes an array of promises, tracks progress, and returns a promise that resolves when all promises are resolved
+*/
+class ProgressControl {
+  constructor(promises) {
+    this.promises = promises;
+    this.resolvedCount = 0;
+    this.pctCompleted = 0;
+    this.listeners = [];
+
+    this._updateProgress();
+    this.promises.forEach(p => {
+      p.then(() => {
+        this.resolvedCount++;
+        this._updateProgress();
+      });
+    });
+
+    this.promiseAll = Promise.all(this.promises);
+  }
+
+  getPromiseAll() {
+    return this.promiseAll;
+  }
+
+  _updateProgress() {
+    this.pctCompleted = this.resolvedCount * 100 / this.promises.length;
+
+    if (this.listeners[0]) {
+      this.listeners[0](this.pctCompleted);
     }
   }
 
+  addListener(cb) {
+    this.listeners.push(cb);
+  }
 }
 
 class App extends React.Component {
@@ -66,31 +159,57 @@ class App extends React.Component {
 
 class FieldDefinitions {
   constructor() {
-    this.describes = [];
+    this.describes = {}; //Object/map of FieldDefinition objects. { DurableId: {data} }
   }
 
   clear() {
-    this.describes = [];
+    this.describes = {};
   }
 
+  /**
+  * Adds definitions to the describes collection. Must contain DurableId
+  */
   addDescribes(definitions) {
     for (let definition of definitions) {
-      this.describes.push(new FieldDefinition(definition));
+      if (!definition.DurableId) {
+        throw "Definition must contain DurableId. It didn't: " + JSON.stringify(definition);
+      }
+
+      if (this.describes[definition.DurableId]) {
+        this.describes[definition.DurableId].addDetails(definition);
+      } else {
+        this.describes[definition.DurableId] = new FieldDefinition(definition);
+      }
     }
   }
 
+  getDurableIds() {
+    return Object.keys(this.describes);
+  }
+
   map(props) {
-    return this.describes.map(props);
+    return Object.values(this.describes).map(props);
   }
 }
 
+/**
+* Represents a field definition (made up from multiple API calls).
+* Note that:
+*   - a FieldDefinition can have have 0-n particles (e.g. UserRecordAccessId on most objects and Lead.CreatedByID have 0 particles. Lead.address and Lead.name have >1 particle)
+*/
 class FieldDefinition {
-  constructor(describe) {
-    this.describe = describe;
+  constructor(definition) {
+    this.definition = definition;
+    this.definition.detailsLoaded = false;
+  }
+
+  addDetails(definition) {
+    Object.assign(this.definition, definition);
+    this.definition.detailsLoaded = true;
   }
 
   get(fieldName) {
-    let value = fieldName.split(".").reduce((prev, curr) => prev ? prev[curr] : null, this.describe);
+    let value = fieldName.split(".").reduce((prev, curr) => prev ? prev[curr] : null, this.definition);
     return typeof value == "boolean" ? JSON.stringify(value) : value;
   }
 
@@ -102,9 +221,14 @@ class DocArtefactList extends React.Component {
 
     return React.createElement(
       "div",
-      { className: "doc-artefacts" },
-      React.createElement(DocArtefactFieldDefinitions, { model: model }),
-      React.createElement("hr", null)
+      null,
+      React.createElement(ProgressInfo, { progressControl: model.progressControl }),
+      React.createElement(
+        "div",
+        { className: "doc-artefacts" },
+        React.createElement(DocArtefactFieldDefinitions, { model: model }),
+        React.createElement("hr", null)
+      )
     );
   }
 }
@@ -136,7 +260,7 @@ class DocArtefactFieldDefinitions extends React.Component {
       description: React.createElement(
         "div",
         null,
-        "Will extract the listed tooling API metadata fields for the listed sobjects. Suitable for establishing external system field overview.",
+        "Will extract metadata fields for the listed sobjects. Suitable for establishing external system field overview.",
         React.createElement(
           "div",
           null,
@@ -146,16 +270,6 @@ class DocArtefactFieldDefinitions extends React.Component {
             "SObjects (comma separated):"
           ),
           React.createElement("textarea", { className: "code", defaultValue: this.model.selectedSObjects.join(", "), onChange: this.onChangeSobjects })
-        ),
-        React.createElement(
-          "div",
-          null,
-          React.createElement(
-            "label",
-            null,
-            "Metadata fields (comma separated):"
-          ),
-          React.createElement("textarea", { className: "code", defaultValue: this.model.selectedDescribeFields.join(", "), onChange: this.onChangeMetadataFields })
         )
       ),
       actions: React.createElement(
@@ -164,7 +278,7 @@ class DocArtefactFieldDefinitions extends React.Component {
         React.createElement(
           "a",
           { href: "#", className: "button", onClick: this.onExportExcelClick },
-          "Export (excel-format) into clipboard"
+          "Get metadata"
         ),
         React.createElement(FieldOverviewTable, { model: this.model })
       ) });
@@ -193,6 +307,40 @@ class DocArtefactListing extends React.Component {
         actions
       )
     );
+  }
+}
+
+class ProgressInfo extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      pctCompleted: this.props.progressControl ? this.props.progressControl.pctCompleted : 0,
+      elements: this.props.progressControl ? this.props.progressControl.promises.length : null
+    };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.progressControl != this.props.progressControl) {
+      //new progressControl was selected
+      this.props.progressControl.addListener(() => {
+        this.setState({
+          "pctCompleted": this.props.progressControl.pctCompleted,
+          "elements": this.props.progressControl.promises.length
+        });
+      });
+    }
+  }
+
+  render() {
+    return this.state.elements ? React.createElement(
+      "div",
+      { className: "progressBar" },
+      "Has worked through ",
+      Math.round(this.state.pctCompleted),
+      "% of ",
+      this.state.elements,
+      " calls"
+    ) : null;
   }
 }
 
@@ -320,7 +468,7 @@ class FieldOverviewTable extends React.Component {
           React.createElement(
             "td",
             { key: "td-qualifiedName-" + fieldDefinition.get("DurableId") },
-            fieldDefinition.get("EntityDefinition.FullName")
+            fieldDefinition.get("EntityDefinition.FullName") + "." + fieldDefinition.get("QualifiedApiName")
           ),
           React.createElement(
             "td",

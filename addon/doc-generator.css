@@ -22,3 +22,9 @@
 	margin-top: 15px;
 	margin-bottom: 15px;
 }
+
+.progressBar {
+	font-weight: bold;
+	text-align: center;
+	font-size: 1.2em;
+}
