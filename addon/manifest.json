@@ -19,7 +19,7 @@
   ],
   "content_scripts": [
     {
-      "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*", "https://*.lightning.force.com/*"],
+      "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*", "https://*.lightning.force.com/*", "https://*salesforce-com*/*"],
       "all_frames": true,
       "css": [
         "button.css",
