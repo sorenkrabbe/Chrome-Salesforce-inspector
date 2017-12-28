@@ -6,3 +6,4 @@ temp/
 *.bak
 npm-debug.log
 target/
+.idea/

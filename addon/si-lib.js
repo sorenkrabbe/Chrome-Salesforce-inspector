@@ -21,6 +21,49 @@ let SILib = {
     }
 
     /**
+    * Selects and copies elementToCopy to client's clipboard.
+    * Will show confirmationMessage" on success and a standard error message on error. Both presented as native JS alerts
+    */
+    copyElementToClipboard(elementToCopy, confirmationMessage) {
+      //Select element to copy (based off https://stackoverflow.com/questions/2044616/select-a-complete-table-with-javascript-to-be-copied-to-clipboard)
+      let body = document.body;
+      let range, sel;
+
+      if (document.createRange && window.getSelection) {
+        range = document.createRange();
+        sel = window.getSelection();
+        sel.removeAllRanges();
+        try {
+          range.selectNodeContents(elementToCopy);
+          sel.addRange(range);
+        } catch (e) {
+          range.selectNode(elementToCopy);
+          sel.addRange(range);
+        }
+      } else if (body.createTextRange) {
+        range = body.createTextRange();
+        range.moveToElementText(elementToCopy);
+        range.select();
+      }
+
+      //Attempt to run "copy" command and report result to user
+      try {
+        let successful = document.execCommand("copy");
+
+        if (successful) {
+          alert(confirmationMessage);
+        } else {
+          alert("Copy to clipboard failed");
+        }
+      } catch (err) {
+        alert("Copy to clipboard failed. See browser console for details");
+        console.log(err);
+      }
+
+      window.getSelection().removeAllRanges();
+    }
+
+    /**
      * Notify React that we changed something, so it will rerender the view.
      * Should only be called once at the end of an event or asynchronous operation, since each call can take some time.
      * All event listeners (functions starting with "on") should call this function if they update the model.

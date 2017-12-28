@@ -6,13 +6,14 @@
 /* eslint-enable no-unused-vars */
 "use strict";
 
-//TODO: Display errors
+//TODO: Display errors (pri 1)
 //TODO: Complete logic:
-//        * Filter off where Particles = null
-//        * Flatten where particles[]>1
-//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details
-//        * Complete progress bar
-//        * Improve header (add env. details)
+//        * Filter off where Particles = null (pri 2)
+//        * Flatten where particles[]>1 (pri 2)
+//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details (pri 2) 
+//        * Improve header (add env. details) (pri 3)
+//TODO: Other:
+//        * Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
 
 
 class Model extends SILib.SIPageModel {
@@ -20,7 +21,6 @@ class Model extends SILib.SIPageModel {
     super(sfHost);
 
     // Raw fetched data
-    this.allSObjects = null;
     this.fieldDefinitions = new FieldDefinitions();
 
     // Processed data and UI state
@@ -34,13 +34,6 @@ class Model extends SILib.SIPageModel {
   }
 
   startLoading() {}
-  //let allSObjectsPromise = sfConn.rest(`/services/data/v${apiVersion}/sobjects`);
-  //this.spinFor("Listing sobjects", allSObjectsPromise, (res) => {
-  //  this.allSObjects = res.sobjects;
-  //  console.log(this.allSObjects)
-  //  this.loadSelectedSObjects();
-  //});
-
 
   /**
   * Will query field details for all fields on sobjects mentioned in this.selectedSObjects. Due to nature of Salesforce tooling api, the following approach is used:
@@ -55,6 +48,8 @@ class Model extends SILib.SIPageModel {
     let allFieldDetailsPromise = this._loadSObjectFields(this.selectedSObjects).then(() => this._loadSObjectFieldDetails(this.fieldDefinitions.getDurableIds()));
 
     this.spinFor("Querying full details for all fields for all objects", allFieldDetailsPromise, () => {});
+
+    return allFieldDetailsPromise;
   }
 
   _loadSObjectFields(sobjects) {
@@ -237,14 +232,15 @@ class DocArtefactFieldDefinitions extends React.Component {
   constructor(props) {
     super(props);
     this.model = props.model;
-    this.onExportExcelClick = this.onExportExcelClick.bind(this);
+    this.onGetMetadataClick = this.onGetMetadataClick.bind(this);
     this.onChangeSobjects = this.onChangeSobjects.bind(this);
     this.onChangeMetadataFields = this.onChangeMetadataFields.bind(this);
   }
 
-  onExportExcelClick(e) {
-    //console.log("onExportExcelClick was clicked.", this.model.selectedSObjects);
-    this.model.loadSelectedSObjects();
+  onGetMetadataClick(e) {
+    this.model.loadSelectedSObjects().then(() => {
+      this.model.copyElementToClipboard(this.refs.fieldOverviewTable.getContentTableElm(), "Field table is on screen and in your clipboard.\n\nGo paste!");
+    });
   }
 
   onChangeSobjects(e) {
@@ -260,7 +256,7 @@ class DocArtefactFieldDefinitions extends React.Component {
       description: React.createElement(
         "div",
         null,
-        "Will extract metadata fields for the listed sobjects. Suitable for establishing external system field overview.",
+        "Will extract field metadata for the listed sobjects. Suitable for establishing external system field overview.",
         React.createElement(
           "div",
           null,
@@ -276,11 +272,20 @@ class DocArtefactFieldDefinitions extends React.Component {
         "div",
         null,
         React.createElement(
-          "a",
-          { href: "#", className: "button", onClick: this.onExportExcelClick },
+          "button",
+          { type: "button", className: "button", onClick: this.onGetMetadataClick },
           "Get metadata"
         ),
-        React.createElement(FieldOverviewTable, { model: this.model })
+        React.createElement(
+          "label",
+          null,
+          "All fields on listed SObjects with selected metadata:"
+        ),
+        React.createElement(
+          "div",
+          { className: "fixedHeightElm" },
+          React.createElement(FieldOverviewTable, { ref: "fieldOverviewTable", model: this.model })
+        )
       ) });
   }
 }
@@ -375,18 +380,6 @@ class SITopBar extends React.Component {
   }
 }
 
-class SObjectSelector extends React.Component {
-  render() {
-    let { model } = this.props;
-
-    return model.allSObjects ? React.createElement(
-      SITopBarTabBox,
-      { label: "sObjects to include" },
-      model.allSObjects.map(sobject => React.createElement(SITopBarTabBoxItemInput, { key: "sobjectselector-" + sobject.name, name: sobject.name, checked: "true" }))
-    ) : null;
-  }
-}
-
 class SITopBarTabBox extends React.Component {
   render() {
     let { children, label } = this.props;
@@ -430,12 +423,16 @@ class SITopBarTabBoxItemInput extends React.Component {
 
 class FieldOverviewTable extends React.Component {
 
+  getContentTableElm() {
+    return this.refs.contentTable;
+  }
+
   render() {
     let { model } = this.props;
 
     return React.createElement(
       "table",
-      null,
+      { ref: "contentTable" },
       React.createElement(
         "thead",
         null,
@@ -456,13 +453,18 @@ class FieldOverviewTable extends React.Component {
             "th",
             { key: "td" + fieldName },
             fieldName
-          ))
+          )),
+          React.createElement(
+            "th",
+            null,
+            "IN \"FIELDS\" SHEET"
+          )
         )
       ),
       React.createElement(
         "tbody",
         null,
-        model.fieldDefinitions.map(fieldDefinition => React.createElement(
+        model.fieldDefinitions.map((fieldDefinition, index) => React.createElement(
           "tr",
           { key: "tr" + fieldDefinition.get("DurableId") },
           React.createElement(
@@ -479,7 +481,14 @@ class FieldOverviewTable extends React.Component {
             "td",
             { key: "td" + fieldDefinition.get("DurableId") + fieldName },
             fieldDefinition.get(fieldName)
-          ))
+          )),
+          React.createElement(
+            "td",
+            { key: "td-excel-custom1" },
+            "=NOT(ISERROR(VLOOKUP(A",
+            index + 2,
+            ";Fields!C:C;1;FALSE)))"
+          )
         ))
       )
     );

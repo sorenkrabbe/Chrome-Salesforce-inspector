@@ -6,15 +6,14 @@
 /* eslint-enable no-unused-vars */
 "use strict";
 
-//TODO: Display errors
+//TODO: Display errors (pri 1)
 //TODO: Complete logic:
-//        * Filter off where Particles = null
-//        * Flatten where particles[]>1
-//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details
-//        * Complete progress bar
-//        * Improve header (add env. details)
+//        * Filter off where Particles = null (pri 2)
+//        * Flatten where particles[]>1 (pri 2)
+//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details (pri 2) 
+//        * Improve header (add env. details) (pri 3)
 //TODO: Other:
-//        * Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done)
+//        * Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
 
 
 class Model extends SILib.SIPageModel {
@@ -22,7 +21,6 @@ class Model extends SILib.SIPageModel {
     super(sfHost);
 
     // Raw fetched data
-    this.allSObjects = null;
     this.fieldDefinitions = new FieldDefinitions();
 
     // Processed data and UI state
@@ -35,15 +33,7 @@ class Model extends SILib.SIPageModel {
     this.progressControl = null;
   }
 
-
-  startLoading() {
-    //let allSObjectsPromise = sfConn.rest(`/services/data/v${apiVersion}/sobjects`);
-    //this.spinFor("Listing sobjects", allSObjectsPromise, (res) => {
-    //  this.allSObjects = res.sobjects;
-    //  console.log(this.allSObjects)
-    //  this.loadSelectedSObjects();
-    //});
-  }
+  startLoading() {}
 
   /**
   * Will query field details for all fields on sobjects mentioned in this.selectedSObjects. Due to nature of Salesforce tooling api, the following approach is used:
@@ -59,6 +49,8 @@ class Model extends SILib.SIPageModel {
       .then(() => this._loadSObjectFieldDetails(this.fieldDefinitions.getDurableIds()));
 
     this.spinFor("Querying full details for all fields for all objects", allFieldDetailsPromise, () => {});
+
+    return allFieldDetailsPromise;
   }
 
   _loadSObjectFields(sobjects) {
@@ -240,14 +232,16 @@ class DocArtefactFieldDefinitions extends React.Component {
   constructor(props) {
     super(props);
     this.model = props.model;
-    this.onExportExcelClick = this.onExportExcelClick.bind(this);
+    this.onGetMetadataClick = this.onGetMetadataClick.bind(this);
     this.onChangeSobjects = this.onChangeSobjects.bind(this);
     this.onChangeMetadataFields = this.onChangeMetadataFields.bind(this);
   }
 
-  onExportExcelClick(e) {
-    //console.log("onExportExcelClick was clicked.", this.model.selectedSObjects);
-    this.model.loadSelectedSObjects();
+  onGetMetadataClick(e) {
+    this.model.loadSelectedSObjects()
+      .then(() => {
+        this.model.copyElementToClipboard(this.refs.fieldOverviewTable.getContentTableElm(), "Field table is on screen and in your clipboard.\n\nGo paste!");
+      });
   }
 
   onChangeSobjects(e) {
@@ -263,7 +257,7 @@ class DocArtefactFieldDefinitions extends React.Component {
       <DocArtefactListing name="Field definition table"
         description={
           <div>
-            Will extract metadata fields for the listed sobjects. Suitable for establishing external system field overview.
+            Will extract field metadata for the listed sobjects. Suitable for establishing external system field overview.
             <div>
               <label>SObjects (comma separated):</label>
               <textarea className="code" defaultValue={this.model.selectedSObjects.join(", ")} onChange={this.onChangeSobjects} />
@@ -276,8 +270,12 @@ class DocArtefactFieldDefinitions extends React.Component {
         }
         actions={
           <div>
-            <a href="#" className="button" onClick={this.onExportExcelClick}>Get metadata</a>
-            <FieldOverviewTable model={this.model} />
+            <button type="button" className="button" onClick={this.onGetMetadataClick}>Get metadata</button>
+
+            <label>All fields on listed SObjects with selected metadata:</label>
+            <div className="fixedHeightElm">
+              <FieldOverviewTable ref="fieldOverviewTable" model={this.model} />
+            </div>
           </div>
         } />
     );
@@ -361,20 +359,6 @@ class SITopBar extends React.Component {
   }
 }
 
-class SObjectSelector extends React.Component {
-  render() {
-    let {model} = this.props;
-
-    return ((model.allSObjects) ? (
-      <SITopBarTabBox label="sObjects to include">
-        {model.allSObjects.map(sobject =>
-          <SITopBarTabBoxItemInput key={"sobjectselector-" + sobject.name} name={sobject.name} checked="true" />
-        )}
-      </SITopBarTabBox>
-    ) : null);
-  }
-}
-
 class SITopBarTabBox extends React.Component {
   render() {
     let {children, label} = this.props;
@@ -412,12 +396,15 @@ class SITopBarTabBoxItemInput extends React.Component {
 
 class FieldOverviewTable extends React.Component {
 
+  getContentTableElm() {
+    return this.refs.contentTable;
+  }
+
   render() {
     let {model} = this.props;
 
     return (
-
-      <table>
+      <table ref="contentTable">
         <thead>
           <tr>
             <th>qualifiedName</th>
@@ -425,16 +412,18 @@ class FieldOverviewTable extends React.Component {
             { model.selectedDescribeFields.map(fieldName =>
               <th key={"td" + fieldName}>{fieldName}</th>
             )}
+            <th>IN "FIELDS" SHEET</th>
           </tr>
         </thead>
         <tbody>
-          { model.fieldDefinitions.map(fieldDefinition =>
+          { model.fieldDefinitions.map((fieldDefinition, index) =>
             <tr key={"tr" + fieldDefinition.get("DurableId")}>
               <td key={"td-qualifiedName-" + fieldDefinition.get("DurableId")}>{fieldDefinition.get("EntityDefinition.FullName") + "." + fieldDefinition.get("QualifiedApiName")}</td>
               <td key={"td-sobject-" + fieldDefinition.get("DurableId")}>{fieldDefinition.get("EntityDefinition.FullName")}</td>
               { model.selectedDescribeFields.map(fieldName =>
                 <td key={"td" + fieldDefinition.get("DurableId") + fieldName}>{fieldDefinition.get(fieldName)}</td>
               )}
+              <td key="td-excel-custom1">=NOT(ISERROR(VLOOKUP(A{index + 2};Fields!C:C;1;FALSE)))</td>
             </tr>
           )}
         </tbody>
