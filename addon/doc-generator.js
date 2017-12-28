@@ -3,14 +3,12 @@
 /* global sfConn apiVersion */
 /* global SILib */
 /* global initButton */
-/* eslint-enable no-unused-vars */
 "use strict";
 
-//TODO: Display errors (pri 1)
 //TODO: Complete logic:
 //        * Filter off where Particles = null (pri 2)
 //        * Flatten where particles[]>1 (pri 2)
-//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details (pri 2) 
+//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details (pri 2)
 //        * Improve header (add env. details) (pri 3)
 //TODO: Other:
 //        * Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
@@ -62,10 +60,8 @@ class Model extends SILib.SIPageModel {
     for (let sobjectName of sobjects) {
 
       let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${soqlPartFields} from FieldDefinition where EntityDefinition.QualifiedApiName = '${sobjectName}'`));
-      apiCallPromise.then(queryRes => {
-        console.log(queryRes.records);
-        this.fieldDefinitions.addDescribes(queryRes.records);
-      });
+      apiCallPromise.then(queryRes => this.fieldDefinitions.addDescribes(queryRes.records)).catch(e => this.addPageMessage(e, "ERROR"));
+
       promises.push(apiCallPromise);
     }
 
@@ -82,11 +78,10 @@ class Model extends SILib.SIPageModel {
     for (let durableId of durableIds) {
       let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${this.selectedSoqlFieldDefinitionSingleRecordFields.join(",")} from FieldDefinition where DurableId = '${durableId}'`));
       apiCallPromise.then(queryRes => {
-        //this.fieldDefinitions.addDescribes(queryRes.records);
-        //console.log("Got", queryRes.records);
         queryRes.records.map(elm => elm.DurableId = durableId);
         this.fieldDefinitions.addDescribes(queryRes.records);
-      });
+      }).catch(e => this.addPageMessage(e, "ERROR"));
+
       promises.push(apiCallPromise);
     }
 

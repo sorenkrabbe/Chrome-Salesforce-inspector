@@ -4,7 +4,6 @@
 /* exported SILib */
 "use strict";
 
-
 let SILib = {
   /**
    * Base class model for controlling state and data of SI pages.
@@ -18,6 +17,14 @@ let SILib = {
       this.sfLink = "https://" + this.sfHost;
       this.spinnerCount = 0;
       this.errorMessages = [];
+    }
+
+    /**
+     * Adds a message (error or info) to the UI
+     * @param pageMessageType "INFO" or "ERROR"
+     */
+    addPageMessage(msg, pageMessageType) {
+      alert(pageMessageType + ": " + msg);
     }
 
     /**
@@ -51,12 +58,12 @@ let SILib = {
         let successful = document.execCommand("copy");
 
         if (successful) {
-          alert(confirmationMessage);
+          this.addPageMessage(confirmationMessage, "INFO");
         } else {
-          alert("Copy to clipboard failed");
+          this.addPageMessage("Copy to clipboard failed", "ERROR");
         }
       } catch (err) {
-        alert("Copy to clipboard failed. See browser console for details");
+        this.addPageMessage("Copy to clipboard failed. See browser console for details", "ERROR");
         console.log(err);
       }
 
