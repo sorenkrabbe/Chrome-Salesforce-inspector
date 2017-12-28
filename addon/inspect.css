@@ -284,6 +284,9 @@ th[tabindex] {
   left: -15px;
   top: -15px;
 }
+.whoami {
+  font-size: 0.6rem;
+}
 .object-bar {
   background: #f7f9fb;
   width: 100%;
@@ -291,6 +294,7 @@ th[tabindex] {
   align-items: center;
   padding: 0 1.5rem;
   flex-wrap: wrap;
+  height: 3rem;
 }
 .object-tab {
   position: relative;

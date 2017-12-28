@@ -2,6 +2,8 @@
  * Collection generally reusable components and methods for the Salesforce Inspector
  */
 /* exported SILib */
+/* global sfConn apiVersion */
+
 "use strict";
 
 let SILib = {
@@ -15,8 +17,13 @@ let SILib = {
       // Processed data and UI state
       this.sfHost = sfHost;
       this.sfLink = "https://" + this.sfHost;
+      this.userInfo = "...";
       this.spinnerCount = 0;
       this.errorMessages = [];
+
+      this.spinFor("Get user/org details", sfConn.soap(sfConn.wsdl(apiVersion, "Partner"), "getUserInfo", {}).then(res => {
+        this.userInfo = res.userFullName + " / " + res.userName + " / " + res.organizationName;
+      }));
     }
 
     /**
@@ -86,7 +93,6 @@ let SILib = {
 
     /**
      * Show the spinner while waiting for a promise, and show an error if it fails.
-     * didUpdate() must be called after calling spinFor.
      * didUpdate() is called when the promise is resolved or rejected, so the caller doesn't have to call it, when it updates the model just before resolving the promise, for better performance.
      * @param actionName Name to show in the errors list if the operation fails.
      * @param promise The promise to wait for.
@@ -96,7 +102,7 @@ let SILib = {
       promise
         .then(res => {
           this.spinnerCount--;
-          cb(res);
+          if (cb) cb(res);
           this.didUpdate();
         })
         .catch(err => {

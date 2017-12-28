@@ -9,7 +9,6 @@
 //        * Filter off where Particles = null (pri 2)
 //        * Flatten where particles[]>1 (pri 2)
 //        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details (pri 2)
-//        * Improve header (add env. details) (pri 3)
 //TODO: Other:
 //        * Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
 
@@ -340,18 +339,11 @@ class SITopBar extends React.Component {
             </svg>
             Salesforce Home
           </a>
-          {/*<span className={"object-tab" + (model.useTab == "childs" ? " active-tab" : "")}>
-            <a href="about:blank" className="tab-with-icon" onClick={this.onUseChildsTab}>sObjects</a>
-            <span className="column-button-outer">
-              <a href="about:blank" onClick={this.onAvailableColumnsClick} className="button-icon-link">
-                <svg className="button-icon">
-                  <use xlinkHref="symbols.svg#chevrondown" />
-                </svg>
-              </a>
-              <SObjectSelector model={model} />
-            </span>
 
-          </span>*/}
+          <h1 className="object-name">
+            Salesforce Inspector - Documentation Generator
+            <div className="whoami">{model.userInfo}</div>
+          </h1>
         </div>
       </div>
     );
