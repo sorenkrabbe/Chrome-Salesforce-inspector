@@ -5,13 +5,9 @@
 /* global initButton */
 "use strict";
 
-//TODO: Complete logic:
-//        * Filter off where Particles = null (pri 2)
-//        * Flatten where particles[]>1 (pri 2)
-//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details (pri 2)
-//TODO: Other:
-//        * Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
-
+//TODO: Ask user before copying to clipboard (pri 2)
+//TODO: Add details to particle FieldDefinitions to show field length etc. for Compound field particles (pri 5)
+//TODO: Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
 
 class Model extends SILib.SIPageModel {
   constructor(sfHost) {
@@ -21,10 +17,10 @@ class Model extends SILib.SIPageModel {
     this.fieldDefinitions = new FieldDefinitions();
 
     // Processed data and UI state
-    this.selectedSObjects = ["Lead"];
+    this.selectedSObjects = ["Contact"];
     this.selectedDescribeFields = ["QualifiedApiName", "Label", "DataType", "Metadata.description", "InlineHelpText", "NamespacePrefix", "Length", "Precision", "Scale", "IsCalculated", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo"]; //Metadata.*
     this.selectedSoqlParticleFields = ["DurableId, QualifiedApiName, DataType"];
-    this.selectedSoqlFieldDefinitionMultiRecordFields = ["EntityDefinition.FullName", "DurableId", "QualifiedApiName", "Label", "DataType", "Length", "NamespacePrefix", "Precision", "Scale", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo", "IsCalculated"]; //MasterLabel, ValueTypeId, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, IsCompactLayoutable, , , , , IsApiFilterable, IsApiSortable, IsListFilterable, IsListSortable, IsApiGroupable, IsListVisible, IsFlsEnabled, ControllingFieldDefinitionId, LastModifiedDate, LastModifiedById, PublisherId, RunningUserFieldAccessId, RelationshipName, ReferenceTo, ReferenceTargetField, IsCompound 
+    this.selectedSoqlFieldDefinitionMultiRecordFields = ["EntityDefinition.FullName", "DurableId", "QualifiedApiName", "Label", "DataType", "Length", "NamespacePrefix", "Precision", "Scale", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo", "IsCalculated"]; //MasterLabel, ValueTypeId, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, IsCompactLayoutable, , , , , IsApiFilterable, IsApiSortable, IsListFilterable, IsListSortable, IsApiGroupable, IsListVisible, IsFlsEnabled, ControllingFieldDefinitionId, LastModifiedDate, LastModifiedById, PublisherId, RunningUserFieldAccessId, RelationshipName, ReferenceTo, ReferenceTargetField, IsCompound
     this.selectedSoqlFieldDefinitionSingleRecordFields = ["Metadata"]; //FullName
 
     this.progressControl = null;
@@ -59,7 +55,9 @@ class Model extends SILib.SIPageModel {
     for (let sobjectName of sobjects) {
 
       let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${soqlPartFields} from FieldDefinition where EntityDefinition.QualifiedApiName = '${sobjectName}'`));
-      apiCallPromise.then(queryRes => this.fieldDefinitions.addDescribes(queryRes.records)).catch(e => this.addPageMessage(e, "ERROR"));
+      apiCallPromise.then(queryRes => {
+        this.fieldDefinitions.addDescribes(queryRes.records);
+      }).catch(e => this.addPageMessage(e, "ERROR"));
 
       promises.push(apiCallPromise);
     }
@@ -131,16 +129,16 @@ class ProgressControl {
 
 class App extends React.Component {
   render() {
-    let { model } = this.props;
+    let {model} = this.props;
 
     return React.createElement(
       "div",
       null,
-      React.createElement(SITopBar, { model: model }),
+      React.createElement(SITopBar, {model}),
       React.createElement(
         "div",
-        { className: "body" },
-        React.createElement(DocArtefactList, { model: model })
+        {className: "body"},
+        React.createElement(DocArtefactList, {model})
       )
     );
   }
@@ -157,19 +155,36 @@ class FieldDefinitions {
 
   /**
   * Adds definitions to the describes collection. Must contain DurableId
+  * Note that: a FieldDefinition can have have 0-n particles (e.g. UserRecordAccessId on most objects and Lead.CreatedByID have 0 particles. Lead.address and Lead.name have >1 particle)
+  * Therefore: If definition contains >1 particle both the definition itself it created as well as a definition to represent each particle
   */
-  addDescribes(definitions) {
-    for (let definition of definitions) {
-      if (!definition.DurableId) {
-        throw "Definition must contain DurableId. It didn't: " + JSON.stringify(definition);
+  addDescribes(rawDefinitions) {
+    for (let rawDefinition of rawDefinitions) {
+
+      if (!rawDefinition.DurableId) {
+        throw "Definition must contain DurableId. It didn't: " + JSON.stringify(rawDefinition);
       }
 
-      if (this.describes[definition.DurableId]) {
-        this.describes[definition.DurableId].addDetails(definition);
-      } else {
-        this.describes[definition.DurableId] = new FieldDefinition(definition);
+      let isFirstProcessingOfField = this.describes[rawDefinition.DurableId] == undefined;
+      let definition = this.addDefinition(rawDefinition, "FIELD");
+
+      if (isFirstProcessingOfField && definition.doSplitParticles()) {
+        for (let rawParticle of definition.definition.Particles.records) {
+          let particle = this.addDefinition(rawParticle, "PARTICLE");
+          particle.definition.EntityDefinition = {"FullName": definition.definition.EntityDefinition.FullName}; //Set sobject name in the same structure as returned in field rawDefinition
+          particle.definition.ExtraTypeInfo = "Part of compound field \"" + definition.definition.QualifiedApiName + "\"";
+        }
       }
     }
+  }
+
+  addDefinition(rawDefinition, type) {
+    if (this.describes[rawDefinition.DurableId]) {
+      this.describes[rawDefinition.DurableId].addDetails(rawDefinition);
+    } else {
+      this.describes[rawDefinition.DurableId] = new FieldDefinition(rawDefinition, type);
+    }
+    return this.describes[rawDefinition.DurableId];
   }
 
   getDurableIds() {
@@ -179,6 +194,10 @@ class FieldDefinitions {
   map(props) {
     return Object.values(this.describes).map(props);
   }
+
+  filter(props) {
+    return Object.values(this.describes).filter(props);
+  }
 }
 
 /**
@@ -187,14 +206,32 @@ class FieldDefinitions {
 *   - a FieldDefinition can have have 0-n particles (e.g. UserRecordAccessId on most objects and Lead.CreatedByID have 0 particles. Lead.address and Lead.name have >1 particle)
 */
 class FieldDefinition {
-  constructor(definition) {
-    this.definition = definition;
+  constructor(rawDefinition, type) {
+    if (type == "PARTICLE") {
+      this.type = "PARTICLE";
+      this.definition = rawDefinition;
+    } else {
+      this.type = "FIELD";
+      this.definition = rawDefinition;
+    }
     this.definition.detailsLoaded = false;
   }
 
-  addDetails(definition) {
-    Object.assign(this.definition, definition);
+  addDetails(rawDefinition) {
+    Object.assign(this.definition, rawDefinition);
     this.definition.detailsLoaded = true;
+  }
+
+  doShow() {
+    return this.hasMoreThanNParticles(0);
+  }
+
+  doSplitParticles() {
+    return this.hasMoreThanNParticles(1);
+  }
+
+  hasMoreThanNParticles(n) {
+    return this.definition.Particles && this.definition.Particles.size > n;
   }
 
   get(fieldName) {
@@ -206,16 +243,16 @@ class FieldDefinition {
 
 class DocArtefactList extends React.Component {
   render() {
-    let { model } = this.props;
+    let {model} = this.props;
 
     return React.createElement(
       "div",
       null,
-      React.createElement(ProgressInfo, { progressControl: model.progressControl }),
+      React.createElement(ProgressInfo, {progressControl: model.progressControl}),
       React.createElement(
         "div",
-        { className: "doc-artefacts" },
-        React.createElement(DocArtefactFieldDefinitions, { model: model }),
+        {className: "doc-artefacts"},
+        React.createElement(DocArtefactFieldDefinitions, {model}),
         React.createElement("hr", null)
       )
     );
@@ -246,7 +283,7 @@ class DocArtefactFieldDefinitions extends React.Component {
   }
 
   render() {
-    return React.createElement(DocArtefactListing, { name: "Field definition table",
+    return React.createElement(DocArtefactListing, {name: "Field definition table",
       description: React.createElement(
         "div",
         null,
@@ -259,7 +296,7 @@ class DocArtefactFieldDefinitions extends React.Component {
             null,
             "SObjects (comma separated):"
           ),
-          React.createElement("textarea", { className: "code", defaultValue: this.model.selectedSObjects.join(", "), onChange: this.onChangeSobjects })
+          React.createElement("textarea", {className: "code", defaultValue: this.model.selectedSObjects.join(", "), onChange: this.onChangeSobjects})
         )
       ),
       actions: React.createElement(
@@ -267,7 +304,7 @@ class DocArtefactFieldDefinitions extends React.Component {
         null,
         React.createElement(
           "button",
-          { type: "button", className: "button", onClick: this.onGetMetadataClick },
+          {type: "button", className: "button", onClick: this.onGetMetadataClick},
           "Get metadata"
         ),
         React.createElement(
@@ -277,16 +314,16 @@ class DocArtefactFieldDefinitions extends React.Component {
         ),
         React.createElement(
           "div",
-          { className: "fixedHeightElm" },
-          React.createElement(FieldOverviewTable, { ref: "fieldOverviewTable", model: this.model })
+          {className: "fixedHeightElm"},
+          React.createElement(FieldOverviewTable, {ref: "fieldOverviewTable", model: this.model})
         )
-      ) });
+      )});
   }
 }
 
 class DocArtefactListing extends React.Component {
   render() {
-    let { name, description, actions } = this.props;
+    let {name, description, actions} = this.props;
     return React.createElement(
       "div",
       null,
@@ -333,7 +370,7 @@ class ProgressInfo extends React.Component {
   render() {
     return this.state.elements ? React.createElement(
       "div",
-      { className: "progressBar" },
+      {className: "progressBar"},
       "Has worked through ",
       Math.round(this.state.pctCompleted),
       "% of ",
@@ -350,32 +387,32 @@ class ProgressInfo extends React.Component {
 class SITopBar extends React.Component {
 
   render() {
-    let { model } = this.props;
+    let {model} = this.props;
 
     return React.createElement(
       "div",
       null,
       React.createElement(
         "div",
-        { className: "object-bar" },
-        React.createElement("img", { id: "spinner", hidden: model.spinnerCount == 0, src: "data:image/gif;base64,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" }),
+        {className: "object-bar"},
+        React.createElement("img", {id: "spinner", hidden: model.spinnerCount == 0, src: "data:image/gif;base64,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"}),
         React.createElement(
           "a",
-          { href: model.sfLink, className: "sf-link" },
+          {href: model.sfLink, className: "sf-link"},
           React.createElement(
             "svg",
-            { viewBox: "0 0 24 24" },
-            React.createElement("path", { d: "M18.9 12.3h-1.5v6.6c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-5.1h-3.6v5.1c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-6.6H5.1c-.1 0-.3-.1-.3-.2s0-.2.1-.3l6.9-7c.1-.1.3-.1.4 0l7 7v.3c0 .1-.2.2-.3.2z" })
+            {viewBox: "0 0 24 24"},
+            React.createElement("path", {d: "M18.9 12.3h-1.5v6.6c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-5.1h-3.6v5.1c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-6.6H5.1c-.1 0-.3-.1-.3-.2s0-.2.1-.3l6.9-7c.1-.1.3-.1.4 0l7 7v.3c0 .1-.2.2-.3.2z"})
           ),
           "Salesforce Home"
         ),
         React.createElement(
           "h1",
-          { className: "object-name" },
+          {className: "object-name"},
           "Salesforce Inspector - Documentation Generator",
           React.createElement(
             "div",
-            { className: "whoami" },
+            {className: "whoami"},
             model.userInfo
           )
         )
@@ -386,16 +423,16 @@ class SITopBar extends React.Component {
 
 class SITopBarTabBox extends React.Component {
   render() {
-    let { children, label } = this.props;
+    let {children, label} = this.props;
     return React.createElement(
       "div",
-      { className: "column-popup" },
+      {className: "column-popup"},
       React.createElement(
         "div",
-        { className: "column-popup-inner" },
+        {className: "column-popup-inner"},
         React.createElement(
           "span",
-          { className: "menu-item" },
+          {className: "menu-item"},
           label
         ),
         children
@@ -410,16 +447,16 @@ class SITopBarTabBoxItemInput extends React.Component {
     this.onShowColumnChange = this.onShowColumnChange.bind(this);
   }
   onShowColumnChange(e) {
-    let { rowList, name } = this.props;
+    let {rowList, name} = this.props;
     rowList.showHideColumn(e.target.checked, name);
     rowList.model.didUpdate();
   }
   render() {
-    let { checked, name } = this.props;
+    let {checked, name} = this.props;
     return React.createElement(
       "label",
-      { className: "menu-item" },
-      React.createElement("input", { type: "checkbox", value: "false", checked: checked }),
+      {className: "menu-item"},
+      React.createElement("input", {type: "checkbox", value: "false", checked}),
       name
     );
   }
@@ -432,11 +469,11 @@ class FieldOverviewTable extends React.Component {
   }
 
   render() {
-    let { model } = this.props;
+    let {model} = this.props;
 
     return React.createElement(
       "table",
-      { ref: "contentTable" },
+      {ref: "contentTable"},
       React.createElement(
         "thead",
         null,
@@ -455,7 +492,7 @@ class FieldOverviewTable extends React.Component {
           ),
           model.selectedDescribeFields.map(fieldName => React.createElement(
             "th",
-            { key: "td" + fieldName },
+            {key: "td" + fieldName},
             fieldName
           )),
           React.createElement(
@@ -468,27 +505,27 @@ class FieldOverviewTable extends React.Component {
       React.createElement(
         "tbody",
         null,
-        model.fieldDefinitions.map((fieldDefinition, index) => React.createElement(
+        model.fieldDefinitions.filter(fieldDefinition => fieldDefinition.doShow()).map((fieldDefinition, index) => React.createElement(
           "tr",
-          { key: "tr" + fieldDefinition.get("DurableId") },
+          {key: "tr" + fieldDefinition.get("DurableId")},
           React.createElement(
             "td",
-            { key: "td-qualifiedName-" + fieldDefinition.get("DurableId") },
+            {key: "td-qualifiedName-" + fieldDefinition.get("DurableId")},
             fieldDefinition.get("EntityDefinition.FullName") + "." + fieldDefinition.get("QualifiedApiName")
           ),
           React.createElement(
             "td",
-            { key: "td-sobject-" + fieldDefinition.get("DurableId") },
+            {key: "td-sobject-" + fieldDefinition.get("DurableId")},
             fieldDefinition.get("EntityDefinition.FullName")
           ),
           model.selectedDescribeFields.map(fieldName => React.createElement(
             "td",
-            { key: "td" + fieldDefinition.get("DurableId") + fieldName },
+            {key: "td" + fieldDefinition.get("DurableId") + fieldName},
             fieldDefinition.get(fieldName)
           )),
           React.createElement(
             "td",
-            { key: "td-excel-custom1" },
+            {key: "td-excel-custom1"},
             "=NOT(ISERROR(VLOOKUP(A",
             index + 2,
             ";Fields!C:C;1;FALSE)))"

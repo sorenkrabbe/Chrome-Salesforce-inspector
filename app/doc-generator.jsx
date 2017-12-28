@@ -5,13 +5,9 @@
 /* global initButton */
 "use strict";
 
-//TODO: Complete logic:
-//        * Filter off where Particles = null (pri 2)
-//        * Flatten where particles[]>1 (pri 2)
-//        * Where Particles.totalSize>1 - don't show FieldDefinition. Only show particle details (pri 2)
-//TODO: Other:
-//        * Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
-
+//TODO: Ask user before copying to clipboard (pri 2)
+//TODO: Add details to particle FieldDefinitions to show field length etc. for Compound field particles (pri 5)
+//TODO: Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
 
 class Model extends SILib.SIPageModel {
   constructor(sfHost) {
@@ -21,10 +17,10 @@ class Model extends SILib.SIPageModel {
     this.fieldDefinitions = new FieldDefinitions();
 
     // Processed data and UI state
-    this.selectedSObjects = ["Lead"];
+    this.selectedSObjects = ["Contact"];
     this.selectedDescribeFields = ["QualifiedApiName", "Label", "DataType", "Metadata.description", "InlineHelpText", "NamespacePrefix", "Length", "Precision", "Scale", "IsCalculated", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo"]; //Metadata.*
     this.selectedSoqlParticleFields = ["DurableId, QualifiedApiName, DataType"];
-    this.selectedSoqlFieldDefinitionMultiRecordFields = ["EntityDefinition.FullName", "DurableId", "QualifiedApiName", "Label", "DataType", "Length", "NamespacePrefix", "Precision", "Scale", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo", "IsCalculated"]; //MasterLabel, ValueTypeId, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, IsCompactLayoutable, , , , , IsApiFilterable, IsApiSortable, IsListFilterable, IsListSortable, IsApiGroupable, IsListVisible, IsFlsEnabled, ControllingFieldDefinitionId, LastModifiedDate, LastModifiedById, PublisherId, RunningUserFieldAccessId, RelationshipName, ReferenceTo, ReferenceTargetField, IsCompound 
+    this.selectedSoqlFieldDefinitionMultiRecordFields = ["EntityDefinition.FullName", "DurableId", "QualifiedApiName", "Label", "DataType", "Length", "NamespacePrefix", "Precision", "Scale", "IsIndexed", "IsFieldHistoryTracked", "ExtraTypeInfo", "IsCalculated"]; //MasterLabel, ValueTypeId, IsHighScaleNumber, IsHtmlFormatted, IsNameField, IsNillable, IsWorkflowFilterable, IsCompactLayoutable, , , , , IsApiFilterable, IsApiSortable, IsListFilterable, IsListSortable, IsApiGroupable, IsListVisible, IsFlsEnabled, ControllingFieldDefinitionId, LastModifiedDate, LastModifiedById, PublisherId, RunningUserFieldAccessId, RelationshipName, ReferenceTo, ReferenceTargetField, IsCompound
     this.selectedSoqlFieldDefinitionSingleRecordFields = ["Metadata"]; //FullName
 
     this.progressControl = null;
@@ -61,7 +57,7 @@ class Model extends SILib.SIPageModel {
 
       let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${soqlPartFields} from FieldDefinition where EntityDefinition.QualifiedApiName = '${sobjectName}'`));
       apiCallPromise
-        .then((queryRes) => this.fieldDefinitions.addDescribes(queryRes.records))
+        .then((queryRes) => { this.fieldDefinitions.addDescribes(queryRes.records); })
         .catch((e) => this.addPageMessage(e, "ERROR"));
 
       promises.push(apiCallPromise);
@@ -161,19 +157,36 @@ class FieldDefinitions {
 
   /**
   * Adds definitions to the describes collection. Must contain DurableId
+  * Note that: a FieldDefinition can have have 0-n particles (e.g. UserRecordAccessId on most objects and Lead.CreatedByID have 0 particles. Lead.address and Lead.name have >1 particle)
+  * Therefore: If definition contains >1 particle both the definition itself it created as well as a definition to represent each particle
   */
-  addDescribes(definitions) {
-    for (let definition of definitions) {
-      if (!definition.DurableId) {
-        throw "Definition must contain DurableId. It didn't: " + JSON.stringify(definition);
+  addDescribes(rawDefinitions) {
+    for (let rawDefinition of rawDefinitions) {
+
+      if (!rawDefinition.DurableId) {
+        throw "Definition must contain DurableId. It didn't: " + JSON.stringify(rawDefinition);
       }
 
-      if (this.describes[definition.DurableId]) {
-        this.describes[definition.DurableId].addDetails(definition);
-      } else {
-        this.describes[definition.DurableId] = new FieldDefinition(definition);
+      let isFirstProcessingOfField = this.describes[rawDefinition.DurableId] == undefined;
+      let definition = this.addDefinition(rawDefinition, "FIELD");
+
+      if (isFirstProcessingOfField && definition.doSplitParticles()) {
+        for (let rawParticle of definition.definition.Particles.records) {
+          let particle = this.addDefinition(rawParticle, "PARTICLE");
+          particle.definition.EntityDefinition = { "FullName": definition.definition.EntityDefinition.FullName }; //Set sobject name in the same structure as returned in field rawDefinition
+          particle.definition.ExtraTypeInfo = "Part of compound field \"" + definition.definition.QualifiedApiName + "\"";
+        }
       }
     }
+  }
+
+  addDefinition(rawDefinition, type) {
+    if (this.describes[rawDefinition.DurableId]) {
+      this.describes[rawDefinition.DurableId].addDetails(rawDefinition);
+    } else {
+      this.describes[rawDefinition.DurableId] = new FieldDefinition(rawDefinition, type);
+    }
+    return this.describes[rawDefinition.DurableId];
   }
 
   getDurableIds() {
@@ -183,6 +196,10 @@ class FieldDefinitions {
   map(props) {
     return Object.values(this.describes).map(props);
   }
+
+  filter(props) {
+    return Object.values(this.describes).filter(props);
+  }
 }
 
 /**
@@ -191,14 +208,32 @@ class FieldDefinitions {
 *   - a FieldDefinition can have have 0-n particles (e.g. UserRecordAccessId on most objects and Lead.CreatedByID have 0 particles. Lead.address and Lead.name have >1 particle)
 */
 class FieldDefinition {
-  constructor(definition) {
-    this.definition = definition;
+  constructor(rawDefinition, type) {
+    if (type == "PARTICLE") {
+      this.type = "PARTICLE";
+      this.definition = rawDefinition;
+    } else {
+      this.type = "FIELD";
+      this.definition = rawDefinition;
+    }
     this.definition.detailsLoaded = false;
   }
 
-  addDetails(definition) {
-    Object.assign(this.definition, definition);
+  addDetails(rawDefinition) {
+    Object.assign(this.definition, rawDefinition);
     this.definition.detailsLoaded = true;
+  }
+
+  doShow() {
+    return this.hasMoreThanNParticles(0);
+  }
+
+  doSplitParticles() {
+    return this.hasMoreThanNParticles(1);
+  }
+
+  hasMoreThanNParticles(n) {
+    return this.definition.Particles && this.definition.Particles.size > n;
   }
 
   get(fieldName) {
@@ -407,7 +442,7 @@ class FieldOverviewTable extends React.Component {
           </tr>
         </thead>
         <tbody>
-          { model.fieldDefinitions.map((fieldDefinition, index) =>
+          { model.fieldDefinitions.filter(fieldDefinition => fieldDefinition.doShow()).map((fieldDefinition, index) =>
             <tr key={"tr" + fieldDefinition.get("DurableId")}>
               <td key={"td-qualifiedName-" + fieldDefinition.get("DurableId")}>{fieldDefinition.get("EntityDefinition.FullName") + "." + fieldDefinition.get("QualifiedApiName")}</td>
               <td key={"td-sobject-" + fieldDefinition.get("DurableId")}>{fieldDefinition.get("EntityDefinition.FullName")}</td>
