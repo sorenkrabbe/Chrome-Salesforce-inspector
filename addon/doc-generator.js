@@ -307,14 +307,7 @@ class DocArtefactFieldDefinitions extends React.Component {
         React.createElement(
           "button",
           {type: "button", className: "button", onClick: this.onGetMetadataClick},
-<<<<<<< HEAD
-<<<<<<< HEAD
           "Get metadata and copy to clipboard"
-=======
-=======
->>>>>>> 6ae9596a3d537bfd2a3c3b2c93634744137e69d8
-          "Get metadata"
->>>>>>> 6ae9596... fix eslint errors
         ),
         React.createElement(
           "label",
@@ -418,14 +411,7 @@ class SITopBar extends React.Component {
         React.createElement(
           "h1",
           {className: "object-name"},
-<<<<<<< HEAD
-<<<<<<< HEAD
           "Salesforce Inspector - Generate Documentation",
-=======
-=======
->>>>>>> 6ae9596a3d537bfd2a3c3b2c93634744137e69d8
-          "Salesforce Inspector - Documentation Generator",
->>>>>>> 6ae9596... fix eslint errors
           React.createElement(
             "div",
             {className: "whoami"},
