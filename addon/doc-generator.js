@@ -223,7 +223,7 @@ class FieldDefinition {
   }
 
   doShow() {
-    return this.hasMoreThanNParticles(0);
+    return this.type == "PARTICLE" || this.hasMoreThanNParticles(0);
   }
 
   doSplitParticles() {
