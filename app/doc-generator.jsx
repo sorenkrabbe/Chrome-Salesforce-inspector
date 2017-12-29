@@ -378,7 +378,7 @@ class SITopBar extends React.Component {
           </a>
 
           <h1 className="object-name">
-            Salesforce Inspector - Documentation Generator
+            Salesforce Inspector - Generate Documentation
             <div className="whoami">{model.userInfo}</div>
           </h1>
         </div>

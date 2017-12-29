@@ -411,7 +411,7 @@ class SITopBar extends React.Component {
         React.createElement(
           "h1",
           {className: "object-name"},
-          "Salesforce Inspector - Documentation Generator",
+          "Salesforce Inspector - Generate Documentation",
           React.createElement(
             "div",
             {className: "whoami"},

@@ -17,6 +17,7 @@ Features
 * Quickly view field information directly from a record detail page, edit page or Visualforce page.
 * Quickly view and edit all data for a record, even data that is not on the page layout.
 * Perform quick one-off data exports and imports directly from within Salesforce. Data can be easily copied to and from Excel. No need to log in again when you are already logged in with your browser.
+* Some support for generating exportable documentation artifacts: Currently limited to metadata for all fields on selected sobjects.
 
 <img alt="Inspector menu" src="https://raw.githubusercontent.com/sorenkrabbe/Chrome-Salesforce-inspector/master/docs/screenshots/1.png" height="100">
 <img alt="Show field metadata" src="https://raw.githubusercontent.com/sorenkrabbe/Chrome-Salesforce-inspector/master/docs/screenshots/2.png" height="100">

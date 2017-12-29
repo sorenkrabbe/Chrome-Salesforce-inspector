@@ -1,3 +1,11 @@
+Version 1.4
+===========
+
+Documentation generator
+-------
+* Introduced Generate Documentation page to hold features for generating exportable documentation artefacts.
+* Supports extract of field metadata for fields on user listed sobjects
+
 Version 1.3
 ===========
 
