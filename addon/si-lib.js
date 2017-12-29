@@ -31,7 +31,8 @@ let SILib = {
      * @param pageMessageType "INFO" or "ERROR"
      */
     addPageMessage(msg, pageMessageType) {
-      alert(pageMessageType + ": " + msg);
+      alert(msg);
+      console.log(pageMessageType, msg);
     }
 
     /**

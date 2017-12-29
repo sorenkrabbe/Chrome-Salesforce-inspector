@@ -5,8 +5,8 @@
 /* global initButton */
 "use strict";
 
-//TODO: Ask user before copying to clipboard (pri 2)
 //TODO: Add details to particle FieldDefinitions to show field length etc. for Compound field particles (pri 5)
+//TODO: Improve si-lib.addPageMessage() message presentation (pri 5)
 //TODO: Restructure code to improve DX ("babel -w --out-dir ../addon/ *" from app dir until it's done) (pri 9)
 
 class Model extends SILib.SIPageModel {
@@ -270,7 +270,9 @@ class DocArtefactFieldDefinitions extends React.Component {
 
   onGetMetadataClick(e) {
     this.model.loadSelectedSObjects().then(() => {
-      this.model.copyElementToClipboard(this.refs.fieldOverviewTable.getContentTableElm(), "Field table is on screen and in your clipboard.\n\nGo paste!");
+      if (confirm("Are you sure you want to override whatever is in your local clipboard with Salesforce field metadata?")) {
+        this.model.copyElementToClipboard(this.refs.fieldOverviewTable.getContentTableElm(), "Field table is on screen and in your clipboard.\n\nGo paste!");
+      }
     });
   }
 
@@ -305,7 +307,7 @@ class DocArtefactFieldDefinitions extends React.Component {
         React.createElement(
           "button",
           {type: "button", className: "button", onClick: this.onGetMetadataClick},
-          "Get metadata"
+          "Get metadata and copy to clipboard"
         ),
         React.createElement(
           "label",
