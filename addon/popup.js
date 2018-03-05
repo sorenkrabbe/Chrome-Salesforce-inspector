@@ -718,7 +718,7 @@ function getRecordId(href) {
   }
   // Lightning Experience and Salesforce1
   if (url.hostname.endsWith(".lightning.force.com")) {
-    let match = url.hash.match(/\/sObject\/([a-zA-Z0-9]+)(?:\/|$)/);
+    let match = url.pathname.match(/\/r|o\/[a-zA-Z]+\/([a-zA-Z0-9]+)(?:\/|$)/);
     if (match) {
       return match[1];
     }
