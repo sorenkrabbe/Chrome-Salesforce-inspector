@@ -34,9 +34,9 @@ async function popupTest(test) {
   assertEquals(null, getRecordId(new URL("https://na1.visual.force.com/apex/VfPage?other=foo"))); // parameter containing 3 character non-ID
   assertEquals(null, getRecordId(new URL("https://na1.visual.force.com/apex/VfPage?other=foofoofoofoofoo"))); // parameter containing 15 character non-ID
   // Lightning Experience / Salesforce1
-  assertEquals("Account", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?source=aloha#/sObject/Account/home?t=1473700726105"))); // lightning record home
-  assertEquals("Account", getRecordId(new URL("https://mydomain.lightning.force.com/one/one.app?source=aloha#/sObject/Account/home?t=1473700726105"))); // lightning record home with My Domain
-  assertEquals("001i0000007BlV0AAK", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?source=aloha#/sObject/001i0000007BlV0AAK/view?t=1473700726105"))); // lightning record detail page
-  assertEquals("001i0000007BlV0AAK", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?id=a37E0000000DV1c#/sObject/001i0000007BlV0AAK/view?t=1473700726105"))); // prefer standard
-  assertEquals("a37E0000000DV1c", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?id=a37E0000000DV1c#/foo?t=1473700726105"))); // support non-standard
+  assertEquals("Account", getRecordId(new URL("https://na1.lightning.force.com/lightning/o/Account/home?t=1473700726105"))); // lightning record home
+  assertEquals("Account", getRecordId(new URL("https://mydomain.lightning.force.com/lightning/o/Account/home?t=1473700726105"))); // lightning record home with My Domain
+  assertEquals("001i0000007BlV0AAK", getRecordId(new URL("https://na1.lightning.force.com/lightning/r/001i0000007BlV0AAK/view?t=1473700726105"))); // lightning record detail page
+  assertEquals("001i0000007BlV0AAK", getRecordId(new URL("https://na1.lightning.force.com/lightning/r/001i0000007BlV0AAK/view?t=1473700726105&id=a37E0000000DV1c"))); // prefer standard
+  assertEquals("a37E0000000DV1c", getRecordId(new URL("https://na1.lightning.force.com/lightning/r/?id=a37E0000000DV1c#/foo?t=1473700726105"))); // support non-standard
 }
