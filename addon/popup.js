@@ -703,9 +703,6 @@ class Autocomplete extends React.PureComponent {
 }
 
 function getRecordId(href) {
-  console.log('Get record');
-  console.log('href');
-
   let url = new URL(href);
   // Find record ID from URL
   let searchParams = new URLSearchParams(url.search.substring(1));
