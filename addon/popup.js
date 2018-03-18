@@ -424,10 +424,9 @@ class AllDataSelection extends React.PureComponent {
     return (
       h("div", {className: "all-data-box-inner"},
         h("div", {className: "all-data-box-data"},
-          h("div", {title: "Record ID", className: "data-element"}, selectedValue.recordId),
+          h("div", {title: "Record ID/prefix", className: "data-element"}, selectedValue.recordId + " / " + selectedValue.sobject.keyPrefix),
           h("div", {title: "API name", className: "data-element"}, selectedValue.sobject.name),
           h("div", {title: "Label", className: "data-element"}, selectedValue.sobject.label),
-          h("div", {title: "ID key prefix", className: "data-element"}, selectedValue.sobject.keyPrefix)
         ),
         h(ShowDetailsButton, {ref: "showDetailsBtn", showDetailsSupported, selectedValue, contextRecordId}),
         selectedValue.recordId && selectedValue.recordId.startsWith("0Af")
