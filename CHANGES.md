@@ -1,3 +1,10 @@
+Version 1.4
+===========
+
+Inspector menu
+--------------
+* Support for Spring '18 LEX URL format (https://docs.releasenotes.salesforce.com/en-us/spring18/release-notes/rn_general_enhanced_urls_cruc.htm)
+
 Version 1.3
 ===========
 
