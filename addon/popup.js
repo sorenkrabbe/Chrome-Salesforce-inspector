@@ -716,9 +716,17 @@ function getRecordId(href) {
       }
     }
   }
+
   // Lightning Experience and Salesforce1
   if (url.hostname.endsWith(".lightning.force.com")) {
-    let match = url.hash.match(/\/sObject\/([a-zA-Z0-9]+)(?:\/|$)/);
+    let match;
+
+    if (url.pathname == "/one/one.app") {
+      // Pre URL change: https://docs.releasenotes.salesforce.com/en-us/spring18/release-notes/rn_general_enhanced_urls_cruc.htm
+      match = url.hash.match(/\/sObject\/([a-zA-Z0-9]+)(?:\/|$)/);
+    } else {
+      match = url.pathname.match(/\/lightning\/[r|o]\/[a-zA-Z0-9_]+\/([a-zA-Z0-9]+)/);
+    }
     if (match) {
       return match[1];
     }

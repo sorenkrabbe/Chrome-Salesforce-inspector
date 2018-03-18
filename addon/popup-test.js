@@ -33,10 +33,13 @@ async function popupTest(test) {
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://na1.visual.force.com/apex/VfPage?other=001i0000007BlV0"))); // another non-standard name
   assertEquals(null, getRecordId(new URL("https://na1.visual.force.com/apex/VfPage?other=foo"))); // parameter containing 3 character non-ID
   assertEquals(null, getRecordId(new URL("https://na1.visual.force.com/apex/VfPage?other=foofoofoofoofoo"))); // parameter containing 15 character non-ID
-  // Lightning Experience / Salesforce1
+  // Lightning Experience / Salesforce1 (Pre URL change: https://docs.releasenotes.salesforce.com/en-us/spring18/release-notes/rn_general_enhanced_urls_cruc.htm)
   assertEquals("Account", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?source=aloha#/sObject/Account/home?t=1473700726105"))); // lightning record home
   assertEquals("Account", getRecordId(new URL("https://mydomain.lightning.force.com/one/one.app?source=aloha#/sObject/Account/home?t=1473700726105"))); // lightning record home with My Domain
   assertEquals("001i0000007BlV0AAK", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?source=aloha#/sObject/001i0000007BlV0AAK/view?t=1473700726105"))); // lightning record detail page
   assertEquals("001i0000007BlV0AAK", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?id=a37E0000000DV1c#/sObject/001i0000007BlV0AAK/view?t=1473700726105"))); // prefer standard
   assertEquals("a37E0000000DV1c", getRecordId(new URL("https://na1.lightning.force.com/one/one.app?id=a37E0000000DV1c#/foo?t=1473700726105"))); // support non-standard
+  // Lightning Experience / Salesforce1
+  assertEquals("001U0000004JEu4IAG", getRecordId(new URL("https://mydomain.lightning.force.com/lightning/r/Account/001U0000004JEu4IAG/view"))); // standard object record detail
+  assertEquals("xxxU0000004JEu4IAG", getRecordId(new URL("https://mydomain.lightning.force.com/lightning/r/pack__Custom_Object1/xxxU0000004JEu4IAG/view"))); // custom object record detail
 }
