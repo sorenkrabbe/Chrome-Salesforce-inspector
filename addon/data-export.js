@@ -683,7 +683,8 @@ class Model {
     exportedData.isTooling = vm.queryTooling;
     exportedData.describeInfo = vm.describeInfo;
     exportedData.sfHost = vm.sfHost;
-    let query = vm.queryInput.value;
+    let query = vm.queryInput.value.replace(/  +/g, " ").replace(", FROM", " FROM");
+    vm.queryInput.value = query;
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll ? "queryAll" : "query";
     function batchHandler(batch) {
       return batch.catch(err => {
