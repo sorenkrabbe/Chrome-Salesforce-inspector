@@ -15,13 +15,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
       let [orgId] = cookie.value.split("!");
-      chrome.cookies.getAll({name: "sid", domain: "salesforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
-        let sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
-        if (!sessionCookie) {
-          sendResponse(null);
+      chrome.cookies.getAll({name: "sid", domain: "salesforce.com", secure: true, storeId: sender.tab.cookieStoreId}, sfCookies => {
+        let sfSessionCookie = sfCookies.find(c => c.value.startsWith(orgId + "!"));
+        if (!sfSessionCookie) {
+          chrome.cookies.getAll({name: "sid", domain: "cloudforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cfCookies => {
+            let cfSessionCookie = cfCookies.find(c => c.value.startsWith(orgId + "!"));
+            if (!cfSessionCookie) {
+              sendResponse(null);
+              return;
+            }
+            sendResponse(cfSessionCookie.domain);
+          });
           return;
         }
-        sendResponse(sessionCookie.domain);
+        sendResponse(sfSessionCookie.domain);
       });
     });
     return true; // Tell Chrome that we want to call sendResponse asynchronously.
