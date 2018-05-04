@@ -707,7 +707,7 @@ function getRecordId(href) {
   // Find record ID from URL
   let searchParams = new URLSearchParams(url.search.substring(1));
   // Salesforce Classic and Console
-  if (url.hostname.endsWith(".salesforce.com")) {
+  if (url.hostname.endsWith(".salesforce.com") || url.hostname.endsWith(".cloudforce.com")) {
     let match = url.pathname.match(/\/([a-zA-Z0-9]{3}|[a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})(?:\/|$)/);
     if (match) {
       let res = match[1];
