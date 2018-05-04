@@ -15,11 +15,17 @@
   "permissions": [
     "https://*.salesforce.com/*",
     "https://*.force.com/*",
+    "https://*.cloudforce.com/*",
     "cookies"
   ],
   "content_scripts": [
     {
-      "matches": ["https://*.salesforce.com/*", "https://*.visual.force.com/*", "https://*.lightning.force.com/*"],
+      "matches": [
+        "https://*.salesforce.com/*",
+        "https://*.visual.force.com/*",
+        "https://*.lightning.force.com/*",
+        "https://*.cloudforce.com/*"
+      ],
       "all_frames": true,
       "css": [
         "button.css",
