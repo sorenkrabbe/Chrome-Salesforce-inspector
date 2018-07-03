@@ -223,7 +223,7 @@ class App extends React.PureComponent {
         ),
         h("div", {className: "footer"},
           h("div", {className: "meta"},
-            h("div", {className: "version"}, "(v" + addonVersion + ")"),
+            h("div", {className: "version"}, "(v" + addonVersion + " / " + apiVersion + ")"),
             h("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
           )
         )
