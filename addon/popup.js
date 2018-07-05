@@ -302,6 +302,7 @@ class AllDataBox extends React.PureComponent {
     //If a recordId is selected and the object supports regularApi
     if (this.state.selectedValue && this.state.selectedValue.recordId && this.state.selectedValue.sobject && this.state.selectedValue.sobject.availableApis && this.state.selectedValue.sobject.availableApis.includes("regularApi")) {
       //optimistically assume the object has certain attribues. If some are not present, no recordIdDetails are displayed
+      //TODO: Better handle objects with no recordtypes. Currently the optimistic approach results in no record details being displayed for ids for objects without record types.
       let query = "select Id, LastModifiedBy.Alias, CreatedBy.Alias, RecordType.DeveloperName, CreatedDate, LastModifiedDate from " + this.state.selectedValue.sobject.name + " where id='" + this.state.selectedValue.recordId + "'";
       sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query), {logErrors: false}).then(res => {
         for (let record of res.records) {
