@@ -224,8 +224,9 @@ class App extends React.PureComponent {
         h("div", {className: "footer"},
           h("div", {className: "meta"},
             h("div", {className: "version"}, "(v" + addonVersion + " / " + apiVersion + ")"),
-            h("a", {href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
-          )
+            h("div", {className: "tip"}, "[ctrl+alt+i] to open"),
+            h("a", {className: "about", href: "https://github.com/sorenkrabbe/Chrome-Salesforce-inspector", target: linkTarget}, "About")
+          ),
         )
       )
     );
@@ -281,11 +282,13 @@ class ShowDetailsButton extends React.PureComponent {
   }
 }
 
+
 class AllDataBox extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
-      selectedValue: null
+      selectedValue: null,
+      recordIdDetails: null
     };
     this.onDataSelect = this.onDataSelect.bind(this);
     this.getMatches = this.getMatches.bind(this);
@@ -293,6 +296,33 @@ class AllDataBox extends React.PureComponent {
   updateSelection(query) {
     let match = this.getBestMatch(query);
     this.setState({selectedValue: match});
+    this.loadRecordIdDetails();
+  }
+  loadRecordIdDetails() {
+    //If a recordId is selected and the object supports regularApi
+    if (this.state.selectedValue && this.state.selectedValue.recordId && this.state.selectedValue.sobject && this.state.selectedValue.sobject.availableApis && this.state.selectedValue.sobject.availableApis.includes("regularApi")) {
+      //optimistically assume the object has certain attribues. If some are not present, no recordIdDetails are displayed
+      let query = "select Id, LastModifiedBy.Alias, CreatedBy.Alias, RecordType.DeveloperName, CreatedDate, LastModifiedDate from " + this.state.selectedValue.sobject.name + " where id='" + this.state.selectedValue.recordId + "'";
+      sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query), {logErrors: false}).then(res => {
+        for (let record of res.records) {
+          let lastModifiedDate = new Date(record.LastModifiedDate);
+          let createdDate = new Date(record.CreatedDate);
+          this.setState({recordIdDetails: {
+            "recordTypeName": record.RecordType.DeveloperName,
+            "createdBy": record.CreatedBy.Alias,
+            "lastModifiedBy": record.LastModifiedBy.Alias,
+            "created": createdDate.toLocaleDateString() + " " + createdDate.toLocaleTimeString(),
+            "lastModified": lastModifiedDate.toLocaleDateString() + " " + lastModifiedDate.toLocaleTimeString(),
+          }});
+        }
+      }).catch(() => {
+        //Swallow this exception since it is likely due to missing standard attributes on the record - i.e. an invalid query.
+        this.setState({recordIdDetails: null});
+      });
+
+    } else {
+      this.setState({recordIdDetails: null});
+    }
   }
   getBestMatch(query) {
     let {sobjectsList} = this.props;
@@ -354,7 +384,9 @@ class AllDataBox extends React.PureComponent {
     return res;
   }
   onDataSelect(value) {
-    this.setState({selectedValue: value});
+    this.setState({selectedValue: value}, () => {
+      this.loadRecordIdDetails();
+    });
   }
   clickShowDetailsBtn() {
     if (this.refs.allDataSelection) {
@@ -368,12 +400,12 @@ class AllDataBox extends React.PureComponent {
   }
   render() {
     let {sfHost, showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget} = this.props;
-    let {selectedValue} = this.state;
+    let {selectedValue, recordIdDetails} = this.state;
     return (
       h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
         h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches}),
         selectedValue
-          ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, contextRecordId, selectedValue, linkTarget})
+          ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, contextRecordId, selectedValue, linkTarget, recordIdDetails})
           : h("div", {className: "all-data-box-inner empty"}, "No record to display")
       )
     );
@@ -412,7 +444,7 @@ class AllDataSelection extends React.PureComponent {
     return "explore-api.html?" + args;
   }
   render() {
-    let {showDetailsSupported, contextRecordId, selectedValue, linkTarget} = this.props;
+    let {showDetailsSupported, contextRecordId, selectedValue, linkTarget, recordIdDetails} = this.props;
     // Show buttons for the available APIs.
     let buttons = Array.from(selectedValue.sobject.availableApis);
     buttons.sort();
@@ -423,10 +455,26 @@ class AllDataSelection extends React.PureComponent {
     return (
       h("div", {className: "all-data-box-inner"},
         h("div", {className: "all-data-box-data"},
-          h("div", {title: "Record ID", className: "data-element"}, selectedValue.recordId),
-          h("div", {title: "API name", className: "data-element"}, selectedValue.sobject.name),
-          h("div", {title: "Label", className: "data-element"}, selectedValue.sobject.label),
-          h("div", {title: "ID key prefix", className: "data-element"}, selectedValue.sobject.keyPrefix)
+          h("table", {},
+            h("tbody", {},
+              h("tr", {},
+                h("th", {}, "Name:"),
+                h("td", {}, selectedValue.sobject.name)
+              ),
+              h("tr", {},
+                h("th", {}, "Label:"),
+                h("td", {}, selectedValue.sobject.label)
+              ),
+              h("tr", {},
+                h("th", {}, "Id:"),
+                h("td", {},
+                  h("span", {}, selectedValue.sobject.keyPrefix),
+                  h("span", {}, (selectedValue.recordId) ? " / " + selectedValue.recordId : ""),
+              )
+              ))),
+
+
+          h(AllDataRecordDetails, {recordIdDetails, className: "top-space"}),
         ),
         h(ShowDetailsButton, {ref: "showDetailsBtn", showDetailsSupported, selectedValue, contextRecordId}),
         selectedValue.recordId && selectedValue.recordId.startsWith("0Af")
@@ -447,6 +495,32 @@ class AllDataSelection extends React.PureComponent {
         ))
       )
     );
+  }
+}
+
+class AllDataRecordDetails extends React.PureComponent {
+  render() {
+    let {recordIdDetails, className} = this.props;
+    if (recordIdDetails) {
+      return (
+        h("table", {className},
+          h("tbody", {},
+            h("tr", {},
+              h("th", {}, "RecType:"),
+              h("td", {}, recordIdDetails.recordTypeName)
+            ),
+            h("tr", {},
+              h("th", {}, "Created:"),
+              h("td", {}, recordIdDetails.created + " (" + recordIdDetails.createdBy + ")")
+            ),
+            h("tr", {},
+              h("th", {}, "Edited:"),
+              h("td", {}, recordIdDetails.lastModified + " (" + recordIdDetails.lastModifiedBy + ")")
+            )
+        )));
+    } else {
+      return null;
+    }
   }
 }
 

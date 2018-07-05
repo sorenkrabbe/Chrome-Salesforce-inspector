@@ -147,6 +147,7 @@ button.button:active, a[href]:active {
 }
 .all-data-box-data {
     flex: 1;
+    font-size: 0.9em;
 }
 .data-element {
 }
@@ -214,9 +215,32 @@ button.button:active, a[href]:active {
 .meta {
     font-size: 12px;
     text-align: right;
+    display: flex;
+    justify-content: space-between;
 }
-.version {
+.meta .version {
     float: left;
     font-size: 0.8em;
     margin-top: 0.2em;
+}
+.meta .tip {
+    text-align: center;
+    color: #999999;
+    font-size: 0.8em;
+    margin-top: 0.2em;
+}
+.all-data-box-data table {
+    text-align: left;
+    border-spacing: 0px;
+    border-collapse: separate;
+}
+.all-data-box-data td {
+    padding: 0px;
+}
+.all-data-box-data th {
+    padding: 0px;
+    padding-right: 5px;
+}
+.top-space {
+    margin-top: 1em;
 }
