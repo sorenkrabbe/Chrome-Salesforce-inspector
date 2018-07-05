@@ -444,6 +444,12 @@ class AllDataSelection extends React.PureComponent {
     args.set("checkDeployStatus", selectedValue.recordId);
     return "explore-api.html?" + args;
   }
+  /**
+   * Optimistically generate lightning setup uri for the provided object api name.
+   */
+  getObjectSetupLink(sobjectName) {
+    return "https://" + this.props.sfHost + "/lightning/setup/ObjectManager/" + sobjectName + "/FieldsAndRelationships/view";
+  }
   render() {
     let {showDetailsSupported, contextRecordId, selectedValue, linkTarget, recordIdDetails} = this.props;
     // Show buttons for the available APIs.
@@ -460,7 +466,9 @@ class AllDataSelection extends React.PureComponent {
             h("tbody", {},
               h("tr", {},
                 h("th", {}, "Name:"),
-                h("td", {}, selectedValue.sobject.name)
+                h("td", {},
+                  h("a", {href: this.getObjectSetupLink(selectedValue.sobject.name), target: linkTarget}, selectedValue.sobject.name)
+                )
               ),
               h("tr", {},
                 h("th", {}, "Label:"),
