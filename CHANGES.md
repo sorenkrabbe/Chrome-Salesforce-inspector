@@ -1,3 +1,15 @@
+Version 1.5
+===========
+
+General
+-------
+* Update to Salesforce API v 43.0
+
+Inspector menu
+--------------
+* Show record details - currently for objects with record types only
+* Link to LEX object manager/setup for object in focus
+
 Version 1.4
 ===========
 

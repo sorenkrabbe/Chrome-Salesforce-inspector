@@ -84,7 +84,7 @@ Design Principles
 
 About
 -----
-By Søren Krabbe (soren.krabbe@capgemini.com) and Jesper Kristensen
+By Søren Krabbe and Jesper Kristensen
 
 License
 -----

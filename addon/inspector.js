@@ -1,7 +1,7 @@
 /* exported sfConn apiVersion */
 "use strict";
 
-var apiVersion = "39.0"; // eslint-disable-line no-var
+var apiVersion = "43.0"; // eslint-disable-line no-var
 var sfConn = { // eslint-disable-line no-var
 
   async getSession(sfHost) {
@@ -13,7 +13,7 @@ var sfConn = { // eslint-disable-line no-var
     }
   },
 
-  async rest(url, {method = "GET", api = "normal", body = undefined, bodyType = "json", headers = {}, progressHandler = null} = {}) {
+  async rest(url, {logErrors = true, method = "GET", api = "normal", body = undefined, bodyType = "json", headers = {}, progressHandler = null} = {}) {
     if (!this.instanceHostname || !this.sessionId) {
       throw new Error("Session not found");
     }
@@ -68,13 +68,13 @@ var sfConn = { // eslint-disable-line no-var
     if (xhr.status >= 200 && xhr.status < 300) {
       return xhr.response;
     } else if (xhr.status == 0) {
-      console.error("Received no response from Salesforce REST API", xhr);
+      if (!logErrors) { console.error("Received no response from Salesforce REST API", xhr); }
       let err = new Error();
       err.name = "SalesforceRestError";
       err.message = "Network error, offline or timeout";
       throw err;
     } else {
-      console.error("Received error response from Salesforce REST API", xhr);
+      if (!logErrors) { console.error("Received error response from Salesforce REST API", xhr); }
       let err = new Error();
       err.name = "SalesforceRestError";
       err.detail = xhr.response;
