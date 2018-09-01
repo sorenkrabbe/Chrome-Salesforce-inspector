@@ -7,6 +7,7 @@ let args = new URLSearchParams(location.search.slice(1));
 let sfHost = args.get("host");
 sfConn.getSession(sfHost).then(() => {
   let sobjectName = args.get("object");
+  if (sobjectName == "Task" || sobjectName == "Event") { sobjectName = "Activity"; }
   let fieldName = args.get("field");
   if (!fieldName.endsWith("__c") && !fieldName.endsWith("__pc")) {
     if (fieldName.endsWith("Id") && fieldName != "Id") {
