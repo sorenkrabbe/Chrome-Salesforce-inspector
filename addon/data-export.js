@@ -972,6 +972,10 @@ class App extends React.Component {
         e.preventDefault();
         model.queryAutocompleteHandler({ctrlSpace: true});
         model.didUpdate();
+      } else if (e.ctrlKey && e.which == 13) { // ctrl + enter
+        e.preventDefault();
+        model.doExport();
+        model.didUpdate();
       }
     });
 
