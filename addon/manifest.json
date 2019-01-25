@@ -5,12 +5,6 @@
   "icons": {
     "128": "icon128.png"
   },
-  "applications": {
-    "gecko": {
-      "id": "jid1-DBcuAQpfLMcvOQ@jetpack",
-      "strict_min_version": "52.0"
-    }
-  },
   "minimum_chrome_version": "55",
   "permissions": [
     "https://*.salesforce.com/*",

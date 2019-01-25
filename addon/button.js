@@ -29,6 +29,11 @@ function initButton(sfHost, inInspector) {
   img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAPCAYAAADd/14OAAAA40lEQVQoz2P4//8/AzpWzGj6L59U/V8urgxMg/g4FUn6J/+X9E38LxWc8V8htR67IpCkuGfMfxCQjSpENRFFkXvk/1+/foGxQloDSD0DVkVfvnyBY7hCdEVv3rxBwXCFIIdKh2WDFT1+/BgDo1qd2fL/1q1bWDFcoW5xz3/Xppn/oycu/X/x4kUMDFeoWdD136R8wn+f9rlgxSdOnEDBKFajK96/fz8coyjEpnj79u1gjKEQXXFE/+L/Gzdu/G9WMfG/am4HZlzDFAf3LPwfOWEJWBPIwwzYUg9MsXXNFDAN4gMAmASShdkS4AcAAAAASUVORK5CYII=";
   btn.appendChild(img);
   document.body.appendChild(rootEl);
+  document.addEventListener("keydown", function logKey(e){
+    if (e.key == "o") {
+      loadPopup();
+    }
+  });
   btn.addEventListener("click", function clickListener() {
     btn.removeEventListener("click", clickListener);
     loadPopup();
