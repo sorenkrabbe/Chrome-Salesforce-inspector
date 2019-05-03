@@ -141,7 +141,7 @@ class Model {
     return "inspect.html?" + args;
   }
   selectHistoryEntry() {
-    if (this.selectedHistoryEntry != null) {
+    if (this.selectedHistoryEntry) {
       this.queryInput.value = this.selectedHistoryEntry.query;
       this.queryTooling = this.selectedHistoryEntry.useToolingApi;
       this.queryAutocompleteHandler();
@@ -152,7 +152,7 @@ class Model {
     this.queryHistory.clear();
   }
   selectSavedEntry() {
-    if (this.selectedSavedEntry != null) {
+    if (this.selectedSavedEntry) {
       this.queryInput.value = this.selectedSavedEntry.query;
       this.queryTooling = this.selectedSavedEntry.useToolingApi;
       this.queryAutocompleteHandler();
