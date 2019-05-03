@@ -153,7 +153,7 @@ class Model {
   }
   selectSavedEntry() {
     if (this.selectedSavedEntry != null) {
-      this.queryInput.value = this.selectedSavedEntry;
+      this.queryInput.value = this.selectedSavedEntry.query;
       this.queryTooling = this.selectedSavedEntry.useToolingApi;
       this.queryAutocompleteHandler();
       this.selectedSavedEntry = null;
