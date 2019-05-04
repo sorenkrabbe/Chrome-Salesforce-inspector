@@ -16,10 +16,19 @@ if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) 
   });
 }
 
-function initButton(sfHost, inInspector) {
+let sfHost;
+let inInspector;
+const rootElId = "insext";
+const btnElId = "insext-btn";
+const popupElId = "insext-popup";
+
+function initButton(host, isInInspector) {
+  sfHost = host;
+  inInspector = isInInspector;
   let rootEl = document.createElement("div");
-  rootEl.id = "insext";
+  rootEl.id = rootElId;
   let btn = document.createElement("div");
+  btn.id = btnElId;
   btn.className = "insext-btn";
   btn.tabIndex = 0;
   btn.accessKey = "i";
@@ -33,61 +42,80 @@ function initButton(sfHost, inInspector) {
     btn.removeEventListener("click", clickListener);
     loadPopup();
   });
+}
 
-  function loadPopup() {
-    btn.addEventListener("click", () => {
-      if (!rootEl.classList.contains("insext-active")) {
-        openPopup();
-      } else {
-        closePopup();
-      }
-    });
+function loadPopup() {
+  const btn = getButton();
+  const rootEl = getRootEl();
+  btn.addEventListener("click", () => {
+    if (!rootEl.classList.contains("insext-active")) {
+      openPopup();
+    } else {
+      closePopup();
+    }
+  });
 
-    let popupSrc = chrome.extension.getURL("popup.html");
-    let popupEl = document.createElement("iframe");
-    popupEl.className = "insext-popup";
-    popupEl.src = popupSrc;
-    addEventListener("message", e => {
-      if (e.source != popupEl.contentWindow) {
-        return;
-      }
-      if (e.data.insextInitRequest) {
-        popupEl.contentWindow.postMessage({
-          insextInitResponse: true,
-          sfHost,
-          forceTargetBlank: !!document.querySelector("body.ApexCSIPage"),
-          showStdPageDetailsSupported: !document.querySelector("#auraLoadingBox") && !inInspector,
-        }, "*");
-      }
-      if (e.data.insextLoaded) {
-        openPopup();
-      }
-      if (e.data.insextClosePopup) {
-        closePopup();
-      }
-      if (e.data.insextShowStdPageDetails) {
-        showStdPageDetails(sfHost, e.data.insextData);
-      }
-    });
-    rootEl.appendChild(popupEl);
-    function openPopup() {
-      popupEl.contentWindow.postMessage({insextUpdateRecordId: true, locationHref: location.href}, "*");
-      rootEl.classList.add("insext-active");
-      // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector
-      addEventListener("click", outsidePopupClick);
-      popupEl.focus();
+  let popupSrc = chrome.extension.getURL("popup.html");
+  let popupEl = document.createElement("iframe");
+  popupEl.id = popupElId;
+  popupEl.className = "insext-popup";
+  popupEl.src = popupSrc;
+  addEventListener("message", e => {
+    if (e.source != popupEl.contentWindow) {
+      return;
     }
-    function closePopup() {
-      rootEl.classList.remove("insext-active");
-      removeEventListener("click", outsidePopupClick);
-      popupEl.blur();
+    if (e.data.insextInitRequest) {
+      popupEl.contentWindow.postMessage({
+        insextInitResponse: true,
+        sfHost,
+        forceTargetBlank: !!document.querySelector("body.ApexCSIPage"),
+        showStdPageDetailsSupported: !document.querySelector("#auraLoadingBox") && !inInspector,
+      }, "*");
     }
-    function outsidePopupClick(e) {
-      // Close the popup when clicking outside it
-      if (!rootEl.contains(e.target)) {
-        closePopup();
-      }
+    if (e.data.insextLoaded) {
+      openPopup();
     }
+    if (e.data.insextClosePopup) {
+      closePopup();
+    }
+    if (e.data.insextShowStdPageDetails) {
+      showStdPageDetails(sfHost, e.data.insextData);
+    }
+  });
+  rootEl.appendChild(popupEl);
+}
+
+function openPopup() {
+  const popupEl = getPopupEl();
+  const rootEl = getRootEl();
+  popupEl.contentWindow.postMessage({insextUpdateRecordId: true, locationHref: location.href}, "*");
+  rootEl.classList.add("insext-active");
+  // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector
+  addEventListener("click", outsidePopupClick);
+  popupEl.focus();
+}
+function closePopup() {
+  const popupEl = getPopupEl();
+  const rootEl = getRootEl();
+  rootEl.classList.remove("insext-active");
+  removeEventListener("click", outsidePopupClick);
+  popupEl.blur();
+}
+function outsidePopupClick(e) {
+  const rootEl = getRootEl();
+  // Close the popup when clicking outside it
+  if (!rootEl.contains(e.target)) {
+    closePopup();
   }
+}
+function getPopupEl() {
+  return document.getElementById(popupElId);
+}
 
+function getButton() {
+  return document.getElementById(btnElId);
+}
+
+function getRootEl() {
+  return document.getElementById(rootElId);
 }
