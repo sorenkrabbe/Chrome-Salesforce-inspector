@@ -8,7 +8,7 @@
 // ApexCSIPage = Developer Console
 // auraLoadingBox = Lightning / Salesforce1
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request) => {
   if (request.message === "open_menu") {
     togglePopup();
   }
