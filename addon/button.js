@@ -7,6 +7,13 @@
 // sfdcBody = normal Salesforce page
 // ApexCSIPage = Developer Console
 // auraLoadingBox = Lightning / Salesforce1
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.message === "open_menu") {
+    togglePopup();
+  }
+});
+
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) {
   // We are in a Salesforce org
   chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, sfHost => {
@@ -38,21 +45,14 @@ function initButton(host, isInInspector) {
   img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAPCAYAAADd/14OAAAA40lEQVQoz2P4//8/AzpWzGj6L59U/V8urgxMg/g4FUn6J/+X9E38LxWc8V8htR67IpCkuGfMfxCQjSpENRFFkXvk/1+/foGxQloDSD0DVkVfvnyBY7hCdEVv3rxBwXCFIIdKh2WDFT1+/BgDo1qd2fL/1q1bWDFcoW5xz3/Xppn/oycu/X/x4kUMDFeoWdD136R8wn+f9rlgxSdOnEDBKFajK96/fz8coyjEpnj79u1gjKEQXXFE/+L/Gzdu/G9WMfG/am4HZlzDFAf3LPwfOWEJWBPIwwzYUg9MsXXNFDAN4gMAmASShdkS4AcAAAAASUVORK5CYII=";
   btn.appendChild(img);
   document.body.appendChild(rootEl);
-  btn.addEventListener("click", function clickListener() {
-    btn.removeEventListener("click", clickListener);
-    loadPopup();
-  });
+  loadPopup();
 }
 
 function loadPopup() {
   const btn = getButton();
   const rootEl = getRootEl();
   btn.addEventListener("click", () => {
-    if (!rootEl.classList.contains("insext-active")) {
-      openPopup();
-    } else {
-      closePopup();
-    }
+    togglePopup();
   });
 
   let popupSrc = chrome.extension.getURL("popup.html");
@@ -72,17 +72,20 @@ function loadPopup() {
         showStdPageDetailsSupported: !document.querySelector("#auraLoadingBox") && !inInspector,
       }, "*");
     }
-    if (e.data.insextLoaded) {
-      openPopup();
-    }
-    if (e.data.insextClosePopup) {
-      closePopup();
-    }
     if (e.data.insextShowStdPageDetails) {
       showStdPageDetails(sfHost, e.data.insextData);
     }
   });
   rootEl.appendChild(popupEl);
+}
+
+function togglePopup() {
+  const rootEl = getRootEl();
+  if (!rootEl.classList.contains("insext-active")) {
+    openPopup();
+  } else {
+    closePopup();
+  }
 }
 
 function openPopup() {
@@ -94,6 +97,7 @@ function openPopup() {
   addEventListener("click", outsidePopupClick);
   popupEl.focus();
 }
+
 function closePopup() {
   const popupEl = getPopupEl();
   const rootEl = getRootEl();
@@ -101,6 +105,7 @@ function closePopup() {
   removeEventListener("click", outsidePopupClick);
   popupEl.blur();
 }
+
 function outsidePopupClick(e) {
   const rootEl = getRootEl();
   // Close the popup when clicking outside it
@@ -108,6 +113,7 @@ function outsidePopupClick(e) {
     closePopup();
   }
 }
+
 function getPopupEl() {
   return document.getElementById(popupElId);
 }

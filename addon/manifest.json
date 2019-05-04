@@ -46,5 +46,14 @@
     "limits.html"
   ],
   "incognito": "split",
+  "commands": {
+    "open_menu": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Command that opens Salesforce Inspector Menu"
+    }
+  },
   "manifest_version": 2
 }

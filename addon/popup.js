@@ -172,7 +172,7 @@ class App extends React.PureComponent {
   componentDidMount() {
     addEventListener("message", this.onUpdateRecordId);
     addEventListener("keydown", this.onShortcutKey);
-    parent.postMessage({insextLoaded: true}, "*");
+    // parent.postMessage({insextLoaded: true}, "*");
     this.loadSobjects();
   }
   componentWillUnmount() {
