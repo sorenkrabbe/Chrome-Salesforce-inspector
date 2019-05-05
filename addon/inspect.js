@@ -32,7 +32,7 @@ class Model {
     this.childRows = new ChildRowList(this);
     this.detailsFilter = "";
     this.detailsBox = null;
-    this.isEditing = false;
+    this.editMode = null; // null (when not editing), "update", "delete" (for confirming) or "create"
     this.hasEntityParticles = false;
   }
   /**
@@ -113,38 +113,95 @@ class Model {
     addProperties(props, this.layoutInfo, "layout.", {detailLayoutSections: true, editLayoutSections: true, relatedLists: true});
     this.showDetailsBox(objectDescribe.name, props, null);
   }
-  canEdit() {
+  canUpdate() {
     return this.objectData && this.objectData.updateable && this.recordData && this.recordData.Id;
   }
-  doEdit() {
-    for (let fieldRow of this.fieldRows.rows) {
-      if (fieldRow.canEdit()) {
-        fieldRow.dataEditValue = fieldRow.dataStringValue();
-      }
-    }
-    this.isEditing = true;
+  doUpdate() {
+    this.editMode = "update";
+    this.fieldRows.makeAllEditable();
+  }
+  canDelete() {
+    return this.objectData && this.objectData.deletable && this.recordData && this.recordData.Id;
+  }
+  doDelete() {
+    this.editMode = "delete";
+  }
+  canCreate() {
+    return this.objectData && this.objectData.createable;
+  }
+  doCreate() {
+    this.editMode = "create";
+    this.fieldRows.makeAllEditable();
   }
   doSave() {
-    let i = this.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
-    this.errorMessages.splice(i, 1);
-    let record = {};
-    this.fieldRows.rows.forEach(fieldRow => fieldRow.saveDataValue(record));
-    let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
-    this.spinFor(
-      "saving record",
-      sfConn.rest(recordUrl, {method: "PATCH", body: record}).then(() => {
-        this.clearRecordData();
-        this.setRecordData(sfConn.rest(recordUrl));
-      })
-    );
+    this.clearSaveError();
+    if (this.editMode == "update") {
+      let record = {};
+      this.fieldRows.rows.forEach(fieldRow => fieldRow.saveDataValue(record));
+      let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
+      this.spinFor(
+        "saving record",
+        sfConn.rest(recordUrl, {method: "PATCH", body: record}).then(() => {
+          this.endEdit();
+          this.clearRecordData();
+          this.setRecordData(sfConn.rest(recordUrl));
+        })
+      );
+    } else if (this.editMode == "delete") {
+      let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
+      this.spinFor(
+        "deleting record",
+        sfConn.rest(recordUrl, {method: "DELETE"}).then(() => {
+          this.endEdit();
+          let args = new URLSearchParams();
+          args.set("host", this.sfHost);
+          args.set("objectType", this.objectName());
+          if (this.useToolingApi) {
+            args.set("useToolingApi", "1");
+          }
+          location.href = "inspect.html?" + args;
+        })
+      );
+    } else if (this.editMode == "create") {
+      let record = {};
+      this.fieldRows.rows.forEach(fieldRow => fieldRow.saveDataValue(record));
+      let recordUrl = this.objectData.urls.sobject;
+      this.spinFor(
+        "creating record",
+        sfConn.rest(recordUrl, {method: "POST", body: record}).then(result => {
+          this.endEdit();
+          let args = new URLSearchParams();
+          args.set("host", this.sfHost);
+          args.set("objectType", this.objectName());
+          if (this.useToolingApi) {
+            args.set("useToolingApi", "1");
+          }
+          args.set("recordId", result.id);
+          location.href = "inspect.html?" + args;
+        })
+      );
+    } else {
+      console.error("unknown edit mode", this.editMode);
+    }
+  }
+  clearSaveError() {
+    let i = this.errorMessages.findIndex(e => ["saving record", "deleting record", "creating record"].some(actionName => e.startsWith(`Error ${actionName}:`)));
+    if (i != -1) {
+      this.errorMessages.splice(i, 1);
+    }
   }
   cancelEdit() {
-    let i = this.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
-    this.errorMessages.splice(i, 1);
+    this.clearSaveError();
+    this.endEdit();
+  }
+  endEdit() {
+    if (!this.canView()) {
+      this.fieldRows.showHideColumn(false, "value");
+    }
     for (let fieldRow of this.fieldRows.rows) {
       fieldRow.dataEditValue = null;
     }
-    this.isEditing = false;
+    this.editMode = null;
   }
   canView() {
     return this.recordData && this.recordData.Id;
@@ -255,14 +312,12 @@ class Model {
   clearRecordData() {
     for (let fieldRow of this.fieldRows.rows) {
       fieldRow.dataTypedValue = undefined;
-      fieldRow.dataEditValue = null;
       fieldRow.detailLayoutInfo = undefined;
       fieldRow.editLayoutInfo = undefined;
     }
     for (let childRow of this.childRows.rows) {
       childRow.relatedListInfo = undefined;
     }
-    this.isEditing = false;
     this.recordData = null;
     this.layoutInfo = null;
   }
@@ -421,6 +476,14 @@ class FieldRowList extends RowList {
       this.rows.forEach(fieldRow => fieldRow.showFieldDescription());
     }
     super.showHideColumn(show, col);
+  }
+  makeAllEditable() {
+    this.showHideColumn(true, "value");
+    for (let fieldRow of this.rows) {
+      if (fieldRow.canEdit()) {
+        fieldRow.dataEditValue = fieldRow.dataStringValue();
+      }
+    }
   }
 }
 
@@ -622,12 +685,22 @@ class FieldRow extends TableRow {
     return typeof this.dataEditValue == "string";
   }
   canEdit() {
-    return this.fieldDescribe && this.fieldDescribe.updateable;
+    switch (this.rowList.model.editMode) {
+      case "update":
+      case null:
+        return this.rowList.model.canUpdate() && this.fieldDescribe && this.fieldDescribe.updateable;
+      case "create":
+        return this.rowList.model.canCreate() && this.fieldDescribe && this.fieldDescribe.createable;
+      default:
+        return false;
+    }
   }
   tryEdit() {
-    if (!this.isEditing() && this.rowList.model.canEdit() && this.canEdit()) {
+    if (!this.isEditing() && this.canEdit()) {
       this.dataEditValue = this.dataStringValue();
-      this.rowList.model.isEditing = true;
+      if (this.rowList.model.editMode == null) {
+        this.rowList.model.editMode = "update";
+      }
       return true;
     }
     return false;
@@ -839,7 +912,9 @@ class App extends React.Component {
     this.onRowsFilterInput = this.onRowsFilterInput.bind(this);
     this.onClearAndFocusFilter = this.onClearAndFocusFilter.bind(this);
     this.onShowObjectMetadata = this.onShowObjectMetadata.bind(this);
-    this.onDoEdit = this.onDoEdit.bind(this);
+    this.onDoUpdate = this.onDoUpdate.bind(this);
+    this.onDoDelete = this.onDoDelete.bind(this);
+    this.onDoCreate = this.onDoCreate.bind(this);
     this.onDoSave = this.onDoSave.bind(this);
     this.onCancelEdit = this.onCancelEdit.bind(this);
   }
@@ -882,9 +957,19 @@ class App extends React.Component {
     model.showObjectMetadata();
     model.didUpdate();
   }
-  onDoEdit() {
+  onDoUpdate() {
     let {model} = this.props;
-    model.doEdit();
+    model.doUpdate();
+    model.didUpdate();
+  }
+  onDoDelete() {
+    let {model} = this.props;
+    model.doDelete();
+    model.didUpdate();
+  }
+  onDoCreate() {
+    let {model} = this.props;
+    model.doCreate();
     model.didUpdate();
   }
   onDoSave() {
@@ -959,9 +1044,24 @@ class App extends React.Component {
             model.recordHeading()
           ),
           h("span", {className: "object-actions"},
-            !model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", disabled: !model.canEdit() || !model.fieldRows.selectedColumnMap.has("value"), onClick: this.onDoEdit}, "Edit") : null,
-            model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", onClick: this.onDoSave}, "Save") : null,
-            model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", onClick: this.onCancelEdit}, "Cancel") : null,
+            model.editMode == null && model.recordData && (model.useTab == "all" || model.useTab == "fields") ? h("button", {
+              title: "Inline edit the values of this record",
+              className: "button",
+              disabled: !model.canUpdate(),
+              onClick: this.onDoUpdate
+            }, "Edit") : null,
+            model.editMode == null && model.recordData && (model.useTab == "all" || model.useTab == "fields") ? h("button", {
+              title: "Delete this record",
+              className: "button",
+              disabled: !model.canDelete(),
+              onClick: this.onDoDelete
+            }, "Delete") : null,
+            model.editMode == null && (model.useTab == "all" || model.useTab == "fields") ? h("button", {
+              title: model.recordData ? "Inline edit the values of this record to be saved as a new cloned record" : "Inline create a new record",
+              className: "button",
+              disabled: !model.canCreate(),
+              onClick: this.onDoCreate
+            }, model.recordData ? "Clone" : "New") : null,
             model.exportLink() ? h("a", {href: model.exportLink(), title: "Export data from this object", className: "button"}, "Export") : null,
             model.viewLink() ? h("a", {href: model.viewLink(), title: "View this record in Salesforce", className: "button"}, "View") : null,
             model.editLayoutLink() ? h("a", {href: model.editLayoutLink(), title: "Open the page layout editor", className: "button"}, "Edit layout") : null,
@@ -983,6 +1083,27 @@ class App extends React.Component {
             classNameForRow: () => ""
           }) : null
         ),
+        model.editMode != null && (model.useTab == "all" || model.useTab == "fields") ? h("span", {className: "edit-bar"},
+          h("button", {
+            title: model.editMode == "update" ? "Cancel editing this record"
+              : model.editMode == "delete" ? "Cancel deleting this record"
+              : model.editMode == "create" ? "Cancel creating this record"
+              : null,
+            className: "button",
+            onClick: this.onCancelEdit
+          }, "Cancel"),
+          h("button", {
+            title: model.editMode == "update" ? "Save the values of this record"
+              : model.editMode == "delete" ? "Delete this record"
+              : model.editMode == "create" ? "Save the values as a new record"
+              : null,
+            className: "button " + (model.editMode == "delete" ? "button-destructive" : "button-brand"),
+            onClick: this.onDoSave
+          }, model.editMode == "update" ? "Save"
+            : model.editMode == "delete" ? "Confirm delete"
+            : model.editMode == "create" ? "Save new"
+            : "???")
+        ) : null,
         model.detailsBox ? h(DetailsBox, {model}) : null
       )
     );
@@ -1139,7 +1260,7 @@ class FieldValueCell extends React.Component {
   onTryEdit(e) {
     let {row} = this.props;
     if (row.tryEdit()) {
-      let td = e.nativeEvent.currentTarget;
+      let td = e.currentTarget;
       row.rowList.model.didUpdate(() => td.querySelector("textarea").focus());
     }
   }
@@ -1216,6 +1337,7 @@ let TypedValue = props =>
   },
     props.value === undefined ? "(Unknown)"
       : props.value === null ? "(Blank)"
+      : typeof props.value == "object" ? JSON.stringify(props.value, null, "  ")
       : "" + props.value
   );
 
