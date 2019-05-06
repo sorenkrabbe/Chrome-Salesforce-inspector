@@ -23,13 +23,21 @@ if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox")) 
   });
 }
 
-let sfHost;
-let inInspector;
 const rootElId = "insext";
 const btnElId = "insext-btn";
 const popupElId = "insext-popup";
+const popupLoadStates = {
+  NOT_LOADED: 0,
+  LOADING: 1,
+  LOADED: 2
+};
+
+let sfHost;
+let inInspector;
+let popupLoadStateCode;
 
 function initButton(host, isInInspector) {
+  popupLoadStateCode = popupLoadStates.NOT_LOADED;
   sfHost = host;
   inInspector = isInInspector;
   let rootEl = document.createElement("div");
@@ -45,15 +53,20 @@ function initButton(host, isInInspector) {
   img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAPCAYAAADd/14OAAAA40lEQVQoz2P4//8/AzpWzGj6L59U/V8urgxMg/g4FUn6J/+X9E38LxWc8V8htR67IpCkuGfMfxCQjSpENRFFkXvk/1+/foGxQloDSD0DVkVfvnyBY7hCdEVv3rxBwXCFIIdKh2WDFT1+/BgDo1qd2fL/1q1bWDFcoW5xz3/Xppn/oycu/X/x4kUMDFeoWdD136R8wn+f9rlgxSdOnEDBKFajK96/fz8coyjEpnj79u1gjKEQXXFE/+L/Gzdu/G9WMfG/am4HZlzDFAf3LPwfOWEJWBPIwwzYUg9MsXXNFDAN4gMAmASShdkS4AcAAAAASUVORK5CYII=";
   btn.appendChild(img);
   document.body.appendChild(rootEl);
-  loadPopup();
-}
 
-function loadPopup() {
-  const btn = getButton();
-  const rootEl = getRootEl();
   btn.addEventListener("click", () => {
     togglePopup();
   });
+}
+
+function loadPopup() {
+  if (popupLoadStateCode >= popupLoadStates.LOADING) {
+    return;
+  }
+  popupLoadStateCode = popupLoadStates.LOADING;
+
+  const btn = getButton();
+  const rootEl = getRootEl();
 
   let popupSrc = chrome.extension.getURL("popup.html");
   let popupEl = document.createElement("iframe");
@@ -77,9 +90,11 @@ function loadPopup() {
     }
   });
   rootEl.appendChild(popupEl);
+  popupLoadStateCode = popupLoadStates.LOADED;
 }
 
 function togglePopup() {
+  loadPopup();
   const rootEl = getRootEl();
   if (!rootEl.classList.contains("insext-active")) {
     openPopup();
