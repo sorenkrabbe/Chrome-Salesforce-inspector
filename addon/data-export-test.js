@@ -55,7 +55,10 @@ async function dataExportTest(test) {
 
   // Autocomplete object names
   assertEquals("Objects:", vm.autocompleteResults.title);
-  assertEquals(["Account", "AccountContactRelation"], getValues(vm.autocompleteResults.results).slice(0, 2));
+  let accountAutocompletes = getValues(vm.autocompleteResults.results);
+  assert(accountAutocompletes.length > 1);
+  assert(accountAutocompletes.includes("Account"));
+  assert(accountAutocompletes.includes("AccountContactRelation"));
 
   // See user info
   assert(vm.userInfo.indexOf(" / ") > -1);
@@ -70,13 +73,13 @@ async function dataExportTest(test) {
 
   // Autocomplete field name in SELECT, sould automatically update when describe call completes
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
 
   // Select autocomplete value in SELECT
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, Name,  from Account", queryInput.value);
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertNotEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertNotEquals("Name", getValues(vm.autocompleteResults.results)[0]);
 
   // Select multiple values in SELECT using Ctrl+Space
   setQuery("select Id, shipp", "", " from Account");
@@ -118,7 +121,7 @@ async function dataExportTest(test) {
   // Autocomplete field in function
   setQuery("select Id, count(nam", "", " from Account");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, count(Name,  from Account", queryInput.value); // not ideal suffix
 
@@ -168,21 +171,21 @@ async function dataExportTest(test) {
   // Autocomplete field name when cursor is just after the "from" keyword
   setQuery("select Id, nam", "", "from Account");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, Name, from Account", queryInput.value);
 
   // Autocomplete upper case
   setQuery("SELECT ID, NAM", "", " FROM ACCOUNT");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("SELECT ID, Name,  FROM ACCOUNT", queryInput.value);
 
   // Autocomplete with "from" substring before the from keyword
   setQuery("select Id, FieldFrom, FromField, nam", "", " from Account");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, FieldFrom, FromField, Name,  from Account", queryInput.value);
 

@@ -79,7 +79,7 @@ var sfConn = { // eslint-disable-line no-var
       err.name = "SalesforceRestError";
       err.detail = xhr.response;
       try {
-        err.message = err.detail.map(err => err.errorCode + ": " + err.message).join("\n");
+        err.message = err.detail.map(err => `${err.errorCode}: ${err.message}${err.fields && err.fields.length > 0 ? ` [${err.fields.join(", ")}]` : ""}`).join("\n");
       } catch (ex) {
         err.message = JSON.stringify(xhr.response);
       }

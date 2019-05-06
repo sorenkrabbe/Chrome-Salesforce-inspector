@@ -153,7 +153,7 @@ class Model {
   }
   selectSavedEntry() {
     if (this.selectedSavedEntry != null) {
-      this.queryInput.value = this.selectedSavedEntry;
+      this.queryInput.value = this.selectedSavedEntry.query;
       this.queryTooling = this.selectedSavedEntry.useToolingApi;
       this.queryAutocompleteHandler();
       this.selectedSavedEntry = null;
@@ -968,9 +968,16 @@ class App extends React.Component {
     // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
     // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown. Might be https://code.google.com/p/chromium/issues/detail?id=13891#c50
     queryInput.addEventListener("keydown", e => {
-      if (e.which == 32 /* space */ && e.ctrlKey) {
+      if (e.ctrlKey && e.key == " ") {
         e.preventDefault();
         model.queryAutocompleteHandler({ctrlSpace: true});
+        model.didUpdate();
+      }
+    });
+    addEventListener("keydown", e => {
+      if (e.ctrlKey && e.key == "Enter") {
+        e.preventDefault();
+        model.doExport();
         model.didUpdate();
       }
     });
@@ -1067,7 +1074,7 @@ class App extends React.Component {
         )
       ),
       h("div", {className: "action-arrow"},
-        h("div", {className: "arrow-body"}, h("button", {disabled: model.isWorking, onClick: this.onExport}, "Export")),
+        h("div", {className: "arrow-body"}, h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter"}, "Export")),
         h("div", {className: "arrow-head"})
       ),
       h("div", {className: "area", id: "result-area"},
