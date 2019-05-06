@@ -65,9 +65,7 @@ function loadPopup() {
   }
   popupLoadStateCode = popupLoadStates.LOADING;
 
-  const btn = getButton();
   const rootEl = getRootEl();
-
   let popupSrc = chrome.extension.getURL("popup.html");
   let popupEl = document.createElement("iframe");
   popupEl.id = popupElId;
@@ -131,10 +129,6 @@ function outsidePopupClick(e) {
 
 function getPopupEl() {
   return document.getElementById(popupElId);
-}
-
-function getButton() {
-  return document.getElementById(btnElId);
 }
 
 function getRootEl() {
