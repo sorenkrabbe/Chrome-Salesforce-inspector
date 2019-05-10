@@ -1,3 +1,24 @@
+Version 1.6
+===========
+
+General
+-------
+* Update to Salesforce API v 45.0
+* Support for cloudforce.com orgs
+
+Show all data
+-------------
+* Buttons to Create, delete and clone records
+
+Data export
+-----------
+* Keyboard shortcut to do export (ctrl+enter)
+* Fixes saved query selection
+
+Data import
+-----------
+* Wider import fields
+
 Version 1.5
 ===========
 
