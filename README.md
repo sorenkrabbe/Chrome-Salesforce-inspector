@@ -62,7 +62,7 @@ Version number must be manually incremented in [addon/manifest.json](addon/manif
 
 ### Chrome
 
-When commit message contains *#releaseIt* the revision will be packaged and uploaded to Chrome Web Store ready for manual release to the masses.
+If the version number is greater than the version currently in Chrome Web Store, the revision will be packaged and uploaded to the store ready for manual release to the masses.
 
 ### Firefox
 
