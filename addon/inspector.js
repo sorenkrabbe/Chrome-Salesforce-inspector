@@ -1,7 +1,7 @@
 /* exported sfConn apiVersion */
 "use strict";
 
-var apiVersion = "43.0"; // eslint-disable-line no-var
+var apiVersion = "45.0"; // eslint-disable-line no-var
 var sfConn = { // eslint-disable-line no-var
 
   async getSession(sfHost) {
