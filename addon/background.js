@@ -1,4 +1,11 @@
 "use strict";
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "open_menu") {
+    chrome.tabs.query({"active": true, "currentWindow": true}, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, {message: command});
+    });
+  }
+});
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Perform cookie operations in the background page, because not all foreground pages have access to the cookie API.
   // Firefox does not support incognito split mode, so we use sender.tab.cookieStoreId to select the right cookie store.
