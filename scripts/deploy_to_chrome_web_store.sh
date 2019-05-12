@@ -44,7 +44,7 @@ then
 fi
 
 log_message "0.2) Is source different"
-SOURCE_VERSION_NUMBER=$(jq '.version' addon/manifest.json | tr -d '"');
+SOURCE_VERSION_NUMBER=$(jq '.version' addon/manifest-template.json | tr -d '"');
 ONLINE_VERSION_NUMBER=$(curl \
      -H "Authorization: Bearer $CHROME_ACCESS_TOKEN" \
      -H "x-goog-api-version: 2" \

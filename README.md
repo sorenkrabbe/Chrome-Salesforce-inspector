@@ -33,15 +33,22 @@ Troubleshooting
 Development
 -----
 
+1. Install Node.js with npm
+2. `npm install`
+
 ### Chrome
-1. Open `chrome://extensions/`.
-2. Enable `Developer mode`.
-3. Click `Load unpacked extension...`.
-4. Select the `addon` subdirectory of this repository.
+1. `npm run chrome-dev-build`
+2. Open `chrome://extensions/`.
+3. Enable `Developer mode`.
+4. Click `Load unpacked extension...`.
+5. Select the `addon` subdirectory of this repository.
 
 ### Firefox
 
-The extension is located in the `addon` subdirectory of this repository. Run it as per [Mozilla's guide](https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Getting_started_with_web-ext).
+1. `npm run firefox-dev-build`
+2. In Firefox, open `about:debugging`.
+3. Click `Load Temporary Add-on…`.
+4. Select the file `addon/manifest.json`.
 
 Unit tests
 -----
@@ -52,13 +59,11 @@ Unit tests
 
 ### Linting
 
-1. Install Node.js with npm
-2. `npm install`
-3. `npm run eslint`
+1. `npm run eslint`
 
 Release
 -------
-Version number must be manually incremented in [addon/manifest.json](addon/manifest.json) file
+Version number must be manually incremented in [addon/manifest-template.json](addon/manifest-template.json) file
 
 ### Chrome
 
@@ -67,7 +72,7 @@ If the version number is greater than the version currently in Chrome Web Store,
 ### Firefox
 
 1. `npm run firefox-release-build`
-2. Upload the file from `target/firefox/salesforce_inspector-x.y.zip` to addons.mozilla.org
+2. Upload the file from `target/firefox/firefox-release-build.zip` to addons.mozilla.org
 
 Design Principles
 -----
