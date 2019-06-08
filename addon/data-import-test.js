@@ -6,8 +6,15 @@
 async function dataImportTest(test) {
   console.log("TEST data-import");
   let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
-  let {testData: {model}} = await loadPage("data-import.html");
+
+  let win = await loadPage("data-import.html");
+  let {testData: {model}} = win;
   let vm = model;
+
+  let clipboardValue;
+  win.copyToClipboard = value => {
+    clipboardValue = value;
+  };
 
   function waitForSpinner() {
     return new Promise(resolve => {
@@ -218,6 +225,28 @@ async function dataImportTest(test) {
     {Name: "test6", Checkbox__c: false, Number__c: 666, Lookup__r: null},
     {Name: "test7", Checkbox__c: false, Number__c: 700.07, Lookup__r: null}
   ], records);
+
+  // Save import options
+  vm.importAction = "update";
+  vm.didUpdate();
+  vm.copyOptions();
+  assertEquals("salesforce-inspector-import-options=&useToolingApi=0&action=update&object=Inspector_Test__c&batchSize=200&threads=6", clipboardValue);
+
+  // Restore import options
+  vm.importAction = "create";
+  vm.didUpdate();
+  vm.importType = "Account";
+  vm.didUpdate();
+  vm.dataFormat = "excel";
+  vm.didUpdate();
+  vm.setData('"salesforce-inspector-import-options=&useToolingApi=0&action=update&object=Inspector_Test__c&batchSize=200&threads=6"\t""\r\n"Name"\t"Number__c"\r\n"test"\t"100"\r\n"test"\t"200"\r\n');
+  assertEquals(false, vm.useToolingApi);
+  assertEquals("update", vm.importAction);
+  assertEquals("Inspector_Test__c", vm.importType);
+  assertEquals("200", vm.batchSize);
+  assertEquals("6", vm.batchConcurrency);
+  assertEquals({Queued: 2, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "Number__c"], ["test", "100"], ["test", "200"]], vm.importTableResult.table);
 
   // Create multiple batches
   await anonApex("delete [select Id from Inspector_Test__c];");

@@ -102,6 +102,20 @@ class Model {
       return;
     }
 
+    if (data[0] && data[0][0] && data[0][0].trimStart().startsWith("salesforce-inspector-import-options")) {
+      let importOptions = new URLSearchParams(data.shift()[0].trim());
+      if (importOptions.get("useToolingApi") == "1") this.useToolingApi = true;
+      if (importOptions.get("useToolingApi") == "0") this.useToolingApi = false;
+      if (importOptions.get("action") == "create") this.importAction = "create";
+      if (importOptions.get("action") == "update") this.importAction = "update";
+      if (importOptions.get("action") == "upsert") this.importAction = "upsert";
+      if (importOptions.get("action") == "delete") this.importAction = "delete";
+      if (importOptions.get("object")) this.importType = importOptions.get("object");
+      if (importOptions.get("externalId") && this.importAction == "upsert") this.externalId = importOptions.get("externalId");
+      if (importOptions.get("batchSize")) this.batchSize = importOptions.get("batchSize");
+      if (importOptions.get("threads")) this.batchConcurrency = importOptions.get("threads");
+    }
+
     if (data.length < 2) {
       this.dataError = "Error: No records to import";
       this.updateResult(null);
@@ -111,6 +125,18 @@ class Model {
     let header = data.shift().map(c => this.makeColumn(c));
     this.updateResult(null); // Two updates, the first clears state from the scrolltable
     this.updateResult({header, data});
+  }
+
+  copyOptions() {
+    let importOptions = new URLSearchParams();
+    importOptions.set("salesforce-inspector-import-options", "");
+    importOptions.set("useToolingApi", this.useToolingApi ? "1" : "0");
+    importOptions.set("action", this.importAction);
+    importOptions.set("object", this.importType);
+    if (this.importAction == "upsert") importOptions.set("externalId", this.externalId);
+    importOptions.set("batchSize", this.batchSize);
+    importOptions.set("threads", this.batchConcurrency);
+    copyToClipboard(importOptions.toString());
   }
 
   invalidInput() {
@@ -632,6 +658,7 @@ class App extends React.Component {
     this.onRetryFailedClick = this.onRetryFailedClick.bind(this);
     this.onCopyAsExcelClick = this.onCopyAsExcelClick.bind(this);
     this.onCopyAsCsvClick = this.onCopyAsCsvClick.bind(this);
+    this.onCopyOptionsClick = this.onCopyOptionsClick.bind(this);
     this.onConfirmPopupYesClick = this.onConfirmPopupYesClick.bind(this);
     this.onConfirmPopupNoClick = this.onConfirmPopupNoClick.bind(this);
     this.unloadListener = null;
@@ -716,6 +743,11 @@ class App extends React.Component {
     e.preventDefault();
     let {model} = this.props;
     model.copyResult(",");
+  }
+  onCopyOptionsClick(e) {
+    e.preventDefault();
+    let {model} = this.props;
+    model.copyOptions();
   }
   onConfirmPopupYesClick(e) {
     e.preventDefault();
@@ -867,7 +899,8 @@ class App extends React.Component {
         h("button", {disabled: !model.isWorking(), onClick: this.onToggleProcessingClick}, model.isWorking() && !model.isProcessingQueue ? "Resume queued" : "Cancel queued"),
         h("button", {disabled: !model.importCounts().Failed > 0, onClick: this.onRetryFailedClick, className: "button-space"}, "Retry failed"),
         h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcelClick, title: "Copy import result to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
-        h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsvClick, title: "Copy import result to clipboard for saving as a CSV file"}, "Copy (CSV)")
+        h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsvClick, className: "button-space", title: "Copy import result to clipboard for saving as a CSV file"}, "Copy (CSV)"),
+        h("button", {onClick: this.onCopyOptionsClick, title: "Save these import options by pasting them into Excel in the top left cell, just above the header row"}, "Copy options")
       ),
       h("div", {hidden: !model.showHelp},
         h("p", {}, "Use for quick one-off data imports."),
@@ -879,7 +912,8 @@ class App extends React.Component {
               h("li", {}, "Empty cells insert null values."),
               h("li", {}, "Number, date, time and checkbox values must conform to the relevant ", h("a", {href: "http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes", target: "_blank"}, "XSD datatypes"), "."),
               h("li", {}, "Columns starting with an underscore are ignored."),
-              h("li", {}, "You can resume a previous import by including the \"__Status\" column in your input.")
+              h("li", {}, "You can resume a previous import by including the \"__Status\" column in your input."),
+              h("li", {}, "You can supply the other import options by clicking \"Copy options\" and pasting the options into Excel in the top left cell, just above the header row.")
             )
           ),
           h("li", {}, "Select your input format"),
