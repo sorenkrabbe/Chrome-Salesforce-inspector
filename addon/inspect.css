@@ -1,34 +1,34 @@
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Light.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Light.woff) format("woff");
+  src:url(fonts/SalesforceSans-Light.woff2);
   font-weight:300
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-LightItalic.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-LightItalic.woff) format("woff");
+  src:url(fonts/SalesforceSans-LightItalic.woff2);
   font-style:italic;
   font-weight:300
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Regular.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Regular.woff) format("woff");
+  src:url(fonts/SalesforceSans-Regular.woff2);
   font-weight:400
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Italic.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Italic.woff) format("woff");
+  src:url(fonts/SalesforceSans-Italic.woff2);
   font-style:italic;
   font-weight:400
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Bold.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Bold.woff) format("woff");
+  src:url(fonts/SalesforceSans-Bold.woff2);
   font-weight:700
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-BoldItalic.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-BoldItalic.woff) format("woff");
- font-style:italic;
+  src:url(fonts/SalesforceSans-BoldItalic.woff2);
+  font-style:italic;
   font-weight:700
 }
 * {
