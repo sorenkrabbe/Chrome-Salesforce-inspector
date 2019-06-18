@@ -73,8 +73,19 @@ class Model extends SILib.SIPageModel {
     }
 
     let promises = [];
+    let delayMs = 0;
+    const CALLOUT_DELAY_MS = 75;
     for (let durableId of durableIds) {
-      let apiCallPromise = sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${this.selectedSoqlFieldDefinitionSingleRecordFields.join(",")} from FieldDefinition where DurableId = '${durableId}'`));
+      delayMs += CALLOUT_DELAY_MS; //Delay rest callout to make calling less aggresive.
+
+      let apiCallPromise = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          sfConn.rest("/services/data/v" + apiVersion + "/" + "tooling/query?q=" + encodeURI(`select ${this.selectedSoqlFieldDefinitionSingleRecordFields.join(",")} from FieldDefinition where DurableId = '${durableId}'`))
+            .then(resolve)
+            .catch(reject);
+        }, delayMs);
+      });
+
       apiCallPromise
         .then((queryRes) => {
           queryRes.records.map((elm) => elm.DurableId = durableId);
