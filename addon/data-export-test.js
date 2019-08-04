@@ -2,6 +2,7 @@
 /* global sfConn apiVersion */
 /* exported dataExportTest */
 /* eslint-enable no-unused-vars */
+/* eslint-disable require-atomic-updates */
 "use strict";
 async function dataExportTest(test) {
   console.log("TEST data-export");
@@ -251,7 +252,7 @@ async function dataExportTest(test) {
   vm.queryAutocompleteHandler();
   await waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults.title);
-  assertEquals(["ApexClass", "ApexClassMember"], getValues(vm.autocompleteResults.results));
+  assertEquals(["ApexClass", "ApexClassMember", "ReleasedApexClassRel"], getValues(vm.autocompleteResults.results));
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id from ApexClass ", queryInput.value);
   await waitForSpinner();

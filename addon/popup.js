@@ -367,7 +367,8 @@ class AllDataBox extends React.PureComponent {
         recordId: null,
         sobject,
         // TO-DO: merge with the sortRank function in data-export
-        relevance: (sobject.keyPrefix == queryKeyPrefix ? 2
+        relevance:
+          (sobject.keyPrefix == queryKeyPrefix ? 2
           : sobject.name.toLowerCase() == query.toLowerCase() ? 3
           : sobject.label.toLowerCase() == query.toLowerCase() ? 4
           : sobject.name.toLowerCase().startsWith(query.toLowerCase()) ? 5
@@ -483,7 +484,7 @@ class AllDataSelection extends React.PureComponent {
                 h("td", {},
                   h("span", {}, selectedValue.sobject.keyPrefix),
                   h("span", {}, (selectedValue.recordId) ? " / " + selectedValue.recordId : ""),
-              )
+                )
               ))),
 
 
@@ -503,8 +504,8 @@ class AllDataSelection extends React.PureComponent {
           },
           index == 0 ? h("span", {}, "Show ", h("u", {}, "a"), "ll data") : "Show all data",
           button == "regularApi" ? ""
-            : button == "toolingApi" ? " (Tooling API)"
-            : " (Not readable)"
+          : button == "toolingApi" ? " (Tooling API)"
+          : " (Not readable)"
         ))
       )
     );
@@ -530,7 +531,7 @@ class AllDataRecordDetails extends React.PureComponent {
               h("th", {}, "Edited:"),
               h("td", {}, recordIdDetails.lastModified + " (" + recordIdDetails.lastModifiedBy + ")")
             )
-        )));
+          )));
     } else {
       return null;
     }

@@ -435,7 +435,7 @@ class Model {
     The context sobjects for "Name" is {"Contact", "Lead"}.
     */
     let contextSobjectDescribes = new Enumerable([sobjectDescribe]);
-    let contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0];
+    let contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_.]*$/)[0];
     let sobjectStatuses = new Map(); // Keys are error statuses, values are an object name with that status. Only one object name in the value, since we only show one error message.
     if (contextPath) {
       let contextFields = contextPath.split(".");
@@ -630,9 +630,9 @@ class Model {
           yield {value: "null", title: "null", suffix: " ", rank: 1};
         }
       })
-      .filter(res => res.value.toLowerCase().includes(searchTerm.toLowerCase()) || res.title.toLowerCase().includes(searchTerm.toLowerCase()))
-      .toArray()
-      .sort(resultsSort);
+        .filter(res => res.value.toLowerCase().includes(searchTerm.toLowerCase()) || res.title.toLowerCase().includes(searchTerm.toLowerCase()))
+        .toArray()
+        .sort(resultsSort);
       vm.autocompleteResults = {
         sobjectName,
         title: fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"),

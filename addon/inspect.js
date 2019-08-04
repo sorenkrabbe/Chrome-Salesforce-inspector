@@ -454,17 +454,20 @@ class FieldRowList extends RowList {
   createColumn(col) {
     return {
       name: col,
-      label: col == "name" ? "Field API Name"
+      label:
+        col == "name" ? "Field API Name"
         : col == "label" ? "Label"
         : col == "type" ? "Type"
         : col == "value" ? "Value"
         : col == "helptext" ? "Help text"
         : col == "desc" ? "Description"
         : col,
-      className: col == "name" ? "field-name"
+      className:
+        col == "name" ? "field-name"
         : col == "label" ? "field-label"
         : "field-column",
-      reactElement: col == "value" ? FieldValueCell
+      reactElement:
+        col == "value" ? FieldValueCell
         : col == "type" ? FieldTypeCell
         : DefaultCell,
       columnFilter: ""
@@ -496,7 +499,8 @@ class ChildRowList extends RowList {
   createColumn(col) {
     return {
       name: col,
-      label: col == "name" ? "Relationship Name"
+      label:
+        col == "name" ? "Relationship Name"
         : col == "object" ? "Child Object"
         : col == "field" ? "Field"
         : col == "label" ? "Label"
@@ -605,8 +609,8 @@ class FieldRow extends TableRow {
     let fieldDescribe = this.fieldDescribe;
     if (fieldDescribe) {
       return fieldDescribe.type == "reference"
-      ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
-      : (fieldDescribe.type || "")
+        ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
+        : (fieldDescribe.type || "")
         + (fieldDescribe.length ? " (" + fieldDescribe.length + ")" : "")
         + (fieldDescribe.precision || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
         + (fieldDescribe.autoNumber ? ", auto number" : "")
@@ -623,8 +627,8 @@ class FieldRow extends TableRow {
     let particle = this.entityParticle;
     if (particle) {
       return particle.DataType == "reference" && particle.FieldDefinition.ReferenceTo.referenceTo
-      ? "[" + particle.FieldDefinition.ReferenceTo.referenceTo.join(", ") + "]"
-      : (particle.DataType || "")
+        ? "[" + particle.FieldDefinition.ReferenceTo.referenceTo.join(", ") + "]"
+        : (particle.DataType || "")
         + (particle.Length ? " (" + particle.Length + ")" : "")
         + (particle.Precision || particle.Scale ? " (" + particle.Precision + ", " + particle.Scale + ")" : "")
         + (particle.IsAutonumber ? ", auto number" : "")
@@ -676,7 +680,7 @@ class FieldRow extends TableRow {
         + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
         + (fieldDescribe.inlineHelpText ? "Help text: " + fieldDescribe.inlineHelpText + "\n" : "")
         + (fieldDescribe.picklistValues && fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(pickval => pickval.value).join(", ") + "\n" : "")
-        ;
+      ;
     }
     // Entity particle does not contain any of this information
     return this.fieldName + "\n(Details not available)";
@@ -1085,7 +1089,8 @@ class App extends React.Component {
         ),
         model.editMode != null && (model.useTab == "all" || model.useTab == "fields") ? h("span", {className: "edit-bar"},
           h("button", {
-            title: model.editMode == "update" ? "Cancel editing this record"
+            title:
+              model.editMode == "update" ? "Cancel editing this record"
               : model.editMode == "delete" ? "Cancel deleting this record"
               : model.editMode == "create" ? "Cancel creating this record"
               : null,
@@ -1093,16 +1098,17 @@ class App extends React.Component {
             onClick: this.onCancelEdit
           }, "Cancel"),
           h("button", {
-            title: model.editMode == "update" ? "Save the values of this record"
+            title:
+              model.editMode == "update" ? "Save the values of this record"
               : model.editMode == "delete" ? "Delete this record"
               : model.editMode == "create" ? "Save the values as a new record"
               : null,
             className: "button " + (model.editMode == "delete" ? "button-destructive" : "button-brand"),
             onClick: this.onDoSave
           }, model.editMode == "update" ? "Save"
-            : model.editMode == "delete" ? "Confirm delete"
-            : model.editMode == "create" ? "Save new"
-            : "???")
+          : model.editMode == "delete" ? "Confirm delete"
+          : model.editMode == "create" ? "Save new"
+          : "???")
         ) : null,
         model.detailsBox ? h(DetailsBox, {model}) : null
       )
@@ -1335,10 +1341,10 @@ let TypedValue = props =>
       + (props.value === true ? "value-is-boolean-true " : "")
       + (props.value === undefined || props.value === null ? "" : "quick-select ")
   },
-    props.value === undefined ? "(Unknown)"
-      : props.value === null ? "(Blank)"
-      : typeof props.value == "object" ? JSON.stringify(props.value, null, "  ")
-      : "" + props.value
+  props.value === undefined ? "(Unknown)"
+  : props.value === null ? "(Blank)"
+  : typeof props.value == "object" ? JSON.stringify(props.value, null, "  ")
+  : "" + props.value
   );
 
 class FieldActionsCell extends React.Component {
