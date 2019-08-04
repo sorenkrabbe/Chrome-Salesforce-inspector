@@ -164,6 +164,38 @@ th {
   text-align: right;
   white-space: nowrap;
 }
+.actions-button {
+  width: 1.25rem;
+  height: 1.25rem;
+  line-height: 1;
+  background-color: #fff;
+  vertical-align: middle;
+  color: #706e6b;
+  border: 1px solid #dddbda;
+  transition: border .15s linear;
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  border-radius: .25rem;
+  -webkit-appearance: none;
+  white-space: normal;
+  cursor: pointer;
+}
+.actions-button:hover,
+.actions-button:active,
+.actions-button:focus {
+  color: #005fb2;
+}
+.actions-button:focus {
+  outline: 0;
+  box-shadow: 0 0 3px #0070d2;
+}
+.actions-icon {
+  width: .75rem;
+  height: .75rem;
+  overflow: hidden;
+  fill: #b0adab;
+}
 th[tabindex] {
   text-decoration: underline;
   cursor: pointer;
@@ -337,6 +369,7 @@ th[tabindex] {
   width: .875rem;
   height: .875rem;
   fill: currentColor;
+  vertical-align: middle;
 }
 .object-name {
   flex: 1 1 0;
@@ -367,6 +400,9 @@ th[tabindex] {
   cursor: default;
   color: #dddbda;
   background-color: #fff;
+}
+.object-actions {
+  position: relative;
 }
 .object-actions .button:not(:first-child) {
   border-top-left-radius: 0;
@@ -508,7 +544,11 @@ th[tabindex] {
   text-align: right;
   white-space: nowrap;
 }
+.pop-menu-container {
+  position: relative;
+}
 .pop-menu {
+  z-index: 10;
   position: absolute;
   border: 1px solid gray;
   background-color: white;
@@ -518,4 +558,10 @@ th[tabindex] {
 }
 .pop-menu a {
   display: block;
+}
+.object-actions .pop-menu,
+.field-actions .pop-menu,
+.child-actions .pop-menu {
+  right: 0;
+  text-align: right;
 }

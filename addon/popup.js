@@ -2,8 +2,8 @@
 /* global React ReactDOM */
 /* global sfConn apiVersion */
 /* global initButton */
+import {getAllFieldSetupLinks} from "./setup-links.js";
 /* eslint-enable no-unused-vars */
-"use strict";
 
 let h = React.createElement;
 
@@ -251,7 +251,7 @@ class ShowDetailsButton extends React.PureComponent {
     return showDetailsSupported && contextRecordId && selectedValue.sobject.keyPrefix == contextRecordId.substring(0, 3) && selectedValue.sobject.availableApis.length > 0;
   }
   onDetailsClick() {
-    let {selectedValue} = this.props;
+    let {sfHost, selectedValue} = this.props;
     let {detailsShown} = this.state;
     if (detailsShown || !this.canShowDetails()) {
       return;
@@ -259,9 +259,12 @@ class ShowDetailsButton extends React.PureComponent {
     let tooling = !selectedValue.sobject.availableApis.includes("regularApi");
     let url = "/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + selectedValue.sobject.name + "/describe/";
     this.setState({detailsShown: true, detailsLoading: true});
-    sfConn.rest(url).then(res => {
+    Promise.all([
+      sfConn.rest(url),
+      getAllFieldSetupLinks(sfHost, selectedValue.sobject.name)
+    ]).then(([res, insextAllFieldSetupLinks]) => {
       this.setState({detailsShown: true, detailsLoading: false});
-      parent.postMessage({insextShowStdPageDetails: true, insextData: res}, "*");
+      parent.postMessage({insextShowStdPageDetails: true, insextData: res, insextAllFieldSetupLinks}, "*");
       closePopup();
     }).catch(error => {
       this.setState({detailsShown: false, detailsLoading: false});
@@ -456,7 +459,7 @@ class AllDataSelection extends React.PureComponent {
     return "https://" + this.props.sfHost + "/lightning/setup/ObjectManager/" + sobjectName + "/FieldsAndRelationships/view";
   }
   render() {
-    let {showDetailsSupported, contextRecordId, selectedValue, linkTarget, recordIdDetails} = this.props;
+    let {sfHost, showDetailsSupported, contextRecordId, selectedValue, linkTarget, recordIdDetails} = this.props;
     // Show buttons for the available APIs.
     let buttons = Array.from(selectedValue.sobject.availableApis);
     buttons.sort();
@@ -490,7 +493,7 @@ class AllDataSelection extends React.PureComponent {
 
           h(AllDataRecordDetails, {recordIdDetails, className: "top-space"}),
         ),
-        h(ShowDetailsButton, {ref: "showDetailsBtn", showDetailsSupported, selectedValue, contextRecordId}),
+        h(ShowDetailsButton, {ref: "showDetailsBtn", sfHost, showDetailsSupported, selectedValue, contextRecordId}),
         selectedValue.recordId && selectedValue.recordId.startsWith("0Af")
           ? h("a", {href: this.getDeployStatusUrl(), target: linkTarget, className: "button"}, "Check Deploy Status") : null,
         buttons.map((button, index) => h("a",
@@ -834,3 +837,5 @@ function getRecordId(href) {
   }
   return null;
 }
+
+window.getRecordId = getRecordId; // For unit tests

@@ -5,10 +5,46 @@ module.exports = {
     "webextensions": true
   },
   "parserOptions": {
-    "ecmaVersion": 8
+    "ecmaVersion": 8,
+    "sourceType": "module"
   },
   "root": true,
   "extends": "eslint:recommended",
+  "overrides": [
+    {
+      "parserOptions": {
+        "sourceType": "script"
+      },
+      "files": [
+        // Extension scripts can not be loaded as modules
+        "addon/background.js",
+        "addon/button.js",
+        "addon/test-page.js",
+        "addon/inspect-inline.js",
+        // These are not converted to modules yet
+        "addon/csv-parse-test.js",
+        "addon/csv-parse.js",
+        "addon/data-export-test.js",
+        "addon/data-export.js",
+        "addon/data-import-test.js",
+        "addon/data-import.js",
+        "addon/data-load.js",
+        "addon/explore-api.js",
+        "addon/inspector.js",
+        "addon/limits.js",
+        "addon/metadata-retrieve.js",
+        "addon/popup-test.js",
+        "addon/test-framework.js",
+        // React cannot be loaded as modules yet. See https://github.com/facebook/react/issues/10021 and https://github.com/facebook/react/issues/11503
+        "addon/react-dom.js",
+        "addon/react-dom.min.js",
+        "addon/react.js",
+        "addon/react.min.js",
+        // Node.js support for ES modules is still experimental. See https://nodejs.org/dist/latest-v12.x/docs/api/esm.html
+        "scripts/*"
+      ]
+    }
+  ],
   "rules": {
     "indent": ["error", 2, {"SwitchCase": 1, "flatTernaryExpressions": true}],
     "quotes": ["error", "double", {"avoidEscape": true}],

@@ -8,10 +8,10 @@
   "applications": {
     "gecko": {
       "id": "jid1-DBcuAQpfLMcvOQ@jetpack",
-      "strict_min_version": "59.0"
+      "strict_min_version": "60.0"
     }
   },
-  "minimum_chrome_version": "55",
+  "minimum_chrome_version": "61",
   "permissions": [
     "https://*.salesforce.com/*",
     "https://*.force.com/*",
@@ -49,8 +49,6 @@
     "inspect.html",
     "metadata-retrieve.html",
     "explore-api.html",
-    "open-field-setup.html",
-    "open-object-setup.html",
     "limits.html"
   ],
   "incognito": "replaced-at-build",

@@ -2,7 +2,7 @@
 /* exported showStdPageDetails */
 /* eslint-enable no-unused-vars */
 "use strict";
-function showStdPageDetails(sfHost, metadataResponse) {
+function showStdPageDetails(metadataResponse, allFieldSetupLinks) {
   let fieldDetailsByLabel = new Map();
   // Loop through all label elements, add event listeners
   for (let fieldDetails of metadataResponse.fields) {
@@ -98,12 +98,12 @@ function showStdPageDetails(sfHost, metadataResponse) {
         if (fieldDetail.calculatedFormula) {
           output.appendChild(Ea("div", {"class": "insext-formula"}, [T(fieldDetail.calculatedFormula)]));
         }
-        let args = new URLSearchParams();
-        args.set("host", sfHost);
-        args.set("object", metadataResponse.name);
-        args.set("field", fieldDetail.name);
-        let fieldSetupLink = Ea("a", {"href": chrome.extension.getURL("open-field-setup.html") + "?" + args}, [T("Setup")]);
-        output.appendChild(fieldSetupLink);
+        let setupLinks = allFieldSetupLinks.get(fieldDetail.name);
+        let lightningFieldSetupLink = Ea("a", {"href": setupLinks.lightningSetupLink}, [T("Lignting setup")]);
+        output.appendChild(lightningFieldSetupLink);
+        output.appendChild(T(" "));
+        let classicFieldSetupLink = Ea("a", {"href": setupLinks.classicSetupLink}, [T("Classic setup")]);
+        output.appendChild(classicFieldSetupLink);
       }
     }
 

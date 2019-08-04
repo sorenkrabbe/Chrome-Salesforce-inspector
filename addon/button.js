@@ -66,7 +66,7 @@ function initButton(sfHost, inInspector) {
         closePopup();
       }
       if (e.data.insextShowStdPageDetails) {
-        showStdPageDetails(sfHost, e.data.insextData);
+        showStdPageDetails(e.data.insextData, e.data.insextAllFieldSetupLinks);
       }
     });
     rootEl.appendChild(popupEl);

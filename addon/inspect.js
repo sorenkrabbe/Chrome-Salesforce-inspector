@@ -2,8 +2,8 @@
 /* global React ReactDOM */
 /* global sfConn apiVersion */
 /* global initButton */
+import {getObjectSetupLinks, getFieldSetupLinks} from "./setup-links.js";
 /* eslint-enable no-unused-vars */
-"use strict";
 
 class Model {
   constructor(sfHost) {
@@ -34,6 +34,9 @@ class Model {
     this.detailsBox = null;
     this.editMode = null; // null (when not editing), "update", "delete" (for confirming) or "create"
     this.hasEntityParticles = false;
+    this.objectActionsOpen = false;
+    this.objectSetupLinks = null;
+    this.objectSetupLinksRequested = false;
   }
   /**
    * Notify React that we changed something, so it will rerender the view.
@@ -244,11 +247,16 @@ class Model {
     }
     return "data-export.html?" + args;
   }
-  openSetup() {
-    let args = new URLSearchParams();
-    args.set("host", this.sfHost);
-    args.set("object", this.objectName());
-    return "open-object-setup.html?" + args;
+  toggleObjectActions() {
+    this.objectActionsOpen = !this.objectActionsOpen;
+    if (this.objectActionsOpen && !this.objectSetupLinksRequested) {
+      this.objectSetupLinksRequested = true;
+      this.spinFor(
+        "getting object setup links",
+        getObjectSetupLinks(this.sfHost, this.objectName())
+          .then(setupLinks => this.objectSetupLinks = setupLinks)
+      );
+    }
   }
   setRecordData(recordDataPromise) {
     this.spinFor("retrieving record", recordDataPromise.then(res => {
@@ -546,6 +554,9 @@ class FieldRow extends TableRow {
     this.entityParticle = undefined;
     this.fieldParticleMetadata = undefined;
     this.recordIdPop = null;
+    this.fieldActionsOpen = false;
+    this.fieldSetupLinks = null;
+    this.fieldSetupLinksRequested = false;
   }
   rowProperties() {
     let props = {};
@@ -666,12 +677,19 @@ class FieldRow extends TableRow {
   fieldIsHidden() {
     return !this.fieldDescribe;
   }
-  openSetup() {
-    let args = new URLSearchParams();
-    args.set("host", this.rowList.model.sfHost);
-    args.set("object", this.rowList.model.objectName());
-    args.set("field", this.fieldName);
-    return "open-field-setup.html?" + args;
+  toggleFieldActions() {
+    this.fieldActionsOpen = !this.fieldActionsOpen;
+    if (this.fieldActionsOpen && !this.fieldSetupLinksRequested) {
+      this.fieldSetupLinksRequested = true;
+      this.rowList.model.spinFor(
+        "getting field setup links for" + this.fieldName,
+        getFieldSetupLinks(this.rowList.model.sfHost, this.rowList.model.objectName(), this.fieldName)
+          .then(setupLinks => this.fieldSetupLinks = setupLinks)
+      );
+    }
+  }
+  showFieldMetadata() {
+    this.rowList.model.showDetailsBox(this.fieldName, this.rowProperties(), this.rowList);
   }
   summary() {
     let fieldDescribe = this.fieldDescribe;
@@ -794,6 +812,9 @@ class ChildRow extends TableRow {
     this.reactKey = reactKey;
     this.childDescribe = undefined;
     this.relatedListInfo = undefined;
+    this.childActionsOpen = false;
+    this.childSetupLinks = null;
+    this.childSetupLinksRequested = false;
   }
   rowProperties() {
     let props = {};
@@ -853,24 +874,21 @@ class ChildRow extends TableRow {
     }
     return "";
   }
-  openSetup() {
-    let childDescribe = this.childDescribe;
-    if (childDescribe) {
-      let args = new URLSearchParams();
-      args.set("host", this.rowList.model.sfHost);
-      args.set("object", childDescribe.childSObject);
-      args.set("field", childDescribe.field);
-      return "open-field-setup.html?" + args;
+  toggleChildActions() {
+    this.childActionsOpen = !this.childActionsOpen;
+    if (this.childActionsOpen && !this.childSetupLinksRequested) {
+      this.childSetupLinksRequested = true;
+      let sobjectName = (this.childDescribe && this.childDescribe.childSObject) || (this.relatedListInfo && this.relatedListInfo.relatedList.sobject);
+      let fieldName = (this.childDescribe && this.childDescribe.field) || (this.relatedListInfo && this.relatedListInfo.relatedList.field);
+      this.rowList.model.spinFor(
+        "getting relationship setup links for " + this.childName,
+        getFieldSetupLinks(this.rowList.model.sfHost, sobjectName, fieldName)
+          .then(setupLinks => this.childSetupLinks = setupLinks)
+      );
     }
-    let relatedListInfo = this.relatedListInfo;
-    if (relatedListInfo) {
-      let args = new URLSearchParams();
-      args.set("host", this.rowList.model.sfHost);
-      args.set("object", relatedListInfo.relatedList.sobject);
-      args.set("field", relatedListInfo.relatedList.field);
-      return "open-field-setup.html?" + args;
-    }
-    return "open-field-setup.html";
+  }
+  showChildMetadata() {
+    this.rowList.model.showDetailsBox(this.childName, this.rowProperties(), this.rowList);
   }
   summary() {
     return undefined;
@@ -916,6 +934,7 @@ class App extends React.Component {
     this.onRowsFilterInput = this.onRowsFilterInput.bind(this);
     this.onClearAndFocusFilter = this.onClearAndFocusFilter.bind(this);
     this.onShowObjectMetadata = this.onShowObjectMetadata.bind(this);
+    this.onToggleObjectActions = this.onToggleObjectActions.bind(this);
     this.onDoUpdate = this.onDoUpdate.bind(this);
     this.onDoDelete = this.onDoDelete.bind(this);
     this.onDoCreate = this.onDoCreate.bind(this);
@@ -959,6 +978,11 @@ class App extends React.Component {
     e.preventDefault();
     let {model} = this.props;
     model.showObjectMetadata();
+    model.didUpdate();
+  }
+  onToggleObjectActions() {
+    let {model} = this.props;
+    model.toggleObjectActions();
     model.didUpdate();
   }
   onDoUpdate() {
@@ -1067,10 +1091,18 @@ class App extends React.Component {
               onClick: this.onDoCreate
             }, model.recordData ? "Clone" : "New") : null,
             model.exportLink() ? h("a", {href: model.exportLink(), title: "Export data from this object", className: "button"}, "Export") : null,
-            model.viewLink() ? h("a", {href: model.viewLink(), title: "View this record in Salesforce", className: "button"}, "View") : null,
-            model.editLayoutLink() ? h("a", {href: model.editLayoutLink(), title: "Open the page layout editor", className: "button"}, "Edit layout") : null,
             model.objectName() ? h("a", {href: "about:blank", onClick: this.onShowObjectMetadata, className: "button"}, "More") : null,
-            model.objectName() ? h("a", {href: model.openSetup(), className: "button"}, "Setup") : null
+            h("button", {className: "button", onClick: this.onToggleObjectActions},
+              h("svg", {className: "button-icon"},
+                h("use", {xlinkHref: "symbols.svg#down"})
+              )
+            ),
+            model.objectActionsOpen && h("div", {className: "pop-menu"},
+              model.viewLink() ? h("a", {href: model.viewLink()}, "View record in Salesforce") : null,
+              model.editLayoutLink() ? h("a", {href: model.editLayoutLink()}, "Edit page layout") : null,
+              model.objectSetupLinks && h("a", {href: model.objectSetupLinks.lightningSetupLink}, "Object setup (Lightning)"),
+              model.objectSetupLinks && h("a", {href: model.objectSetupLinks.classicSetupLink}, "Object setup (Classic)")
+            )
           )
         ),
         h("div", {className: "body " + (model.fieldRows.selectedColumnMap.size < 2 && model.childRows.selectedColumnMap.size < 2 ? "empty " : "")},
@@ -1179,7 +1211,7 @@ class RowTable extends React.Component {
           selectedColumns.map(col =>
             h(HeaderCell, {key: col.name, col, rowList})
           ),
-          h("th", {className: actionsColumn.className}, "Actions")
+          h("th", {className: actionsColumn.className}, "")
         ),
         rowList.model.useTab != "all" ? h("tr", {},
           selectedColumns.map(col =>
@@ -1296,8 +1328,10 @@ class FieldValueCell extends React.Component {
       );
     } else if (row.isId()) {
       return h("td", {className: col.className, onDoubleClick: this.onTryEdit},
-        h("div", {className: "value-text quick-select"}, h("a", {href: row.idLink() /*used to show visited color*/, onClick: this.onRecordIdClick}, row.dataStringValue())),
-        row.recordIdPop == null ? null : h("div", {className: "pop-menu"}, row.recordIdPop.map(link => h("a", {key: link.href, href: link.href}, link.text)))
+        h("div", {className: "pop-menu-container"},
+          h("div", {className: "value-text quick-select"}, h("a", {href: row.idLink() /*used to show visited color*/, onClick: this.onRecordIdClick}, row.dataStringValue())),
+          row.recordIdPop == null ? null : h("div", {className: "pop-menu"}, row.recordIdPop.map(link => h("a", {key: link.href, href: link.href}, link.text)))
+        )
       );
     } else {
       return h("td", {className: col.className, onDoubleClick: this.onTryEdit},
@@ -1351,19 +1385,34 @@ class FieldActionsCell extends React.Component {
   constructor(props) {
     super(props);
     this.onOpenDetails = this.onOpenDetails.bind(this);
+    this.onToggleFieldActions = this.onToggleFieldActions.bind(this);
   }
   onOpenDetails(e) {
     e.preventDefault();
     let {row} = this.props;
-    row.rowList.model.showDetailsBox(row.fieldName, row.rowProperties(), row.rowList);
+    row.showFieldMetadata();
+    row.rowList.model.didUpdate();
+  }
+  onToggleFieldActions() {
+    let {row} = this.props;
+    row.toggleFieldActions();
     row.rowList.model.didUpdate();
   }
   render() {
     let {row} = this.props;
     return h("td", {className: "field-actions"},
-      h("a", {href: "about:blank", onClick: this.onOpenDetails}, "More"),
-      " ",
-      h("a", {href: row.openSetup()}, "Setup")
+      h("div", {className: "pop-menu-container"},
+        h("button", {className: "actions-button", onClick: this.onToggleFieldActions},
+          h("svg", {className: "actions-icon"},
+            h("use", {xlinkHref: "symbols.svg#down"})
+          ),
+        ),
+        row.fieldActionsOpen && h("div", {className: "pop-menu"},
+          h("a", {href: "about:blank", onClick: this.onOpenDetails}, "All field metadata"),
+          row.fieldSetupLinks && h("a", {href: row.fieldSetupLinks.lightningSetupLink}, "Field setup (Lightning)"),
+          row.fieldSetupLinks && h("a", {href: row.fieldSetupLinks.classicSetupLink}, "Field setup (Classic)")
+        )
+      )
     );
   }
 }
@@ -1372,21 +1421,35 @@ class ChildActionsCell extends React.Component {
   constructor(props) {
     super(props);
     this.onOpenDetails = this.onOpenDetails.bind(this);
+    this.onToggleChildActions = this.onToggleChildActions.bind(this);
   }
   onOpenDetails(e) {
     e.preventDefault();
     let {row} = this.props;
-    row.rowList.model.showDetailsBox(row.childName, row.rowProperties(), row.rowList);
+    row.showChildMetadata();
+    row.rowList.model.didUpdate();
+  }
+  onToggleChildActions() {
+    let {row} = this.props;
+    row.toggleChildActions();
     row.rowList.model.didUpdate();
   }
   render() {
     let {row} = this.props;
     return h("td", {className: "child-actions"},
-      h("a", {href: "about:blank", onClick: this.onOpenDetails}, "More"),
-      " ",
-      row.queryListUrl() ? h("a", {href: row.queryListUrl(), title: "Export records in this related list"}, "List") : null,
-      " ",
-      h("a", {href: row.openSetup()}, "Setup")
+      h("div", {className: "pop-menu-container"},
+        h("button", {className: "actions-button", onClick: this.onToggleChildActions},
+          h("svg", {className: "actions-icon"},
+            h("use", {xlinkHref: "symbols.svg#down"})
+          ),
+        ),
+        row.childActionsOpen && h("div", {className: "pop-menu"},
+          h("a", {href: "about:blank", onClick: this.onOpenDetails}, "All relationship metadata"),
+          row.queryListUrl() ? h("a", {href: row.queryListUrl(), title: "Export records in this related list"}, "Export related records") : null,
+          row.childSetupLinks && h("a", {href: row.childSetupLinks.lightningSetupLink}, "Setup (Lightning)"),
+          row.childSetupLinks && h("a", {href: row.childSetupLinks.classicSetupLink}, "Setup (Classic)")
+        )
+      )
     );
   }
 }
