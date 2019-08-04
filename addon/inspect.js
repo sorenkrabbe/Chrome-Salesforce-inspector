@@ -729,7 +729,13 @@ class FieldRow extends TableRow {
   }
   saveDataValue(recordData) {
     if (this.isEditing()) {
-      recordData[this.fieldDescribe.name] = this.dataEditValue == "" ? null : this.dataEditValue;
+      if (this.dataEditValue == "") {
+        if (this.rowList.model.editMode != "create") {
+          recordData[this.fieldDescribe.name] = null;
+        }
+      } else {
+        recordData[this.fieldDescribe.name] = this.dataEditValue;
+      }
     }
   }
   isId() {
