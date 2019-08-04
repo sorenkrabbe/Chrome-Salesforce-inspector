@@ -111,7 +111,7 @@ class Model {
     let props = {};
     addProperties(props, objectDescribe, "desc.", {fields: true, childRelationships: true});
     addProperties(props, this.layoutInfo, "layout.", {detailLayoutSections: true, editLayoutSections: true, relatedLists: true});
-    this.showDetailsBox(objectDescribe.name, props, null);
+    this.showDetailsBox(this.objectName(), props, null);
   }
   canUpdate() {
     return this.objectData && this.objectData.updateable && this.recordData && this.recordData.Id;
@@ -355,7 +355,7 @@ class Model {
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
     this.spinFor(
       "querying tooling particles",
-      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")).then(res => {
+      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")).then(res => {
         for (let entityParticle of res.records) {
           this.fieldRows.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
         }
@@ -626,8 +626,8 @@ class FieldRow extends TableRow {
     }
     let particle = this.entityParticle;
     if (particle) {
-      return particle.DataType == "reference" && particle.FieldDefinition.ReferenceTo.referenceTo
-        ? "[" + particle.FieldDefinition.ReferenceTo.referenceTo.join(", ") + "]"
+      return particle.DataType == "reference" && particle.ReferenceTo.referenceTo
+        ? "[" + particle.ReferenceTo.referenceTo.join(", ") + "]"
         : (particle.DataType || "")
         + (particle.Length ? " (" + particle.Length + ")" : "")
         + (particle.Precision || particle.Scale ? " (" + particle.Precision + ", " + particle.Scale + ")" : "")
@@ -650,7 +650,7 @@ class FieldRow extends TableRow {
     }
     let particle = this.entityParticle;
     if (particle) {
-      return particle.DataType == "reference" ? particle.FieldDefinition.ReferenceTo.referenceTo : null;
+      return particle.DataType == "reference" ? particle.ReferenceTo.referenceTo : null;
     }
     return [];
   }
@@ -774,7 +774,7 @@ class FieldRow extends TableRow {
     }
   }
   showFieldDescription() {
-    if (!this.entityParticle) {
+    if (!this.entityParticle || !this.entityParticle.FieldDefinition) {
       return;
     }
     this.rowList.model.spinFor(
