@@ -1,7 +1,5 @@
-/* eslint-disable no-unused-vars */
 /* exported initButton */
 /* global showStdPageDetails */
-/* eslint-enable no-unused-vars */
 "use strict";
 
 // sfdcBody = normal Salesforce page

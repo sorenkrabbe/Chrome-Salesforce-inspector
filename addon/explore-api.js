@@ -1,9 +1,6 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
+import {sfConn, apiVersion} from "./inspector.js";
 /* global initButton */
-/* eslint-enable no-unused-vars */
-"use strict";
 
 class Model {
   constructor(sfHost, args) {

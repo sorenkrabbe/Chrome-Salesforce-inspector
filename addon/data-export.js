@@ -1,10 +1,7 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
+import {sfConn, apiVersion} from "./inspector.js";
 /* global initButton */
-/* global Enumerable DescribeInfo copyToClipboard initScrollTable */
-/* eslint-enable no-unused-vars */
-"use strict";
+import {Enumerable, DescribeInfo, copyToClipboard, initScrollTable} from "./data-load.js";
 
 class QueryHistory {
   constructor(storageKey, max) {
@@ -667,7 +664,7 @@ class Model {
             }
           })
           .concat(
-            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"]) //  eslint-disable-line indent
+            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"])
               .filter(fn => fn.toLowerCase().startsWith(searchTerm.toLowerCase()))
               .map(fn => ({value: fn, title: fn + "()", suffix: "(", rank: 2}))
           )
@@ -1116,8 +1113,7 @@ class App extends React.Component {
     ReactDOM.render(h(App, {model}), root);
 
     if (parent && parent.isUnitTest) { // for unit tests
-      window.testData = {model};
-      parent.postMessage({insextTestLoaded: true}, "*");
+      parent.insextTestLoaded({model, sfConn});
     }
 
   });

@@ -1,6 +1,4 @@
-/* eslint-disable no-unused-vars */
-/* global sfConn apiVersion */
-/* eslint-enable no-unused-vars */
+import {sfConn, apiVersion} from "./inspector.js";
 
 export async function getObjectSetupLinks(sfHost, sobjectName) {
   let {records: entityDefinitions} = await sfConn.rest(`/services/data/v${apiVersion}/tooling/query/?q=${encodeURIComponent(`select DurableId from EntityDefinition where QualifiedApiName = '${sobjectName}'`)}`);

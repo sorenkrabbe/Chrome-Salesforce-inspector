@@ -1,20 +1,11 @@
-/* eslint-disable no-unused-vars */
-/* global sfConn apiVersion */
-/* exported dataImportTest */
-/* eslint-enable no-unused-vars */
-"use strict";
-async function dataImportTest(test) {
+import {sfConn} from "./inspector.js";
+
+export async function dataImportTest(test) {
   console.log("TEST data-import");
   let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
 
-  let win = await loadPage("data-import.html");
-  let {testData: {model}} = win;
+  let {model} = await loadPage("data-import.html");
   let vm = model;
-
-  let clipboardValue;
-  win.copyToClipboard = value => {
-    clipboardValue = value;
-  };
 
   function waitForSpinner() {
     return new Promise(resolve => {
@@ -230,7 +221,7 @@ async function dataImportTest(test) {
   vm.importAction = "update";
   vm.didUpdate();
   vm.copyOptions();
-  assertEquals("salesforce-inspector-import-options=&useToolingApi=0&action=update&object=Inspector_Test__c&batchSize=200&threads=6", clipboardValue);
+  assertEquals("salesforce-inspector-import-options=&useToolingApi=0&action=update&object=Inspector_Test__c&batchSize=200&threads=6", window.testClipboardValue);
 
   // Restore import options
   vm.importAction = "create";

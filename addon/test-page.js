@@ -1,7 +1,5 @@
-/* eslint-disable no-unused-vars */
 /* exported initButton */
 /* global showStdPageDetails */
-/* eslint-enable no-unused-vars */
 "use strict";
 
 // This is a slightly modified version of button.js. We should find a way to reuse some of that file instead of repeating it here.
@@ -54,7 +52,7 @@ function initButton(sfHost, inInspector) {
     console.log("Salesforce Inspector: Open popup");
     popupEl.contentWindow.postMessage({insextUpdateRecordId: true, locationHref}, "*");
     rootEl.classList.add("insext-active");
-    parent.postMessage({insextTestLoaded: true}, "*");
+    parent.insextTestLoaded({getRecordId: window[0].getRecordId});
     // These event listeners are only enabled when the popup is active to avoid interfering with Salesforce when not using the inspector
     popupEl.focus();
   }

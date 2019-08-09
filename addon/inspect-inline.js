@@ -1,6 +1,4 @@
-/* eslint-disable no-unused-vars */
 /* exported showStdPageDetails */
-/* eslint-enable no-unused-vars */
 "use strict";
 function showStdPageDetails(metadataResponse, allFieldSetupLinks) {
   let fieldDetailsByLabel = new Map();

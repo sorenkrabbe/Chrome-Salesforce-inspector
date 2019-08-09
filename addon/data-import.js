@@ -1,11 +1,8 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
+import {sfConn, apiVersion} from "./inspector.js";
 /* global initButton */
-/* global csvParse */
-/* global Enumerable DescribeInfo copyToClipboard initScrollTable */
-/* eslint-enable no-unused-vars */
-"use strict";
+import {csvParse} from "./csv-parse.js";
+import {DescribeInfo, copyToClipboard, initScrollTable} from "./data-load.js";
 
 class Model {
 
@@ -1006,8 +1003,7 @@ class StatusBox extends React.Component {
     ReactDOM.render(h(App, {model}), root);
 
     if (parent && parent.isUnitTest) { // for unit tests
-      window.testData = {model};
-      parent.postMessage({insextTestLoaded: true}, "*");
+      parent.insextTestLoaded({model});
     }
 
   });

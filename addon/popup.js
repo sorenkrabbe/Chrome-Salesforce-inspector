@@ -1,9 +1,6 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
-/* global initButton */
+import {sfConn, apiVersion} from "./inspector.js";
 import {getAllFieldSetupLinks} from "./setup-links.js";
-/* eslint-enable no-unused-vars */
 
 let h = React.createElement;
 
@@ -838,4 +835,4 @@ function getRecordId(href) {
   return null;
 }
 
-window.getRecordId = getRecordId; // For unit tests
+window.getRecordId = getRecordId; // for unit tests
