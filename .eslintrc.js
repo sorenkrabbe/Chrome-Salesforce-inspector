@@ -5,7 +5,7 @@ module.exports = {
     "webextensions": true
   },
   "parserOptions": {
-    "ecmaVersion": 8,
+    "ecmaVersion": 11,
     "sourceType": "module"
   },
   "root": true,

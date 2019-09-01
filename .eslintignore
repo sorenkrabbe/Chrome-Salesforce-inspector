@@ -3,5 +3,3 @@ addon/react-dom.min.js
 addon/react.js
 addon/react.min.js
 target/
-# Ignore until https://github.com/eslint/eslint/issues/11803
-addon/csv-parse-test.js
