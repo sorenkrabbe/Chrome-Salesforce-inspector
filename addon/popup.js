@@ -18,17 +18,16 @@ function closePopup() {
   parent.postMessage({insextClosePopup: true}, "*");
 }
 
-function init(params) {
-
-  let sfHost = params.sfHost;
+function init({sfHost, inDevConsole, inLightning, inInspector}) {
   let addonVersion = chrome.runtime.getManifest().version;
 
   sfConn.getSession(sfHost).then(() => {
 
     ReactDOM.render(h(App, {
       sfHost,
-      forceTargetBlank: params.forceTargetBlank,
-      showDetailsSupported: params.showStdPageDetailsSupported,
+      inDevConsole,
+      inLightning,
+      inInspector,
       addonVersion,
     }), document.getElementById("root"));
 
@@ -42,14 +41,19 @@ class App extends React.PureComponent {
       sobjectsList: null,
       sobjectsLoading: true,
       contextRecordId: null,
+      isInSetup: false,
     };
     this.onUpdateRecordId = this.onUpdateRecordId.bind(this);
     this.onShortcutKey = this.onShortcutKey.bind(this);
   }
   onUpdateRecordId(e) {
     if (e.source == parent && e.data.insextUpdateRecordId) {
-      let recordId = getRecordId(e.data.locationHref);
-      this.setState({contextRecordId: recordId});
+      let {locationHref} = e.data;
+      let recordId = getRecordId(locationHref);
+      this.setState({
+        contextRecordId: recordId,
+        isInSetup: locationHref.includes("/lightning/setup/"),
+      });
       this.refs.showAllDataBox.updateSelection(recordId);
     }
   }
@@ -165,6 +169,9 @@ class App extends React.PureComponent {
       e.preventDefault();
       this.refs.apiExploreBtn.click();
     }
+    if (e.key == "h" && this.refs.homeBtn) {
+      this.refs.homeBtn.click();
+    }
   }
   componentDidMount() {
     addEventListener("message", this.onUpdateRecordId);
@@ -179,18 +186,20 @@ class App extends React.PureComponent {
   render() {
     let {
       sfHost,
-      forceTargetBlank,
-      showDetailsSupported,
+      inDevConsole,
+      inLightning,
+      inInspector,
       addonVersion,
     } = this.props;
     let {
       sobjectsList,
       sobjectsLoading,
       contextRecordId,
+      isInSetup,
     } = this.state;
     let hostArg = new URLSearchParams();
     hostArg.set("host", sfHost);
-    let linkTarget = forceTargetBlank ? "_blank" : "_top";
+    let linkTarget = inDevConsole ? "_blank" : "_top";
     return (
       h("div", {},
         h("div", {className: "header"},
@@ -208,14 +217,17 @@ class App extends React.PureComponent {
           "Salesforce inspector"
         ),
         h("div", {className: "main"},
-          h(AllDataBox, {ref: "showAllDataBox", sfHost, showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
+          h(AllDataBox, {ref: "showAllDataBox", sfHost, showDetailsSupported: !inLightning && !inInspector, sobjectsList, sobjectsLoading, contextRecordId, linkTarget}),
           h("div", {className: "global-box"},
             h("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
             h("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
             h("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
             // Advanded features should be put below this line, and the layout adjusted so they are below the fold
             h("a", {ref: "metaRetrieveBtn", href: "metadata-retrieve.html?" + hostArg, target: linkTarget, className: "button"}, h("u", {}, "D"), "ownload Metadata"),
-            h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button"}, "E", h("u", {}, "x"), "plore API")
+            h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button"}, "E", h("u", {}, "x"), "plore API"),
+            // Workaround for in Lightning the link to Setup always opens a new tab, and the link back cannot open a new tab.
+            inLightning && isInSetup && h("a", {ref: "homeBtn", href: `https://${sfHost}/lightning/page/home`, title: "You can choose if you want to open in a new tab or not", target: linkTarget, className: "button"}, "Salesforce ", h("u", {}, "H"), "ome"),
+            inLightning && !isInSetup && h("a", {ref: "homeBtn", href: `https://${sfHost}/lightning/setup/SetupOneHome/home?setupApp=all`, title: "You can choose if you want to open in a new tab or not", target: linkTarget, className: "button"}, "Setup ", h("u", {}, "H"), "ome"),
           )
         ),
         h("div", {className: "footer"},

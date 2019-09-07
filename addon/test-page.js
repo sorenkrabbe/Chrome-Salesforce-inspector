@@ -1,3 +1,4 @@
+/* global initButton */
 let args = new URLSearchParams(location.search.slice(1));
 let sfHost = args.get("host");
 initButton(sfHost, true);
