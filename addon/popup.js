@@ -33,7 +33,7 @@ function init({sfHost, inDevConsole, inLightning, inInspector}) {
 
   });
 }
-
+//TODO: Search for context in both all data aspects
 class App extends React.PureComponent {
   constructor(props) {
     super(props);
@@ -54,7 +54,7 @@ class App extends React.PureComponent {
         contextRecordId: recordId,
         isInSetup: locationHref.includes("/lightning/setup/"),
       });
-      this.refs.showAllDataBox.updateSelection(recordId);
+      this.refs.showAllDataBox.updateContextRecordId(recordId);
     }
   }
   loadSobjects() {
@@ -133,7 +133,7 @@ class App extends React.PureComponent {
           sobjectsLoading: false,
           sobjectsList: Array.from(entityMap.values())
         });
-        this.refs.showAllDataBox.updateSelection(this.state.contextRecordId);
+        this.refs.showAllDataBox.updateContextRecordId(this.state.contextRecordId);
       })
       .catch(e => {
         console.error(e);
@@ -172,6 +172,7 @@ class App extends React.PureComponent {
     if (e.key == "h" && this.refs.homeBtn) {
       this.refs.homeBtn.click();
     }
+    //TODO: Add shortcut for "u to go to user aspect"
   }
   componentDidMount() {
     addEventListener("message", this.onUpdateRecordId);
@@ -246,60 +247,163 @@ class App extends React.PureComponent {
   }
 }
 
-class ShowDetailsButton extends React.PureComponent {
+class AllDataBox extends React.PureComponent {
+
   constructor(props) {
     super(props);
+    this.SearchAspectTypes = Object.freeze({sobject: "sobject", users: "users"}); //Enum. Supported aspects
+
     this.state = {
-      detailsLoading: false,
-      detailsShown: false,
+      activeSearchAspect: this.SearchAspectTypes.sobject
     };
-    this.onDetailsClick = this.onDetailsClick.bind(this);
+    this.onAspectClick = this.onAspectClick.bind(this);
   }
-  canShowDetails() {
-    let {showDetailsSupported, selectedValue, contextRecordId} = this.props;
-    return showDetailsSupported && contextRecordId && selectedValue.sobject.keyPrefix == contextRecordId.substring(0, 3) && selectedValue.sobject.availableApis.length > 0;
-  }
-  onDetailsClick() {
-    let {sfHost, selectedValue} = this.props;
-    let {detailsShown} = this.state;
-    if (detailsShown || !this.canShowDetails()) {
-      return;
-    }
-    let tooling = !selectedValue.sobject.availableApis.includes("regularApi");
-    let url = "/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + selectedValue.sobject.name + "/describe/";
-    this.setState({detailsShown: true, detailsLoading: true});
-    Promise.all([
-      sfConn.rest(url),
-      getAllFieldSetupLinks(sfHost, selectedValue.sobject.name)
-    ]).then(([res, insextAllFieldSetupLinks]) => {
-      this.setState({detailsShown: true, detailsLoading: false});
-      parent.postMessage({insextShowStdPageDetails: true, insextData: res, insextAllFieldSetupLinks}, "*");
-      closePopup();
-    }).catch(error => {
-      this.setState({detailsShown: false, detailsLoading: false});
-      console.error(error);
-      alert(error);
+
+  onAspectClick(e) {
+    this.setState({
+      activeSearchAspect: e.currentTarget.dataset.aspect
     });
   }
+
+  updateContextRecordId(contextRecordId) {
+    if (this.refs.showAllDataBoxSObject) {
+      this.refs.showAllDataBoxSObject.updateSelection(contextRecordId);
+    }
+  }
+
+  getActiveAspectElm() {
+    let {activeSearchAspect} = this.state;
+    let {sfHost, showDetailsSupported, sobjectsList, linkTarget} = this.props;
+
+    switch (activeSearchAspect) {
+      case this.SearchAspectTypes.sobject:
+        return h(AllDataBoxSObject, {ref: "showAllDataBoxSObject", sfHost, showDetailsSupported, sobjectsList, contextRecordId: null, linkTarget});
+      case this.SearchAspectTypes.users:
+        return h(AllDataBoxUsers, {ref: "showAllDataBoxUsers", sfHost, linkTarget}, "Users");
+      default:
+        return "AllData aspect " + activeSearchAspect + " not implemented";
+    }
+  }
+
   render() {
-    let {detailsLoading, detailsShown} = this.state;
+    let {sobjectsLoading} = this.props;
+    let {activeSearchAspect} = this.state;
+
     return (
-      h("button",
-        {
-          id: "showStdPageDetailsBtn",
-          className: "button" + (detailsLoading ? " loading" : ""),
-          disabled: detailsShown,
-          onClick: this.onDetailsClick,
-          style: {display: !this.canShowDetails() ? "none" : ""}
-        },
-        "Show field ", h("u", {}, "m"), "etadata"
+      h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
+        h("ul", {className: "small-tabs"},
+          h("li", {onClick: this.onAspectClick, "data-aspect": this.SearchAspectTypes.sobject, className: (activeSearchAspect == this.SearchAspectTypes.sobject) ? "active" : ""}, "Objects"),
+          h("li", {onClick: this.onAspectClick, "data-aspect": this.SearchAspectTypes.users, className: (activeSearchAspect == this.SearchAspectTypes.users) ? "active" : ""}, "Users")
+        ),
+        this.getActiveAspectElm()
       )
     );
   }
 }
 
+class AllDataBoxUsers extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.state = {
+      selectedUser: null,
+      selectedUserId: null,
+      contextUserId: null,
+      contextOrgId: null
+    };
+    this.getMatches = this.getMatches.bind(this);
+    this.onDataSelect = this.onDataSelect.bind(this);
+  }
 
-class AllDataBox extends React.PureComponent {
+  componentDidMount() {
+    this.loadContext();
+  }
+
+  async loadContext() {
+    try {
+      const userInfo = await sfConn.rest("/services/oauth2/userinfo");
+      this.onDataSelect(userInfo.user_id);
+    } catch (err) {
+      console.error("Unable to query current user's id", err);
+    }
+  }
+
+  async getMatches(userQuery) {
+    if (!userQuery) {
+      return [];
+    }
+
+    //TODO: Better search query. SOSL?
+    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where username like '%" + userQuery + "%' limit 100";
+
+    try {
+      const userSearchResult = await sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query));
+      return userSearchResult.records;
+      //return [{recordId: "123423", name: "User's name", username: "username@username.com", alias: "usr"}];
+    } catch (err) {
+      console.error("Unable to query user details with: " + query + ".", err);
+      return [];
+    }
+
+  }
+
+  async onDataSelect(userRecord) {
+    await this.setState({selectedUserId: userRecord.Id, selectedUser: null});
+    await this.querySelectedUserDetails();
+  }
+
+  async querySelectedUserDetails() {
+    let {selectedUserId} = this.state;
+    if (!selectedUserId) {
+      return;
+    }
+    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where Id='" + selectedUserId + "' limit 1";
+    try {
+      //const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/sobjects/User/" + selectedUserId);
+      const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query));
+      await this.setState({selectedUser: userResult.records[0]});
+    } catch (err) {
+      console.error("Unable to query user details with: " + query + ".", err);
+    }
+  }
+
+  resultRender(matches, userQuery) {
+    return matches.map(value => ({
+      key: value.Id,
+      value,
+      element: [
+        h("div", {className: "autocomplete-item-main", key: "main"},
+          h(MarkSubstring, {
+            text: value.Name + " (" + value.Alias + ")",
+            start: value.Name.toLowerCase().indexOf(userQuery.toLowerCase()),
+            length: userQuery.length
+          })),
+        h("div", {className: "autocomplete-item-sub", key: "sub"},
+          h(MarkSubstring, {
+            text: (!value.IsActive) ? "⚠ " + value.Username : value.Username,
+            start: value.Username.toLowerCase().indexOf(userQuery.toLowerCase()),
+            length: userQuery.length
+          }))
+      ]
+    }));
+  }
+
+  render() {
+    let {selectedUser, contextOrgId, contextUserId} = this.state;
+    let {sfHost} = this.props;
+
+    return (
+      h("div", {ref: "usersBox", className: "users-box"},
+        h(AllDataSearch, {getMatches: this.getMatches, onDataSelect: this.onDataSelect, inputSearchDelay: 400, placeholderText: "Username, email, alias or name of user", resultRender: this.resultRender}),
+        h("div", {className: "all-data-box-inner" + (!selectedUser ? " empty" : "")},
+          selectedUser
+            ? h(UserDetails, {user: selectedUser, sfHost, contextOrgId, currentUserId: contextUserId})
+            : h("div", {className: "center"}, "No user details available")
+        ))
+    );
+  }
+}
+
+class AllDataBoxSObject extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
@@ -367,8 +471,8 @@ class AllDataBox extends React.PureComponent {
     }
     return {recordId, sobject};
   }
-  getMatches(query) {
-    let {sobjectsList, contextRecordId} = this.props;
+  async getMatches(query) {
+    let {sobjectsList} = this.props;
     if (!sobjectsList) {
       return [];
     }
@@ -390,7 +494,7 @@ class AllDataBox extends React.PureComponent {
           : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
           : 10) + (sobject.availableApis.length == 0 ? 20 : 0)
       }));
-    query = query || contextRecordId || "";
+    query = query || "";
     queryKeyPrefix = query.substring(0, 3);
     if (query.match(/^([a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$/)) {
       let objectsForId = sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
@@ -416,19 +520,163 @@ class AllDataBox extends React.PureComponent {
       this.refs.allDataSelection.clickAllDataBtn();
     }
   }
+
+  resultRender(matches, userQuery) {
+    return matches.map(value => ({
+      key: value.recordId + "#" + value.sobject.name,
+      value,
+      element: [
+        h("div", {className: "autocomplete-item-main", key: "main"},
+          value.recordId || h(MarkSubstring, {
+            text: value.sobject.name,
+            start: value.sobject.name.toLowerCase().indexOf(userQuery.toLowerCase()),
+            length: userQuery.length
+          }),
+          value.sobject.availableApis.length == 0 ? " (Not readable)" : ""
+        ),
+        h("div", {className: "autocomplete-item-sub", key: "sub"},
+          h(MarkSubstring, {
+            text: value.sobject.keyPrefix || "---",
+            start: value.sobject.keyPrefix == userQuery.substring(0, 3) ? 0 : -1,
+            length: 3
+          }),
+          " • ",
+          h(MarkSubstring, {
+            text: value.sobject.label,
+            start: value.sobject.label.toLowerCase().indexOf(userQuery.toLowerCase()),
+            length: userQuery.length
+          })
+        )
+      ]
+    }));
+  }
+
   render() {
-    let {sfHost, showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget} = this.props;
+    let {sfHost, showDetailsSupported, sobjectsList, linkTarget} = this.props;
     let {selectedValue, recordIdDetails} = this.state;
     return (
-      h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
-        h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches}),
+      h("div", {},
+        h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches, inputSearchDelay: 0, placeholderText: "Record id, id prefix or object name", resultRender: this.resultRender}),
         selectedValue
-          ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, contextRecordId, selectedValue, linkTarget, recordIdDetails})
+          ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, selectedValue, linkTarget, recordIdDetails})
           : h("div", {className: "all-data-box-inner empty"}, "No record to display")
       )
     );
   }
 }
+
+class UserDetails extends React.PureComponent {
+  doSupportLoginAs(userId) {
+    let {currentUserId} = this.props;
+    return (userId != currentUserId); //Optimistically show login unless it's logged in user's userid. No API to determine if user is allowed to login as given user. See https://salesforce.stackexchange.com/questions/224342/query-can-i-login-as-for-users
+  }
+
+  getLoginAsLink(userId) {
+    let {sfHost, orgId} = this.props;
+    const retUrl = "/"; //TODO: Get current url to return to there - %2Fhome%2Fhome.jsp&isdtp=p1
+    const targetUrl = "/"; //TODO: Is more target URL required?
+    return "https://" + sfHost + "/servlet/servlet.su" + "?oid=" + encodeURIComponent(orgId) + "&suorgadminid=" + encodeURIComponent(userId) + "&retURL=" + encodeURIComponent(retUrl) + "&targetURL=" + encodeURIComponent(targetUrl);
+  }
+
+  getUserDetailLink(userId) {
+    let {sfHost} = this.props;
+    return "https://" + sfHost + "/lightning/setup/ManageUsers/page?address=%2F" + userId + "%3Fnoredirect%3D1";
+  }
+
+  render() {
+    let {user} = this.props;
+
+    return (
+      h("div", {className: "all-data-box-data"},
+        h("table", {},
+          h("tbody", {},
+            h("tr", {},
+              h("th", {}, "Name:"),
+              h("td", {}, user.Name + " (" + user.Alias + ")")
+            ),
+            h("tr", {},
+              h("th", {}, "Username:"),
+              h("td", {}, user.Username)
+            ),
+            h("tr", {},
+              h("th", {}, "Profile:"),
+              h("td", {}, user.Profile.Name)
+            ),
+            h("tr", {},
+              h("th", {}, "Role:"),
+              h("td", {}, (user.UserRole) ? user.UserRole.Name : "")
+            ),
+            h("tr", {},
+              h("th", {}, "Language:"),
+              h("td", {}, user.LocaleSidKey + "/" + user.LanguageLocaleKey)
+            ),
+            h("tr", {},
+              h("th", {}, "FederationId:"),
+              h("td", {}, user.FederationIdentifier)
+            )
+          )
+        ),
+        h("div", {ref: "userButtons", className: "center"},
+          this.doSupportLoginAs(user.Id) ? h("a", {href: this.getLoginAsLink(user.Id) + user.Id, target: this.props.linkTarget, className: "button button-secondary"}, "Login as") : null,
+          h("a", {href: this.getUserDetailLink(user.Id), target: this.props.linkTarget, className: "button button-secondary"}, "Details")
+        ))
+    );//TODO: Pull button to bottom
+  }
+}
+
+
+class ShowDetailsButton extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.state = {
+      detailsLoading: false,
+      detailsShown: false,
+    };
+    this.onDetailsClick = this.onDetailsClick.bind(this);
+  }
+  canShowDetails() {
+    let {showDetailsSupported, selectedValue, contextRecordId} = this.props;
+    return showDetailsSupported && contextRecordId && selectedValue.sobject.keyPrefix == contextRecordId.substring(0, 3) && selectedValue.sobject.availableApis.length > 0;
+  }
+  onDetailsClick() {
+    let {sfHost, selectedValue} = this.props;
+    let {detailsShown} = this.state;
+    if (detailsShown || !this.canShowDetails()) {
+      return;
+    }
+    let tooling = !selectedValue.sobject.availableApis.includes("regularApi");
+    let url = "/services/data/v" + apiVersion + "/" + (tooling ? "tooling/" : "") + "sobjects/" + selectedValue.sobject.name + "/describe/";
+    this.setState({detailsShown: true, detailsLoading: true});
+    Promise.all([
+      sfConn.rest(url),
+      getAllFieldSetupLinks(sfHost, selectedValue.sobject.name)
+    ]).then(([res, insextAllFieldSetupLinks]) => {
+      this.setState({detailsShown: true, detailsLoading: false});
+      parent.postMessage({insextShowStdPageDetails: true, insextData: res, insextAllFieldSetupLinks}, "*");
+      closePopup();
+    }).catch(error => {
+      this.setState({detailsShown: false, detailsLoading: false});
+      console.error(error);
+      alert(error);
+    });
+  }
+  render() {
+    let {detailsLoading, detailsShown} = this.state;
+    return (
+      h("button",
+        {
+          id: "showStdPageDetailsBtn",
+          className: "button" + (detailsLoading ? " loading" : ""),
+          disabled: detailsShown,
+          onClick: this.onDetailsClick,
+          style: {display: !this.canShowDetails() ? "none" : ""}
+        },
+        "Show field ", h("u", {}, "m"), "etadata"
+      )
+    );
+  }
+}
+
 
 class AllDataSelection extends React.PureComponent {
   clickShowDetailsBtn() {
@@ -554,7 +802,9 @@ class AllDataSearch extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
-      inspectQuery: ""
+      queryString: "",
+      matchingResults: [],
+      queryDelayTimer: null
     };
     this.onAllDataInput = this.onAllDataInput.bind(this);
     this.onAllDataFocus = this.onAllDataFocus.bind(this);
@@ -565,8 +815,9 @@ class AllDataSearch extends React.PureComponent {
   }
   onAllDataInput(e) {
     let val = e.target.value;
-    this.refs.autoComplete.handleInput();
-    this.setState({inspectQuery: val});
+    //this.refs.autoComplete.handleInput(); //TODO: confirm unneeded...
+    this.getMatchesDelayed(val);
+    this.setState({queryString: val});
   }
   onAllDataFocus() {
     this.refs.autoComplete.handleFocus();
@@ -580,59 +831,45 @@ class AllDataSearch extends React.PureComponent {
   }
   updateAllDataInput(value) {
     this.props.onDataSelect(value);
-    this.setState({inspectQuery: ""});
+    this.setState({queryString: ""});
   }
   onAllDataArrowClick() {
     this.refs.showAllDataInp.focus();
   }
+  getMatchesDelayed(userQuery) {
+    let {queryDelayTimer} = this.state;
+    let {inputSearchDelay} = this.props;
+
+    if (queryDelayTimer) {
+      clearTimeout(queryDelayTimer);
+    }
+    queryDelayTimer = setTimeout(async () => {
+      const matchingResults = await this.props.getMatches(userQuery);
+      await this.setState({matchingResults});
+    }, inputSearchDelay);
+
+    this.setState({queryDelayTimer});
+  }
   render() {
-    let {inspectQuery} = this.state;
+    let {queryString, matchingResults} = this.state;
+    let {placeholderText, resultRender} = this.props;
     return (
       h("div", {className: "input-with-dropdown"},
-        h("div", {},
-          h("input", {
-            className: "all-data-input",
-            ref: "showAllDataInp",
-            placeholder: "Record id, id prefix or object name",
-            onInput: this.onAllDataInput,
-            onFocus: this.onAllDataFocus,
-            onBlur: this.onAllDataBlur,
-            onKeyDown: this.onAllDataKeyDown,
-            value: inspectQuery
-          }),
-          h(Autocomplete, {
-            ref: "autoComplete",
-            updateInput: this.updateAllDataInput,
-            matchingResults: this.props.getMatches(inspectQuery)
-              .map(value => ({
-                key: value.recordId + "#" + value.sobject.name,
-                value,
-                element: [
-                  h("div", {className: "autocomplete-item-main", key: "main"},
-                    value.recordId || h(MarkSubstring, {
-                      text: value.sobject.name,
-                      start: value.sobject.name.toLowerCase().indexOf(inspectQuery.toLowerCase()),
-                      length: inspectQuery.length
-                    }),
-                    value.sobject.availableApis.length == 0 ? " (Not readable)" : ""
-                  ),
-                  h("div", {className: "autocomplete-item-sub", key: "sub"},
-                    h(MarkSubstring, {
-                      text: value.sobject.keyPrefix || "---",
-                      start: value.sobject.keyPrefix == inspectQuery.substring(0, 3) ? 0 : -1,
-                      length: 3
-                    }),
-                    " • ",
-                    h(MarkSubstring, {
-                      text: value.sobject.label,
-                      start: value.sobject.label.toLowerCase().indexOf(inspectQuery.toLowerCase()),
-                      length: inspectQuery.length
-                    })
-                  )
-                ]
-              }))
-          })
-        ),
+        h("input", {
+          className: "all-data-input",
+          ref: "showAllDataInp",
+          placeholder: placeholderText,
+          onInput: this.onAllDataInput,
+          onFocus: this.onAllDataFocus,
+          onBlur: this.onAllDataBlur,
+          onKeyDown: this.onAllDataKeyDown,
+          value: queryString
+        }),
+        h(Autocomplete, {
+          ref: "autoComplete",
+          updateInput: this.updateAllDataInput,
+          matchingResults: resultRender(matchingResults, queryString)
+        }),
         h("svg", {viewBox: "0 0 24 24", onClick: this.onAllDataArrowClick},
           h("path", {d: "M3.8 6.5h16.4c.4 0 .8.6.4 1l-8 9.8c-.3.3-.9.3-1.2 0l-8-9.8c-.4-.4-.1-1 .4-1z"})
         )
