@@ -209,6 +209,7 @@ button.button:active, a[href]:active {
   }
 }
 .all-data-box.loading,
+.users-box.loading,
 #showStdPageDetailsBtn.loading {
     animation: bg-load 1s cubic-bezier(.5, .4, .5, .6) infinite;
 }
@@ -280,4 +281,7 @@ ul.small-tabs li.active {
 }
 ul.small-tabs li:hover {
     background-color: #f4f6f9;
+}
+.inactive {
+  color: #c0c0c0
 }

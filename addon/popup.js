@@ -165,6 +165,7 @@ class AllDataBox extends React.PureComponent {
       activeSearchAspect: this.SearchAspectTypes.sobject,
       sobjectsList: null,
       sobjectsLoading: true,
+      usersBoxLoading: false,
       contextRecordId: null,
       contextUserId: null,
       contextOrgId: null,
@@ -201,6 +202,18 @@ class AllDataBox extends React.PureComponent {
       let recordId = getRecordId(contextUrl);
       this.setState({contextRecordId: recordId});
     }
+  }
+
+  setIsLoading(aspect, value) {
+    switch (aspect) {
+      case "usersBox": this.setState({usersBoxLoading: value});
+        break;
+    }
+  }
+
+  isLoading() {
+    let {usersBoxLoading, sobjectsLoading} = this.state;
+    return sobjectsLoading || usersBoxLoading;
   }
 
   async ensureKnownUserContext() {
@@ -300,7 +313,7 @@ class AllDataBox extends React.PureComponent {
           sobjectsLoading: false,
           sobjectsList: Array.from(entityMap.values())
         });
-        //this.refs.showAllDataBox.updateContextRecordId(this.state.contextRecordId);//TODO: remove
+        this.refs.showAllDataBoxSObject.refs.allDataSearch.getMatchesDelayed("");
       })
       .catch(e => {
         console.error(e);
@@ -309,11 +322,11 @@ class AllDataBox extends React.PureComponent {
   }
 
   render() {
-    let {activeSearchAspect, sobjectsLoading, contextRecordId, contextUserId, sobjectsList} = this.state;
+    let {activeSearchAspect, sobjectsLoading, contextRecordId, contextUserId, contextOrgId, sobjectsList} = this.state;
     let {sfHost, showDetailsSupported, linkTarget} = this.props;
 
     return (
-      h("div", {className: "all-data-box " + (sobjectsLoading ? "loading " : "")},
+      h("div", {className: "all-data-box " + (this.isLoading() ? "loading " : "")},
         h("ul", {className: "small-tabs"},
           h("li", {onClick: this.onAspectClick, "data-aspect": this.SearchAspectTypes.sobject, className: (activeSearchAspect == this.SearchAspectTypes.sobject) ? "active" : ""}, "Objects"),
           h("li", {onClick: this.onAspectClick, "data-aspect": this.SearchAspectTypes.users, className: (activeSearchAspect == this.SearchAspectTypes.users) ? "active" : ""}, "Users")
@@ -322,7 +335,7 @@ class AllDataBox extends React.PureComponent {
         (activeSearchAspect == this.SearchAspectTypes.sobject)
           ? h(AllDataBoxSObject, {ref: "showAllDataBoxSObject", sfHost, showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget})
           : (activeSearchAspect == this.SearchAspectTypes.users)
-            ? h(AllDataBoxUsers, {ref: "showAllDataBoxUsers", sfHost, linkTarget, contextUserId}, "Users")
+            ? h(AllDataBoxUsers, {ref: "showAllDataBoxUsers", sfHost, linkTarget, contextUserId, contextOrgId, setIsLoading: (value) => { this.setIsLoading("usersBox", value); }}, "Users")
             : "AllData aspect " + activeSearchAspect + " not implemented"
       )
     );
@@ -352,20 +365,23 @@ class AllDataBoxUsers extends React.PureComponent {
   }
 
   async getMatches(userQuery) {
+    let {setIsLoading} = this.props;
     if (!userQuery) {
       return [];
     }
 
     //TODO: Better search query. SOSL?
-    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where username like '%" + userQuery + "%' limit 100";
+    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where username like '%" + userQuery + "%' or name like '%" + userQuery + "%' order by LastLoginDate limit 100";
 
     try {
+      setIsLoading(true);
       const userSearchResult = await sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query));
       return userSearchResult.records;
-      //return [{recordId: "123423", name: "User's name", username: "username@username.com", alias: "usr"}];
     } catch (err) {
       console.error("Unable to query user details with: " + query + ".", err);
       return [];
+    } finally {
+      setIsLoading(false);
     }
 
   }
@@ -379,16 +395,21 @@ class AllDataBoxUsers extends React.PureComponent {
 
   async querySelectedUserDetails() {
     let {selectedUserId} = this.state;
+    let {setIsLoading} = this.props;
+
     if (!selectedUserId) {
       return;
     }
     const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where Id='" + selectedUserId + "' limit 1";
     try {
+      setIsLoading(true);
       //const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/sobjects/User/" + selectedUserId);
       const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query));
       await this.setState({selectedUser: userResult.records[0]});
     } catch (err) {
       console.error("Unable to query user details with: " + query + ".", err);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -415,14 +436,14 @@ class AllDataBoxUsers extends React.PureComponent {
 
   render() {
     let {selectedUser} = this.state;
-    let {sfHost, contextOrgId, contextUserId} = this.props;
+    let {sfHost, linkTarget, contextOrgId, contextUserId} = this.props;
 
     return (
       h("div", {ref: "usersBox", className: "users-box"},
-        h(AllDataSearch, {getMatches: this.getMatches, onDataSelect: this.onDataSelect, inputSearchDelay: 400, placeholderText: "Username, email, alias or name of user", resultRender: this.resultRender}),
+        h(AllDataSearch, {ref: "allDataSearch", getMatches: this.getMatches, onDataSelect: this.onDataSelect, inputSearchDelay: 400, placeholderText: "Username, email, alias or name of user", resultRender: this.resultRender}),
         h("div", {className: "all-data-box-inner" + (!selectedUser ? " empty" : "")},
           selectedUser
-            ? h(UserDetails, {user: selectedUser, sfHost, contextOrgId, currentUserId: contextUserId})
+            ? h(UserDetails, {user: selectedUser, sfHost, contextOrgId, currentUserId: contextUserId, linkTarget})
             : h("div", {className: "center"}, "No user details available")
         ))
     );
@@ -455,31 +476,32 @@ class AllDataBoxSObject extends React.PureComponent {
     }
   }
 
-  updateSelection(query) {
+  async updateSelection(query) {
     let match = this.getBestMatch(query);
-    this.setState({selectedValue: match});
+    await this.setState({selectedValue: match});
     this.loadRecordIdDetails();
   }
 
   loadRecordIdDetails() {
+    let {selectedValue} = this.state;
     //If a recordId is selected and the object supports regularApi
-    if (this.state.selectedValue && this.state.selectedValue.recordId && this.state.selectedValue.sobject && this.state.selectedValue.sobject.availableApis && this.state.selectedValue.sobject.availableApis.includes("regularApi")) {
+    if (selectedValue && selectedValue.recordId && selectedValue.sobject && selectedValue.sobject.availableApis && selectedValue.sobject.availableApis.includes("regularApi")) {
       //optimistically assume the object has certain attribues. If some are not present, no recordIdDetails are displayed
       //TODO: Better handle objects with no recordtypes. Currently the optimistic approach results in no record details being displayed for ids for objects without record types.
-      let query = "select Id, LastModifiedBy.Alias, CreatedBy.Alias, RecordType.DeveloperName, CreatedDate, LastModifiedDate from " + this.state.selectedValue.sobject.name + " where id='" + this.state.selectedValue.recordId + "'";
+      let query = "select Id, LastModifiedBy.Alias, CreatedBy.Alias, RecordType.DeveloperName, CreatedDate, LastModifiedDate from " + selectedValue.sobject.name + " where id='" + selectedValue.recordId + "'";
       sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query), {logErrors: false}).then(res => {
         for (let record of res.records) {
           let lastModifiedDate = new Date(record.LastModifiedDate);
           let createdDate = new Date(record.CreatedDate);
           this.setState({recordIdDetails: {
-            "recordTypeName": record.RecordType.DeveloperName,
+            "recordTypeName": (record.RecordType) ? record.RecordType.DeveloperName : "-",
             "createdBy": record.CreatedBy.Alias,
             "lastModifiedBy": record.LastModifiedBy.Alias,
             "created": createdDate.toLocaleDateString() + " " + createdDate.toLocaleTimeString(),
             "lastModified": lastModifiedDate.toLocaleDateString() + " " + lastModifiedDate.toLocaleTimeString(),
           }});
         }
-      }).catch(() => {
+      }).catch((err) => {
         //Swallow this exception since it is likely due to missing standard attributes on the record - i.e. an invalid query.
         this.setState({recordIdDetails: null});
       });
@@ -516,8 +538,9 @@ class AllDataBoxSObject extends React.PureComponent {
     return {recordId, sobject};
   }
 
-  async getMatches(query) {
-    let {sobjectsList} = this.props;
+  getMatches(query) {
+    let {sobjectsList, contextRecordId} = this.props;
+
     if (!sobjectsList) {
       return [];
     }
@@ -539,7 +562,7 @@ class AllDataBoxSObject extends React.PureComponent {
           : sobject.label.toLowerCase().includes(" " + query.toLowerCase()) ? 9
           : 10) + (sobject.availableApis.length == 0 ? 20 : 0)
       }));
-    query = query || "";
+    query = query || contextRecordId || "";
     queryKeyPrefix = query.substring(0, 3);
     if (query.match(/^([a-zA-Z0-9]{15}|[a-zA-Z0-9]{18})$/)) {
       let objectsForId = sobjectsList.filter(sobject => sobject.keyPrefix == queryKeyPrefix);
@@ -604,7 +627,7 @@ class AllDataBoxSObject extends React.PureComponent {
     let {selectedValue, recordIdDetails} = this.state;
     return (
       h("div", {},
-        h(AllDataSearch, {onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches, inputSearchDelay: 0, placeholderText: "Record id, id prefix or object name", resultRender: this.resultRender}),
+        h(AllDataSearch, {ref: "allDataSearch", onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches, inputSearchDelay: 0, placeholderText: "Record id, id prefix or object name", resultRender: this.resultRender}),
         selectedValue
           ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, selectedValue, linkTarget, recordIdDetails})
           : h("div", {className: "all-data-box-inner empty"}, "No record to display")
@@ -614,16 +637,21 @@ class AllDataBoxSObject extends React.PureComponent {
 }
 
 class UserDetails extends React.PureComponent {
-  doSupportLoginAs(userId) {
+  doSupportLoginAs(user) {
     let {currentUserId} = this.props;
-    return (userId != currentUserId); //Optimistically show login unless it's logged in user's userid. No API to determine if user is allowed to login as given user. See https://salesforce.stackexchange.com/questions/224342/query-can-i-login-as-for-users
+    //Optimistically show login unless it's logged in user's userid or user is inactive.
+    //No API to determine if user is allowed to login as given user. See https://salesforce.stackexchange.com/questions/224342/query-can-i-login-as-for-users
+    if (!user || user.Id == currentUserId || !user.IsActive) {
+      return false;
+    }
+    return true;
   }
 
   getLoginAsLink(userId) {
-    let {sfHost, orgId} = this.props;
+    let {sfHost, contextOrgId} = this.props;
     const retUrl = "/"; //TODO: Get current url to return to there - %2Fhome%2Fhome.jsp&isdtp=p1
-    const targetUrl = "/"; //TODO: Is more target URL required?
-    return "https://" + sfHost + "/servlet/servlet.su" + "?oid=" + encodeURIComponent(orgId) + "&suorgadminid=" + encodeURIComponent(userId) + "&retURL=" + encodeURIComponent(retUrl) + "&targetURL=" + encodeURIComponent(targetUrl);
+    const targetUrl = "/lightning/setup/BigObjects/home"; //TODO: Is more target URL required?
+    return "https://" + sfHost + "/servlet/servlet.su" + "?oid=" + encodeURIComponent(contextOrgId) + "&suorgadminid=" + encodeURIComponent(userId) + "&retURL=" + encodeURIComponent(retUrl) + "&targetURL=" + encodeURIComponent(targetUrl);
   }
 
   getUserDetailLink(userId) {
@@ -632,43 +660,47 @@ class UserDetails extends React.PureComponent {
   }
 
   render() {
-    let {user} = this.props;
+    let {user, linkTarget} = this.props;
 
     return (
-      h("div", {className: "all-data-box-data"},
-        h("table", {},
-          h("tbody", {},
-            h("tr", {},
-              h("th", {}, "Name:"),
-              h("td", {}, user.Name + " (" + user.Alias + ")")
-            ),
-            h("tr", {},
-              h("th", {}, "Username:"),
-              h("td", {}, user.Username)
-            ),
-            h("tr", {},
-              h("th", {}, "Profile:"),
-              h("td", {}, user.Profile.Name)
-            ),
-            h("tr", {},
-              h("th", {}, "Role:"),
-              h("td", {}, (user.UserRole) ? user.UserRole.Name : "")
-            ),
-            h("tr", {},
-              h("th", {}, "Language:"),
-              h("td", {}, user.LocaleSidKey + "/" + user.LanguageLocaleKey)
-            ),
-            h("tr", {},
-              h("th", {}, "FederationId:"),
-              h("td", {}, user.FederationIdentifier)
+      h("div", {className: "all-data-box-inner"},
+        h("div", {className: "all-data-box-data"},
+          h("table", {className: (user.IsActive) ? "" : "inactive"},
+            h("tbody", {},
+              h("tr", {},
+                h("th", {}, "Name:"),
+                h("td", {},
+                  (user.IsActive) ? "" : h("span", {title: "User is inactive"}, "⚠ "),
+                  user.Name + " (" + user.Alias + ")"
+                )
+              ),
+              h("tr", {},
+                h("th", {}, "Username:"),
+                h("td", {}, user.Username)
+              ),
+              h("tr", {},
+                h("th", {}, "Profile:"),
+                h("td", {}, user.Profile.Name)
+              ),
+              h("tr", {},
+                h("th", {}, "Role:"),
+                h("td", {}, (user.UserRole) ? user.UserRole.Name : "")
+              ),
+              h("tr", {},
+                h("th", {}, "Language:"),
+                h("td", {}, user.LocaleSidKey + "/" + user.LanguageLocaleKey)
+              ),
+              h("tr", {},
+                h("th", {}, "FederationId:"),
+                h("td", {}, user.FederationIdentifier)
+              )
             )
-          )
-        ),
+          )),
         h("div", {ref: "userButtons", className: "center"},
-          this.doSupportLoginAs(user.Id) ? h("a", {href: this.getLoginAsLink(user.Id) + user.Id, target: this.props.linkTarget, className: "button button-secondary"}, "Login as") : null,
-          h("a", {href: this.getUserDetailLink(user.Id), target: this.props.linkTarget, className: "button button-secondary"}, "Details")
+          this.doSupportLoginAs(user) ? h("a", {href: this.getLoginAsLink(user.Id) + user.Id, target: linkTarget, className: "button button-secondary"}, "Try login as") : null,
+          h("a", {href: this.getUserDetailLink(user.Id), target: linkTarget, className: "button button-secondary"}, "Details")
         ))
-    );//TODO: Pull button to bottom
+    );
   }
 }
 
@@ -861,9 +893,12 @@ class AllDataSearch extends React.PureComponent {
     this.updateAllDataInput = this.updateAllDataInput.bind(this);
     this.onAllDataArrowClick = this.onAllDataArrowClick.bind(this);
   }
+  componentDidMount() {
+    let {queryString} = this.state;
+    this.getMatchesDelayed(queryString);
+  }
   onAllDataInput(e) {
     let val = e.target.value;
-    //this.refs.autoComplete.handleInput(); //TODO: confirm unneeded...
     this.getMatchesDelayed(val);
     this.setState({queryString: val});
   }
@@ -880,6 +915,7 @@ class AllDataSearch extends React.PureComponent {
   updateAllDataInput(value) {
     this.props.onDataSelect(value);
     this.setState({queryString: ""});
+    this.getMatchesDelayed("");
   }
   onAllDataArrowClick() {
     this.refs.showAllDataInp.focus();
@@ -892,7 +928,8 @@ class AllDataSearch extends React.PureComponent {
       clearTimeout(queryDelayTimer);
     }
     queryDelayTimer = setTimeout(async () => {
-      const matchingResults = await this.props.getMatches(userQuery);
+      let {getMatches} = this.props;
+      const matchingResults = await getMatches(userQuery);
       await this.setState({matchingResults});
     }, inputSearchDelay);
 
