@@ -169,6 +169,7 @@ class AllDataBox extends React.PureComponent {
       contextRecordId: null,
       contextUserId: null,
       contextOrgId: null,
+      contextPath: null,
     };
     this.onAspectClick = this.onAspectClick.bind(this);
     this.parseContextUrl = this.ensureKnownBrowserContext.bind(this);
@@ -200,7 +201,11 @@ class AllDataBox extends React.PureComponent {
     let {contextUrl} = this.props;
     if (contextUrl) {
       let recordId = getRecordId(contextUrl);
-      this.setState({contextRecordId: recordId});
+      let path = getPathFromUrl(contextUrl);
+      this.setState({
+        contextRecordId: recordId,
+        contextPath: path
+      });
     }
   }
 
@@ -322,7 +327,7 @@ class AllDataBox extends React.PureComponent {
   }
 
   render() {
-    let {activeSearchAspect, sobjectsLoading, contextRecordId, contextUserId, contextOrgId, sobjectsList} = this.state;
+    let {activeSearchAspect, sobjectsLoading, contextRecordId, contextUserId, contextOrgId, contextPath, sobjectsList} = this.state;
     let {sfHost, showDetailsSupported, linkTarget} = this.props;
 
     return (
@@ -335,7 +340,7 @@ class AllDataBox extends React.PureComponent {
         (activeSearchAspect == this.SearchAspectTypes.sobject)
           ? h(AllDataBoxSObject, {ref: "showAllDataBoxSObject", sfHost, showDetailsSupported, sobjectsList, sobjectsLoading, contextRecordId, linkTarget})
           : (activeSearchAspect == this.SearchAspectTypes.users)
-            ? h(AllDataBoxUsers, {ref: "showAllDataBoxUsers", sfHost, linkTarget, contextUserId, contextOrgId, setIsLoading: (value) => { this.setIsLoading("usersBox", value); }}, "Users")
+            ? h(AllDataBoxUsers, {ref: "showAllDataBoxUsers", sfHost, linkTarget, contextUserId, contextOrgId, contextPath, setIsLoading: (value) => { this.setIsLoading("usersBox", value); }}, "Users")
             : "AllData aspect " + activeSearchAspect + " not implemented"
       )
     );
@@ -356,6 +361,7 @@ class AllDataBoxUsers extends React.PureComponent {
   componentDidMount() {
     let {contextUserId} = this.props;
     this.onDataSelect({Id: contextUserId});
+    this.refs.allDataSearch.refs.showAllDataInp.focus();
   }
 
   componentDidUpdate(prevProps) {
@@ -436,14 +442,14 @@ class AllDataBoxUsers extends React.PureComponent {
 
   render() {
     let {selectedUser} = this.state;
-    let {sfHost, linkTarget, contextOrgId, contextUserId} = this.props;
+    let {sfHost, linkTarget, contextOrgId, contextUserId, contextPath} = this.props;
 
     return (
       h("div", {ref: "usersBox", className: "users-box"},
         h(AllDataSearch, {ref: "allDataSearch", getMatches: this.getMatches, onDataSelect: this.onDataSelect, inputSearchDelay: 400, placeholderText: "Username, email, alias or name of user", resultRender: this.resultRender}),
         h("div", {className: "all-data-box-inner" + (!selectedUser ? " empty" : "")},
           selectedUser
-            ? h(UserDetails, {user: selectedUser, sfHost, contextOrgId, currentUserId: contextUserId, linkTarget})
+            ? h(UserDetails, {user: selectedUser, sfHost, contextOrgId, currentUserId: contextUserId, linkTarget, contextPath})
             : h("div", {className: "center"}, "No user details available")
         ))
     );
@@ -501,7 +507,7 @@ class AllDataBoxSObject extends React.PureComponent {
             "lastModified": lastModifiedDate.toLocaleDateString() + " " + lastModifiedDate.toLocaleTimeString(),
           }});
         }
-      }).catch((err) => {
+      }).catch(() => {
         //Swallow this exception since it is likely due to missing standard attributes on the record - i.e. an invalid query.
         this.setState({recordIdDetails: null});
       });
@@ -648,9 +654,9 @@ class UserDetails extends React.PureComponent {
   }
 
   getLoginAsLink(userId) {
-    let {sfHost, contextOrgId} = this.props;
-    const retUrl = "/"; //TODO: Get current url to return to there - %2Fhome%2Fhome.jsp&isdtp=p1
-    const targetUrl = "/lightning/setup/BigObjects/home"; //TODO: Is more target URL required?
+    let {sfHost, contextOrgId, contextPath} = this.props;
+    const retUrl = contextPath || "/";
+    const targetUrl = contextPath || "/";
     return "https://" + sfHost + "/servlet/servlet.su" + "?oid=" + encodeURIComponent(contextOrgId) + "&suorgadminid=" + encodeURIComponent(userId) + "&retURL=" + encodeURIComponent(retUrl) + "&targetURL=" + encodeURIComponent(targetUrl);
   }
 
@@ -688,7 +694,7 @@ class UserDetails extends React.PureComponent {
               ),
               h("tr", {},
                 h("th", {}, "Language:"),
-                h("td", {}, user.LocaleSidKey + "/" + user.LanguageLocaleKey)
+                h("td", {}, user.LocaleSidKey + " / " + user.LanguageLocaleKey)
               ),
               h("tr", {},
                 h("th", {}, "FederationId:"),
@@ -697,7 +703,7 @@ class UserDetails extends React.PureComponent {
             )
           )),
         h("div", {ref: "userButtons", className: "center"},
-          this.doSupportLoginAs(user) ? h("a", {href: this.getLoginAsLink(user.Id) + user.Id, target: linkTarget, className: "button button-secondary"}, "Try login as") : null,
+          this.doSupportLoginAs(user) ? h("a", {href: this.getLoginAsLink(user.Id), target: linkTarget, className: "button button-secondary"}, "Try login as") : null,
           h("a", {href: this.getUserDetailLink(user.Id), target: linkTarget, className: "button button-secondary"}, "Details")
         ))
     );
@@ -899,6 +905,7 @@ class AllDataSearch extends React.PureComponent {
   }
   onAllDataInput(e) {
     let val = e.target.value;
+    this.refs.autoComplete.handleInput();
     this.getMatchesDelayed(val);
     this.setState({queryString: val});
   }
@@ -1167,6 +1174,11 @@ function getRecordId(href) {
     }
   }
   return null;
+}
+
+function getPathFromUrl(href) {
+  let url = new URL(href);
+  return url.pathname;
 }
 
 window.getRecordId = getRecordId; // for unit tests
