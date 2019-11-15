@@ -285,3 +285,9 @@ ul.small-tabs li:hover {
 .inactive {
   color: #c0c0c0
 }
+.small {
+  font-size: 0.8em;
+}
+.oneliner {
+  white-space: nowrap;
+}

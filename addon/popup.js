@@ -377,7 +377,7 @@ class AllDataBoxUsers extends React.PureComponent {
     }
 
     //TODO: Better search query. SOSL?
-    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where username like '%" + userQuery + "%' or name like '%" + userQuery + "%' order by LastLoginDate limit 100";
+    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where isactive=true and  (username like '%" + userQuery + "%' or name like '%" + userQuery + "%') order by LastLoginDate limit 100";
 
     try {
       setIsLoading(true);
@@ -430,7 +430,8 @@ class AllDataBoxUsers extends React.PureComponent {
             start: value.Name.toLowerCase().indexOf(userQuery.toLowerCase()),
             length: userQuery.length
           })),
-        h("div", {className: "autocomplete-item-sub", key: "sub"},
+        h("div", {className: "autocomplete-item-sub small", key: "sub"},
+          h("div", {}, (value.Profile) ? value.Profile.Name : ""),
           h(MarkSubstring, {
             text: (!value.IsActive) ? "⚠ " + value.Username : value.Username,
             start: value.Username.toLowerCase().indexOf(userQuery.toLowerCase()),
@@ -682,23 +683,19 @@ class UserDetails extends React.PureComponent {
               ),
               h("tr", {},
                 h("th", {}, "Username:"),
-                h("td", {}, user.Username)
+                h("td", {className: "oneliner"}, user.Username)
               ),
               h("tr", {},
                 h("th", {}, "Profile:"),
-                h("td", {}, user.Profile.Name)
+                h("td", {className: "oneliner"}, user.Profile.Name)
               ),
               h("tr", {},
                 h("th", {}, "Role:"),
-                h("td", {}, (user.UserRole) ? user.UserRole.Name : "")
+                h("td", {className: "oneliner"}, (user.UserRole) ? user.UserRole.Name : "")
               ),
               h("tr", {},
                 h("th", {}, "Language:"),
                 h("td", {}, user.LocaleSidKey + " / " + user.LanguageLocaleKey)
-              ),
-              h("tr", {},
-                h("th", {}, "FederationId:"),
-                h("td", {}, user.FederationIdentifier)
               )
             )
           )),
