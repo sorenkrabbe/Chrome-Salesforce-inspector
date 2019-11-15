@@ -92,5 +92,4 @@
     <pluralLabel>Inspector Tests</pluralLabel>
     <searchLayouts/>
     <sharingModel>ReadWrite</sharingModel>
-    <startsWith>Vowel</startsWith>
 </CustomObject>
