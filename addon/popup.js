@@ -377,7 +377,7 @@ class AllDataBoxUsers extends React.PureComponent {
     }
 
     //TODO: Better search query. SOSL?
-    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where isactive=true and  (username like '%" + userQuery + "%' or name like '%" + userQuery + "%') order by LastLoginDate limit 100";
+    const query = "select Id, Name, Email, Username, ProfileId, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where isactive=true and  (username like '%" + userQuery + "%' or name like '%" + userQuery + "%') order by LastLoginDate limit 100";
 
     try {
       setIsLoading(true);
@@ -406,7 +406,7 @@ class AllDataBoxUsers extends React.PureComponent {
     if (!selectedUserId) {
       return;
     }
-    const query = "select Id, Name, Email, Username, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where Id='" + selectedUserId + "' limit 1";
+    const query = "select Id, Name, Email, Username, ProfileId, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where Id='" + selectedUserId + "' limit 1";
     try {
       setIsLoading(true);
       //const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/sobjects/User/" + selectedUserId);
@@ -666,6 +666,11 @@ class UserDetails extends React.PureComponent {
     return "https://" + sfHost + "/lightning/setup/ManageUsers/page?address=%2F" + userId + "%3Fnoredirect%3D1";
   }
 
+  getProfileLink(profileId) {
+    let {sfHost} = this.props;
+    return "https://" + sfHost + "/lightning/setup/EnhancedProfiles/page?address=%2F" + profileId;
+  }
+
   render() {
     let {user, linkTarget} = this.props;
 
@@ -686,8 +691,14 @@ class UserDetails extends React.PureComponent {
                 h("td", {className: "oneliner"}, user.Username)
               ),
               h("tr", {},
+                h("th", {}, "E-mail:"),
+                h("td", {className: "oneliner"}, user.Email)
+              ),
+              h("tr", {},
                 h("th", {}, "Profile:"),
-                h("td", {className: "oneliner"}, user.Profile.Name)
+                h("td", {className: "oneliner"},
+                  h("a", {href: this.getProfileLink(user.ProfileId), target: linkTarget}, user.Profile.Name)
+                )
               ),
               h("tr", {},
                 h("th", {}, "Role:"),
@@ -695,7 +706,11 @@ class UserDetails extends React.PureComponent {
               ),
               h("tr", {},
                 h("th", {}, "Language:"),
-                h("td", {}, user.LocaleSidKey + " / " + user.LanguageLocaleKey)
+                h("td", {},
+                  h("div", {className: "flag flag-" + sfLocaleKeyToCountryCode(user.LanguageLocaleKey), title: "Language: " + user.LanguageLocaleKey}),
+                  " | ",
+                  h("div", {className: "flag flag-" + sfLocaleKeyToCountryCode(user.LocaleSidKey), title: "Locale: " + user.LocaleSidKey})
+                )
               )
             )
           )),
@@ -1179,6 +1194,12 @@ function getSfPathFromUrl(href) {
     return "/";
   }
   return url.pathname;
+}
+
+function sfLocaleKeyToCountryCode(localeKey) {
+  //Converts a Salesforce locale key to a lower case country code (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) or "".
+  if (!localeKey) { return ""; }
+  return localeKey.split("_").pop().toLowerCase();
 }
 
 window.getRecordId = getRecordId; // for unit tests

@@ -291,3 +291,7 @@ ul.small-tabs li:hover {
 .oneliner {
   white-space: nowrap;
 }
+.flag {
+  vertical-align: middle;
+  opacity: 70%;
+}
