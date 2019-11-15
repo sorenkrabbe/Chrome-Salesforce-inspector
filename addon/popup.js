@@ -201,7 +201,7 @@ class AllDataBox extends React.PureComponent {
     let {contextUrl} = this.props;
     if (contextUrl) {
       let recordId = getRecordId(contextUrl);
-      let path = getPathFromUrl(contextUrl);
+      let path = getSfPathFromUrl(contextUrl);
       this.setState({
         contextRecordId: recordId,
         contextPath: path
@@ -1173,8 +1173,11 @@ function getRecordId(href) {
   return null;
 }
 
-function getPathFromUrl(href) {
+function getSfPathFromUrl(href) {
   let url = new URL(href);
+  if (url.protocol.endsWith("-extension:")) {
+    return "/";
+  }
   return url.pathname;
 }
 
