@@ -1,3 +1,10 @@
+Version 1.8
+===========
+
+Inspector menu
+--------------
+* Added user search aspect to simplify access to detailed user data and "login as".
+
 Version 1.7
 ===========
 
