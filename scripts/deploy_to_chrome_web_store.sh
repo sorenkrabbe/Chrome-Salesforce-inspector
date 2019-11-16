@@ -3,13 +3,7 @@
 # Two command line params expected: "CHROME_APP_ID ENVIRONMENT_TYPE (PROD|BETA)"
 #
 # The script is designed to run in CI context in the directory of the Salesforce Inspector project.
-# Will package and upload BUT NOT RELEASE the addon to Chrome Web Store. 
-#
-# Version numbers will be set to the value defined in version.json
-#
-# CI service could be setup with the following command to only upload when commit message contains "#releaseit":
-#    if [[ ${CI_MESSAGE^^} != *"#RELEASEIT"* ]]; then echo "Release tag (#releaseIt) not found in commit message. Stopping build for commit ID: $CI_COMMIT_ID"; else scripts/deploy_to_chrome_web_store.sh; fi;
-#
+# Will - if version number of source is newer than version number in Chrome Web Store - package and upload BUT NOT RELEASE the addon to Chrome Web Store.
 
 CHROME_APP_ID=$1         # first URL parameter
 ENVIRONMENT_TYPE=$2      # second URL parameter - PROD|BETA
@@ -30,7 +24,7 @@ log_detail() {
      printf "   -------- \n$1\n   --------\n";
 }
 
-log_message "0) Should release?";
+log_message "0) Auth"; # could also be "should release?" but currently there's no good mechanism to determine that. Currently released version cannot be queried from google store
 
 log_message "0.1) Auth with google (renew access token)"
 CHROME_ACCESS_TOKEN=$( \
@@ -43,26 +37,10 @@ then
      exit 1;
 fi
 
-log_message "0.2) Is source different"
 SOURCE_VERSION_NUMBER=$(jq '.version' addon/manifest-template.json | tr -d '"');
-ONLINE_VERSION_NUMBER=$(curl \
-     -H "Authorization: Bearer $CHROME_ACCESS_TOKEN" \
-     -H "x-goog-api-version: 2" \
-     -X GET -L -s \
-     https://chrome.google.com/webstore/detail/$CHROME_APP_ID|sed -n 's/.*<meta itemprop="version" content="\([^"]*\)" \/>.*/\1/p')
-
-if [[ $SOURCE_VERSION_NUMBER == $ONLINE_VERSION_NUMBER ]]
-then
-     log_message "0.2) -> No - source version number is same as online version number ($SOURCE_VERSION_NUMBER)";
-     exit 0
-fi
-
-log_message "0.2) -> Yes - source version \"$SOURCE_VERSION_NUMBER\" will be uploaded to replace online version \"$ONLINE_VERSION_NUMBER\"";
 
 log_message "1) Prepare application app package";
 
-. $NVM_DIR/nvm.sh
-nvm install 7
 npm install
 # Uses ENVIRONMENT_TYPE and ZIP_FILE_NAME
 npm run chrome-release-build
@@ -79,11 +57,18 @@ UPLOAD_RESULT=$(curl \
 
 if [[ $(echo $UPLOAD_RESULT | jq '.uploadState') == '"SUCCESS"' ]]
      then
-     log_message "2.2.1) Upload succesful!";
+     log_message "2.2.1) Upload succesful! - v$SOURCE_VERSION_NUMBER";
 else
-     log_error "2.2.1) Upload failed";
-     log_detail "$UPLOAD_RESULT";
-     exit 1;
+     log_message "2.2.1) Upload failed";
+     if [[ $(echo $UPLOAD_RESULT | jq '.itemError[0].error_code') == '"PKG_INVALID_VERSION_NUMBER"' ]]
+          then
+          log_message "2.2.2) But that's ok, upload should only suceed on version increments."
+          log_message "$(echo $UPLOAD_RESULT | jq '.itemError[0].error_detail')"
+     else
+          log_error "2.2.2) With an unexpected reason:"
+          log_error "$UPLOAD_RESULT"
+          exit 1;
+     fi
 fi
 
 if [[ $ENVIRONMENT_TYPE == "BETA" ]]
