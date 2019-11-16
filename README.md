@@ -52,8 +52,10 @@ Development
 
 Unit tests
 -----
-1. Set up a Developer Edition org with the customizations described in `test/org/`.
-   * Push to org with `sfdx force:mdapi:deploy --deploydir test/org -w 1000 -u [your-test-org-alias]`
+1. Set up an org (e.g. a Developer Edition) and apply the following customizations:
+   1.a. Everything described in metadata in `test/org/`. Push to org with `sfdx force:mdapi:deploy --deploydir test/org -w 1000 -u [your-test-org-alias]`
+   1.b. Ensure _Allow users to relate a contact to multiple accounts_ is enabled (Setup→Account Settings)
+   1.c. Ensure the org has no _namespace prefix_ (Setup→Package Manager)
 2. Navigate to one of the extension pages and replace the file name with `test-framework.html`, for example `chrome-extension://example/test-framework.html?host=example.my.salesforce.com`.
 3. Wait until "Salesforce Inspector unit test finished successfully" is shown.
 4. If the test fails, open your browser's developer tools console to see error messages.

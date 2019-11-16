@@ -4,5 +4,9 @@
         <members>Inspector_Test__c</members>
         <name>CustomObject</name>
     </types>
+    <types>
+        <members>SalesforceInspectorTest</members>
+        <name>ApexClass</name>
+    </types>
     <version>47.0</version>
 </Package>

@@ -237,20 +237,20 @@ export async function dataExportTest(test) {
   assertEquals("Opportunity fields:", vm.autocompleteResults.title);
 
   // Autocomplete tooling API
-  setQuery("select Id from ApexCla", "", "");
+  setQuery("select Id from LeadCon", "", "");
   vm.queryTooling = true;
   vm.queryAutocompleteHandler();
   await waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults.title);
-  assertEquals(["ApexClass", "ApexClassMember", "ReleasedApexClassRel"], getValues(vm.autocompleteResults.results));
+  assertEquals(["LeadConfigSettings", "LeadConvertSettings"], getValues(vm.autocompleteResults.results));
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
-  assertEquals("select Id from ApexClass ", queryInput.value);
+  assertEquals("select Id from LeadConfigSettings ", queryInput.value);
   await waitForSpinner();
   vm.queryTooling = false;
   vm.queryAutocompleteHandler();
 
   // Show describe
-  assertEquals("ApexClass", vm.autocompleteResults.sobjectName);
+  assertEquals("LeadConfigSettings", vm.autocompleteResults.sobjectName);
 
   // Set up test records
   await anonApex(`
