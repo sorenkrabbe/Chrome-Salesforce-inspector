@@ -33,7 +33,7 @@ function init({sfHost, inDevConsole, inLightning, inInspector}) {
 
   });
 }
-//TODO: Search for context in both all data aspects
+
 class App extends React.PureComponent {
   constructor(props) {
     super(props);
@@ -377,14 +377,30 @@ class AllDataBoxUsers extends React.PureComponent {
     }
 
     //TODO: Better search query. SOSL?
-    const query = "select Id, Name, Email, Username, ProfileId, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where isactive=true and  (username like '%" + userQuery + "%' or name like '%" + userQuery + "%') order by LastLoginDate limit 100";
+    const fullQuerySelect = "select Id, Name, Email, Username, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, ProfileId, Profile.Name";
+    const minimalQuerySelect = "select Id, Name, Email, Username, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive";
+    const queryFrom = "from User where isactive=true and (username like '%" + userQuery + "%' or name like '%" + userQuery + "%') order by LastLoginDate limit 100";
+    const compositeQuery = {
+      "compositeRequest": [
+        {
+          "method": "GET",
+          "url": "/services/data/v47.0/query/?q=" + encodeURIComponent(fullQuerySelect + " " + queryFrom),
+          "referenceId": "fullData"
+        }, {
+          "method": "GET",
+          "url": "/services/data/v47.0/query/?q=" + encodeURIComponent(minimalQuerySelect + " " + queryFrom),
+          "referenceId": "minimalData"
+        }
+      ]
+    };
 
     try {
       setIsLoading(true);
-      const userSearchResult = await sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query));
-      return userSearchResult.records;
+      const userSearchResult = await sfConn.rest("/services/data/v" + apiVersion + "/composite", {method: "POST", body: compositeQuery});
+      let users = userSearchResult.compositeResponse.find((elm) => elm.httpStatusCode == 200).body.records;
+      return users;
     } catch (err) {
-      console.error("Unable to query user details with: " + query + ".", err);
+      console.error("Unable to query user details with: " + JSON.stringify(compositeQuery) + ".", err);
       return [];
     } finally {
       setIsLoading(false);
@@ -406,14 +422,32 @@ class AllDataBoxUsers extends React.PureComponent {
     if (!selectedUserId) {
       return;
     }
-    const query = "select Id, Name, Email, Username, ProfileId, Profile.Name, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier from User where Id='" + selectedUserId + "' limit 1";
+    //Optimistically attempt broad query (fullQuery) and fall back to minimalQuery to ensure some data is returned in most cases (e.g. profile cannot be queried by community users)
+    const fullQuerySelect = "select Id, Name, Email, Username, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier, ProfileId, Profile.Name";
+    const minimalQuerySelect = "select Id, Name, Email, Username, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, FederationIdentifier";
+    const queryFrom = "from User where Id='" + selectedUserId + "' limit 1";
+    const compositeQuery = {
+      "compositeRequest": [
+        {
+          "method": "GET",
+          "url": "/services/data/v47.0/query/?q=" + encodeURIComponent(fullQuerySelect + " " + queryFrom),
+          "referenceId": "fullData"
+        }, {
+          "method": "GET",
+          "url": "/services/data/v47.0/query/?q=" + encodeURIComponent(minimalQuerySelect + " " + queryFrom),
+          "referenceId": "minimalData"
+        }
+      ]
+    };
+
     try {
       setIsLoading(true);
-      //const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/sobjects/User/" + selectedUserId);
-      const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/query?q=" + encodeURIComponent(query));
-      await this.setState({selectedUser: userResult.records[0]});
+      //const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/sobjects/User/" + selectedUserId); //Does not return profile details. Query call is therefore prefered
+      const userResult = await sfConn.rest("/services/data/v" + apiVersion + "/composite", {method: "POST", body: compositeQuery});
+      let userDetail = userResult.compositeResponse.find((elm) => elm.httpStatusCode == 200).body.records[0];
+      await this.setState({selectedUser: userDetail});
     } catch (err) {
-      console.error("Unable to query user details with: " + query + ".", err);
+      console.error("Unable to query user details with: " + JSON.stringify(compositeQuery) + ".", err);
     } finally {
       setIsLoading(false);
     }
@@ -697,7 +731,9 @@ class UserDetails extends React.PureComponent {
               h("tr", {},
                 h("th", {}, "Profile:"),
                 h("td", {className: "oneliner"},
-                  h("a", {href: this.getProfileLink(user.ProfileId), target: linkTarget}, user.Profile.Name)
+                  (user.Profile)
+                    ? h("a", {href: this.getProfileLink(user.ProfileId), target: linkTarget}, user.Profile.Name)
+                    : h("em", {className: "inactive"}, "unknown")
                 )
               ),
               h("tr", {},
