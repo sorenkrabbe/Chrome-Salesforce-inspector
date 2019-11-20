@@ -177,6 +177,7 @@ button.button:active, a[href]:active {
     width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    z-index: 1;
 }
 .autocomplete-item {
     display: block;
