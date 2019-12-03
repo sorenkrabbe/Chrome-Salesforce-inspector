@@ -664,13 +664,13 @@ class AllDataBoxSObject extends React.PureComponent {
   }
 
   render() {
-    let {sfHost, showDetailsSupported, sobjectsList, linkTarget} = this.props;
+    let {sfHost, showDetailsSupported, sobjectsList, linkTarget, contextRecordId} = this.props;
     let {selectedValue, recordIdDetails} = this.state;
     return (
       h("div", {},
         h(AllDataSearch, {ref: "allDataSearch", onDataSelect: this.onDataSelect, sobjectsList, getMatches: this.getMatches, inputSearchDelay: 0, placeholderText: "Record id, id prefix or object name", resultRender: this.resultRender}),
         selectedValue
-          ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, selectedValue, linkTarget, recordIdDetails})
+          ? h(AllDataSelection, {ref: "allDataSelection", sfHost, showDetailsSupported, selectedValue, linkTarget, recordIdDetails, contextRecordId})
           : h("div", {className: "all-data-box-inner empty"}, "No record to display")
       )
     );
