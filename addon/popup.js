@@ -1195,7 +1195,7 @@ function getRecordId(href) {
   }
 
   // Lightning Experience and Salesforce1
-  if (url.hostname.endsWith(".lightning.force.com")) {
+  if (url.hostname.endsWith(".lightning.force.com") || url.hostname.endsWith(".lightning.force.com.us.cas.ms")) {
     let match;
 
     if (url.pathname == "/one/one.app") {
