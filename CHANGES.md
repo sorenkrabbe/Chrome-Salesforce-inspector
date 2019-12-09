@@ -1,3 +1,10 @@
+Version 1.9
+===========
+
+Inspector menu
+--------------
+* Fix a bug fix hiding the "show field metadata" button (#150)
+
 Version 1.8
 ===========
 
