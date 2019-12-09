@@ -16,11 +16,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse(null);
         return;
       }
-      let [orgId] = cookie.value.split("!");
-      chrome.cookies.getAll({name: "sid", domain: "salesforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
+      let [orgId] = cookie.value.split("!").length > 1 ? cookie.value.split("!") : [null];
+      let regex = "(.*).lightning.force.com(.*)";
+      let matchList = cookie.domain.match(regex);
+      let orgCode, ext;
+      if (matchList.length === 3) {
+        orgCode = matchList[1];
+        ext = matchList[2];
+      }
+      chrome.cookies.getAll({name: "sid", domain: "salesforce.com" + ext, secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
         let sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
+        let sessionCookieByRegex = cookies.find(c => c.domain.indexOf(orgCode) > -1);
         if (sessionCookie) {
           sendResponse(sessionCookie.domain);
+        } else if (sessionCookieByRegex) {
+          sendResponse(sessionCookieByRegex.domain);
         } else {
           chrome.cookies.getAll({name: "sid", domain: "cloudforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
             sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
