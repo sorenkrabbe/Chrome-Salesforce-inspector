@@ -1,9 +1,6 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
+import {sfConn, apiVersion} from "./inspector.js";
 /* global initButton */
-/* eslint-enable no-unused-vars */
-"use strict";
 
 class Model {
   constructor(sfHost, args) {
@@ -376,14 +373,14 @@ console.log(`%cExample:
   Tooling: https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/
   Reports and Dashboards: https://developer.salesforce.com/docs/atlas.en-us.api_analytics.meta/api_analytics/
 `,
-  "font-weight: bold; font-style: italic",
-  "",
-  "font-weight: bold; font-style: italic",
-  "",
-  "font-weight: bold; font-style: italic",
-  "",
-  "font-weight: bold; font-style: italic",
-  ""
+"font-weight: bold; font-style: italic",
+"",
+"font-weight: bold; font-style: italic",
+"",
+"font-weight: bold; font-style: italic",
+"",
+"font-weight: bold; font-style: italic",
+""
 );
 console.groupEnd();
 console.groupCollapsed("How to make SOAP API calls");
@@ -416,11 +413,11 @@ console.log(`%cExample:
   "Metadata": https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/
   "Tooling": https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/
 `,
-  "font-weight: bold; font-style: italic",
-  "",
-  "font-weight: bold; font-style: italic",
-  "",
-  "font-weight: bold; font-style: italic",
-  ""
+"font-weight: bold; font-style: italic",
+"",
+"font-weight: bold; font-style: italic",
+"",
+"font-weight: bold; font-style: italic",
+""
 );
 console.groupEnd();

@@ -119,7 +119,7 @@ button.button:active, a[href]:active {
     background-color: white;
     color: #16325c;
     border: 1px solid #d8dde6;
-    border-radius: .25rem;
+    border-radius: 0 .25rem .25rem .25rem;
     transition: border .1s linear,background-color .1s linear;
     display: inline-block;
     padding: 0 2rem 0 .75rem;
@@ -177,6 +177,7 @@ button.button:active, a[href]:active {
     width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
+    z-index: 1;
 }
 .autocomplete-item {
     display: block;
@@ -209,6 +210,7 @@ button.button:active, a[href]:active {
   }
 }
 .all-data-box.loading,
+.users-box.loading,
 #showStdPageDetailsBtn.loading {
     animation: bg-load 1s cubic-bezier(.5, .4, .5, .6) infinite;
 }
@@ -243,4 +245,54 @@ button.button:active, a[href]:active {
 }
 .top-space {
     margin-top: 1em;
+}
+.button-secondary {
+    line-height: 1.2rem;
+    width: auto;
+    vertical-align: top;
+    margin: 2px;
+}
+.center {
+    text-align: center;
+}
+ul.small-tabs {
+    margin: 0;
+    padding: 0;
+    font-size: 0.90em;
+}
+ul.small-tabs li {
+    display: inline;
+    border: solid 1px #d8dde6;
+    color: #0070d2;
+    padding: 2px 6px;
+    font-style: italic;
+    cursor: pointer;
+    line-height: 1.5em;
+}
+ul.small-tabs li:first-child {
+    margin: 0px;
+}
+ul.small-tabs li.active {
+    /*background-color: #d8dde6;*/
+    font-style: normal;
+    font-weight: bold;
+    color: rgb(112, 110, 107);
+    padding-top: 6px;
+    border-radius: 3px;
+}
+ul.small-tabs li:hover {
+    background-color: #f4f6f9;
+}
+.inactive {
+  color: #c0c0c0
+}
+.small {
+  font-size: 0.8em;
+}
+.oneliner {
+  white-space: nowrap;
+}
+.flag {
+  vertical-align: middle;
+  opacity: 70%;
 }

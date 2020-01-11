@@ -1,8 +1,9 @@
-/* eslint-disable no-unused-vars */
-/* global sfConn apiVersion */
-/* global popupTest csvParseTest dataImportTest dataExportTest */
-/* eslint-enable no-unused-vars */
-"use strict";
+import {sfConn, apiVersion} from "./inspector.js";
+import {popupTest} from "./popup-test.js";
+import {csvParseTest} from "./csv-parse-test.js";
+import {dataImportTest} from "./data-import-test.js";
+import {dataExportTest} from "./data-export-test.js";
+
 let seenError = false;
 class Test {
 
@@ -71,12 +72,10 @@ class Test {
 
   loadPage(url) {
     return new Promise(resolve => {
-      addEventListener("message", function handler(e) {
-        if (e.data.insextTestLoaded) {
-          removeEventListener("message", handler);
-          resolve(window.page.contentWindow);
-        }
-      });
+      window.insextTestLoaded = testData => {
+        window.insextTestLoaded = null;
+        resolve(testData);
+      };
       let args = new URLSearchParams();
       args.set("host", this.sfHost);
       window.page.src = url + "?" + args;
@@ -92,7 +91,7 @@ class Test {
 
 }
 
-this.isUnitTest = true;
+window.isUnitTest = true;
 
 addEventListener("load", () => {
   (async () => {

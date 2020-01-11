@@ -1,17 +1,13 @@
-/* eslint-disable no-unused-vars */
-/* global sfConn apiVersion */
-/* exported dataExportTest */
-/* eslint-enable no-unused-vars */
-"use strict";
-async function dataExportTest(test) {
+/* eslint-disable require-atomic-updates */
+
+export async function dataExportTest(test) {
   console.log("TEST data-export");
   let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
 
   localStorage.removeItem("insextQueryHistory");
   localStorage.removeItem("insextSavedQueryHistory");
 
-  let win = await loadPage("data-export.html");
-  let {testData: {model}} = win;
+  let {model, sfConn} = await loadPage("data-export.html");
   let vm = model;
   let queryInput = model.queryInput;
   function queryAutocompleteEvent() {
@@ -24,11 +20,6 @@ async function dataExportTest(test) {
     queryInput.selectionEnd = a.length + b.length;
     queryAutocompleteEvent();
   }
-
-  let clipboardValue;
-  win.copyToClipboard = value => {
-    clipboardValue = value;
-  };
 
   function waitForSpinner() {
     return new Promise(resolve => {
@@ -55,7 +46,10 @@ async function dataExportTest(test) {
 
   // Autocomplete object names
   assertEquals("Objects:", vm.autocompleteResults.title);
-  assertEquals(["Account", "AccountContactRelation"], getValues(vm.autocompleteResults.results).slice(0, 2));
+  let accountAutocompletes = getValues(vm.autocompleteResults.results);
+  assert(accountAutocompletes.length > 1);
+  assert(accountAutocompletes.includes("Account"));
+  assert(accountAutocompletes.includes("AccountContactRelation"));
 
   // See user info
   assert(vm.userInfo.indexOf(" / ") > -1);
@@ -70,13 +64,13 @@ async function dataExportTest(test) {
 
   // Autocomplete field name in SELECT, sould automatically update when describe call completes
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
 
   // Select autocomplete value in SELECT
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, Name,  from Account", queryInput.value);
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertNotEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertNotEquals("Name", getValues(vm.autocompleteResults.results)[0]);
 
   // Select multiple values in SELECT using Ctrl+Space
   setQuery("select Id, shipp", "", " from Account");
@@ -118,7 +112,7 @@ async function dataExportTest(test) {
   // Autocomplete field in function
   setQuery("select Id, count(nam", "", " from Account");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, count(Name,  from Account", queryInput.value); // not ideal suffix
 
@@ -168,21 +162,21 @@ async function dataExportTest(test) {
   // Autocomplete field name when cursor is just after the "from" keyword
   setQuery("select Id, nam", "", "from Account");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, Name, from Account", queryInput.value);
 
   // Autocomplete upper case
   setQuery("SELECT ID, NAM", "", " FROM ACCOUNT");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("SELECT ID, Name,  FROM ACCOUNT", queryInput.value);
 
   // Autocomplete with "from" substring before the from keyword
   setQuery("select Id, FieldFrom, FromField, nam", "", " from Account");
   assertEquals("Account fields:", vm.autocompleteResults.title);
-  assertEquals(["Name"], getValues(vm.autocompleteResults.results));
+  assertEquals("Name", getValues(vm.autocompleteResults.results)[0]);
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("select Id, FieldFrom, FromField, Name,  from Account", queryInput.value);
 
@@ -243,20 +237,20 @@ async function dataExportTest(test) {
   assertEquals("Opportunity fields:", vm.autocompleteResults.title);
 
   // Autocomplete tooling API
-  setQuery("select Id from ApexCla", "", "");
+  setQuery("select Id from LeadCon", "", "");
   vm.queryTooling = true;
   vm.queryAutocompleteHandler();
   await waitForSpinner();
   assertEquals("Objects:", vm.autocompleteResults.title);
-  assertEquals(["ApexClass", "ApexClassMember"], getValues(vm.autocompleteResults.results));
+  assertEquals(["LeadConfigSettings", "LeadConvertSettings"], getValues(vm.autocompleteResults.results));
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
-  assertEquals("select Id from ApexClass ", queryInput.value);
+  assertEquals("select Id from LeadConfigSettings ", queryInput.value);
   await waitForSpinner();
   vm.queryTooling = false;
   vm.queryAutocompleteHandler();
 
   // Show describe
-  assertEquals("ApexClass", vm.autocompleteResults.sobjectName);
+  assertEquals("LeadConfigSettings", vm.autocompleteResults.sobjectName);
 
   // Set up test records
   await anonApex(`
@@ -301,15 +295,15 @@ async function dataExportTest(test) {
   // Copy Excel
   assertEquals(true, vm.canCopy());
   vm.copyAsExcel();
-  assertEquals('"_"\t"Name"\t"Checkbox__c"\t"Number__c"\r\n"[Inspector_Test__c]"\t"test1"\t"false"\t"100.01"\r\n"[Inspector_Test__c]"\t"test2"\t"true"\t"200.02"\r\n"[Inspector_Test__c]"\t"test3"\t"false"\t"300.03"\r\n"[Inspector_Test__c]"\t"test4"\t"true"\t"400.04"', clipboardValue);
+  assertEquals('"_"\t"Name"\t"Checkbox__c"\t"Number__c"\r\n"[Inspector_Test__c]"\t"test1"\t"false"\t"100.01"\r\n"[Inspector_Test__c]"\t"test2"\t"true"\t"200.02"\r\n"[Inspector_Test__c]"\t"test3"\t"false"\t"300.03"\r\n"[Inspector_Test__c]"\t"test4"\t"true"\t"400.04"', window.testClipboardValue);
 
   // Copy CSV
   vm.copyAsCsv();
-  assertEquals('"_","Name","Checkbox__c","Number__c"\r\n"[Inspector_Test__c]","test1","false","100.01"\r\n"[Inspector_Test__c]","test2","true","200.02"\r\n"[Inspector_Test__c]","test3","false","300.03"\r\n"[Inspector_Test__c]","test4","true","400.04"', clipboardValue);
+  assertEquals('"_","Name","Checkbox__c","Number__c"\r\n"[Inspector_Test__c]","test1","false","100.01"\r\n"[Inspector_Test__c]","test2","true","200.02"\r\n"[Inspector_Test__c]","test3","false","300.03"\r\n"[Inspector_Test__c]","test4","true","400.04"', window.testClipboardValue);
 
   // Copy JSON
   vm.copyAsJson();
-  assert(clipboardValue.indexOf("Inspector_Test__c") > -1);
+  assert(window.testClipboardValue.indexOf("Inspector_Test__c") > -1);
 
   // Filter results
   vm.setResultsFilter("TRU");
@@ -541,19 +535,19 @@ async function dataExportTest(test) {
   assertEquals([], vm.queryHistory.list);
 
   // Autocomplete load errors
-  let restOrig = win.sfConn.rest;
+  let restOrig = sfConn.rest;
   let restError = () => Promise.reject();
 
   // Autocomplete load errors for global describe
   setQuery("select Id from Acco", "", "");
-  win.sfConn.rest = restError;
+  sfConn.rest = restError;
   vm.autocompleteReload();
   assertEquals("Loading metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
   await waitForSpinner();
   assertEquals("Loading metadata failed.", vm.autocompleteResults.title);
   assertEquals(1, vm.autocompleteResults.results.length);
-  win.sfConn.rest = restOrig;
+  sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("Loading metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
@@ -561,14 +555,14 @@ async function dataExportTest(test) {
   assertEquals("Objects:", vm.autocompleteResults.title);
 
   // Autocomplete load errors for object describe
-  win.sfConn.rest = restError;
+  sfConn.rest = restError;
   setQuery("select Id", "", " from Account");
   assertEquals("Loading Account metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
   await waitForSpinner();
   assertEquals("Loading Account metadata failed.", vm.autocompleteResults.title);
   assertEquals(1, vm.autocompleteResults.results.length);
-  win.sfConn.rest = restOrig;
+  sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
@@ -576,14 +570,14 @@ async function dataExportTest(test) {
   assertEquals("Account fields:", vm.autocompleteResults.title);
 
   // Autocomplete load errors for relationship object describe
-  win.sfConn.rest = restError;
+  sfConn.rest = restError;
   setQuery("select Id, OWNER.USERN", "", " from Account");
   assertEquals("Loading User metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);
   await waitForSpinner();
   assertEquals("Loading User metadata failed.", vm.autocompleteResults.title);
   assertEquals(1, vm.autocompleteResults.results.length);
-  win.sfConn.rest = restOrig;
+  sfConn.rest = restOrig;
   vm.autocompleteClick(vm.autocompleteResults.results[0]);
   assertEquals("Loading Account metadata...", vm.autocompleteResults.title);
   assertEquals(0, vm.autocompleteResults.results.length);

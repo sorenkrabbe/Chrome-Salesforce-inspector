@@ -5,25 +5,19 @@
 "use strict";
 const fs = require("fs-extra");
 const replace = require("replace-in-file");
-const childProcess = require("child_process");
 const zipdir = require("zip-dir");
 
 let browser = process.argv[2];
-let target;
 
-if (browser == "firefox") {
+fs.emptyDirSync(`target/${browser}`);
 
-  fs.emptyDirSync("target/firefox");
-  target = "target/firefox/dist";
-
-} else if (browser == "chrome") {
-
-  fs.emptyDirSync("target/chrome");
-  target = "target/chrome/dist/addon";
-
-} else {
-  throw new Error("Unknown browser: " + browser);
+let target = `target/${browser}/dist`;
+if (browser == "chrome") {
+  target += "/addon";
 }
+
+// Generate manifest.json file
+require("./dev-build.js");
 
 fs.copySync("addon", target, {
   filter(path) {
@@ -33,6 +27,8 @@ fs.copySync("addon", target, {
       // Skip files in .gitignore
       && !file.endsWith(".zip")
       && !file.endsWith(".xpi")
+      // Skip the manifest source file
+      && file != "addon/manifest-template.json"
       // Skip files where the release version will use minified versions instead
       && file != "addon/react.js"
       && file != "addon/react-dom.js";
@@ -60,36 +56,10 @@ if (process.env.ENVIRONMENT_TYPE == "BETA") {
   });
 }
 
-if (browser == "firefox") {
-
-  // Firefox needs to run in spanning mode, since it does not support split mode.
-  // Chrome needs to run in split mode, since it does not support opening private extension tabs in spanning mode.
-  // In development, we specify split mode for both browsers, since Firefox just ignores it.
-  // But for Firefox release we need to replace it with spanning, or else addons.mozilla.org will fail.
-  replace.sync({
-    files: target + "/manifest.json",
-    replace: '"incognito": "split",',
-    with: '"incognito": "spanning",'
-  });
-
-  if (process.env.ZIP_FILE_NAME) {
-    throw new Error("ZIP_FILE_NAME not supported");
+zipdir(`target/${browser}/dist`, {saveTo: process.env.ZIP_FILE_NAME || `target/${browser}/${browser}-release-build.zip`}, err => {
+  if (err) {
+    process.exitCode = 1;
+    console.error(err);
   }
-
-  childProcess.execSync("web-ext build --source-dir target/firefox/dist --artifacts-dir target/firefox");
-
-  console.log("Completed Firefox release build");
-
-} else if (browser == "chrome") {
-
-  zipdir("target/chrome/dist", {saveTo: process.env.ZIP_FILE_NAME || "target/chrome/chrome-release-build.zip"}, err => {
-    if (err) {
-      process.exitCode = 1;
-      console.error(err);
-    }
-    console.log("Completed Chrome release build");
-  });
-
-} else {
-  throw new Error("Unknown browser: " + browser);
-}
+  console.log(`Completed ${browser} release build`);
+});

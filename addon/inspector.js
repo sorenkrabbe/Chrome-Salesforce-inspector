@@ -1,8 +1,5 @@
-/* exported sfConn apiVersion */
-"use strict";
-
-var apiVersion = "43.0"; // eslint-disable-line no-var
-var sfConn = { // eslint-disable-line no-var
+export let apiVersion = "47.0";
+export let sfConn = {
 
   async getSession(sfHost) {
     let message = await new Promise(resolve =>
@@ -79,7 +76,7 @@ var sfConn = { // eslint-disable-line no-var
       err.name = "SalesforceRestError";
       err.detail = xhr.response;
       try {
-        err.message = err.detail.map(err => err.errorCode + ": " + err.message).join("\n");
+        err.message = err.detail.map(err => `${err.errorCode}: ${err.message}${err.fields && err.fields.length > 0 ? ` [${err.fields.join(", ")}]` : ""}`).join("\n");
       } catch (ex) {
         err.message = JSON.stringify(xhr.response);
       }

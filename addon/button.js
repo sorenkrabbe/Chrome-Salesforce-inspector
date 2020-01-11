@@ -1,7 +1,5 @@
-/* eslint-disable no-unused-vars */
 /* exported initButton */
 /* global showStdPageDetails */
-/* eslint-enable no-unused-vars */
 "use strict";
 
 // sfdcBody = normal Salesforce page
@@ -60,8 +58,9 @@ function initButton(sfHost, inInspector) {
         popupEl.contentWindow.postMessage({
           insextInitResponse: true,
           sfHost,
-          forceTargetBlank: !!document.querySelector("body.ApexCSIPage"),
-          showStdPageDetailsSupported: !document.querySelector("#auraLoadingBox") && !inInspector,
+          inDevConsole: !!document.querySelector("body.ApexCSIPage"),
+          inLightning: !!document.querySelector("#auraLoadingBox"),
+          inInspector,
         }, "*");
       }
       if (e.data.insextLoaded) {
@@ -71,7 +70,7 @@ function initButton(sfHost, inInspector) {
         closePopup();
       }
       if (e.data.insextShowStdPageDetails) {
-        showStdPageDetails(sfHost, e.data.insextData);
+        showStdPageDetails(e.data.insextData, e.data.insextAllFieldSetupLinks);
       }
     });
     rootEl.appendChild(popupEl);

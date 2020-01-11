@@ -1,9 +1,7 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
+import {sfConn, apiVersion} from "./inspector.js";
 /* global initButton */
-/* eslint-enable no-unused-vars */
-"use strict";
+import {getObjectSetupLinks, getFieldSetupLinks} from "./setup-links.js";
 
 class Model {
   constructor(sfHost) {
@@ -32,8 +30,11 @@ class Model {
     this.childRows = new ChildRowList(this);
     this.detailsFilter = "";
     this.detailsBox = null;
-    this.isEditing = false;
+    this.editMode = null; // null (when not editing), "update", "delete" (for confirming) or "create"
     this.hasEntityParticles = false;
+    this.objectActionsOpen = false;
+    this.objectSetupLinks = null;
+    this.objectSetupLinksRequested = false;
   }
   /**
    * Notify React that we changed something, so it will rerender the view.
@@ -111,40 +112,97 @@ class Model {
     let props = {};
     addProperties(props, objectDescribe, "desc.", {fields: true, childRelationships: true});
     addProperties(props, this.layoutInfo, "layout.", {detailLayoutSections: true, editLayoutSections: true, relatedLists: true});
-    this.showDetailsBox(objectDescribe.name, props, null);
+    this.showDetailsBox(this.objectName(), props, null);
   }
-  canEdit() {
+  canUpdate() {
     return this.objectData && this.objectData.updateable && this.recordData && this.recordData.Id;
   }
-  doEdit() {
-    for (let fieldRow of this.fieldRows.rows) {
-      if (fieldRow.canEdit()) {
-        fieldRow.dataEditValue = fieldRow.dataStringValue();
-      }
-    }
-    this.isEditing = true;
+  doUpdate() {
+    this.editMode = "update";
+    this.fieldRows.makeAllEditable();
+  }
+  canDelete() {
+    return this.objectData && this.objectData.deletable && this.recordData && this.recordData.Id;
+  }
+  doDelete() {
+    this.editMode = "delete";
+  }
+  canCreate() {
+    return this.objectData && this.objectData.createable;
+  }
+  doCreate() {
+    this.editMode = "create";
+    this.fieldRows.makeAllEditable();
   }
   doSave() {
-    let i = this.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
-    this.errorMessages.splice(i, 1);
-    let record = {};
-    this.fieldRows.rows.forEach(fieldRow => fieldRow.saveDataValue(record));
-    let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
-    this.spinFor(
-      "saving record",
-      sfConn.rest(recordUrl, {method: "PATCH", body: record}).then(() => {
-        this.clearRecordData();
-        this.setRecordData(sfConn.rest(recordUrl));
-      })
-    );
+    this.clearSaveError();
+    if (this.editMode == "update") {
+      let record = {};
+      this.fieldRows.rows.forEach(fieldRow => fieldRow.saveDataValue(record));
+      let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
+      this.spinFor(
+        "saving record",
+        sfConn.rest(recordUrl, {method: "PATCH", body: record}).then(() => {
+          this.endEdit();
+          this.clearRecordData();
+          this.setRecordData(sfConn.rest(recordUrl));
+        })
+      );
+    } else if (this.editMode == "delete") {
+      let recordUrl = this.objectData.urls.rowTemplate.replace("{ID}", this.recordData.Id);
+      this.spinFor(
+        "deleting record",
+        sfConn.rest(recordUrl, {method: "DELETE"}).then(() => {
+          this.endEdit();
+          let args = new URLSearchParams();
+          args.set("host", this.sfHost);
+          args.set("objectType", this.objectName());
+          if (this.useToolingApi) {
+            args.set("useToolingApi", "1");
+          }
+          location.href = "inspect.html?" + args;
+        })
+      );
+    } else if (this.editMode == "create") {
+      let record = {};
+      this.fieldRows.rows.forEach(fieldRow => fieldRow.saveDataValue(record));
+      let recordUrl = this.objectData.urls.sobject;
+      this.spinFor(
+        "creating record",
+        sfConn.rest(recordUrl, {method: "POST", body: record}).then(result => {
+          this.endEdit();
+          let args = new URLSearchParams();
+          args.set("host", this.sfHost);
+          args.set("objectType", this.objectName());
+          if (this.useToolingApi) {
+            args.set("useToolingApi", "1");
+          }
+          args.set("recordId", result.id);
+          location.href = "inspect.html?" + args;
+        })
+      );
+    } else {
+      console.error("unknown edit mode", this.editMode);
+    }
+  }
+  clearSaveError() {
+    let i = this.errorMessages.findIndex(e => ["saving record", "deleting record", "creating record"].some(actionName => e.startsWith(`Error ${actionName}:`)));
+    if (i != -1) {
+      this.errorMessages.splice(i, 1);
+    }
   }
   cancelEdit() {
-    let i = this.errorMessages.findIndex(e => e.startsWith("Error saving record:"));
-    this.errorMessages.splice(i, 1);
+    this.clearSaveError();
+    this.endEdit();
+  }
+  endEdit() {
+    if (!this.canView()) {
+      this.fieldRows.showHideColumn(false, "value");
+    }
     for (let fieldRow of this.fieldRows.rows) {
       fieldRow.dataEditValue = null;
     }
-    this.isEditing = false;
+    this.editMode = null;
   }
   canView() {
     return this.recordData && this.recordData.Id;
@@ -187,11 +245,16 @@ class Model {
     }
     return "data-export.html?" + args;
   }
-  openSetup() {
-    let args = new URLSearchParams();
-    args.set("host", this.sfHost);
-    args.set("object", this.objectName());
-    return "open-object-setup.html?" + args;
+  toggleObjectActions() {
+    this.objectActionsOpen = !this.objectActionsOpen;
+    if (this.objectActionsOpen && !this.objectSetupLinksRequested) {
+      this.objectSetupLinksRequested = true;
+      this.spinFor(
+        "getting object setup links",
+        getObjectSetupLinks(this.sfHost, this.objectName())
+          .then(setupLinks => this.objectSetupLinks = setupLinks)
+      );
+    }
   }
   setRecordData(recordDataPromise) {
     this.spinFor("retrieving record", recordDataPromise.then(res => {
@@ -255,14 +318,12 @@ class Model {
   clearRecordData() {
     for (let fieldRow of this.fieldRows.rows) {
       fieldRow.dataTypedValue = undefined;
-      fieldRow.dataEditValue = null;
       fieldRow.detailLayoutInfo = undefined;
       fieldRow.editLayoutInfo = undefined;
     }
     for (let childRow of this.childRows.rows) {
       childRow.relatedListInfo = undefined;
     }
-    this.isEditing = false;
     this.recordData = null;
     this.layoutInfo = null;
   }
@@ -300,7 +361,7 @@ class Model {
     // Therefore qe query the minimum set of meta-fields needed by our main UI.
     this.spinFor(
       "querying tooling particles",
-      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, FieldDefinition.ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")).then(res => {
+      sfConn.rest("/services/data/v" + apiVersion + "/tooling/query/?q=" + encodeURIComponent("select QualifiedApiName, Label, DataType, ReferenceTo, Length, Precision, Scale, IsAutonumber, IsCaseSensitive, IsDependentPicklist, IsEncrypted, IsIdLookup, IsHtmlFormatted, IsNillable, IsUnique, IsCalculated, InlineHelpText, FieldDefinition.DurableId from EntityParticle where EntityDefinition.QualifiedApiName = '" + this.sobjectName + "'")).then(res => {
         for (let entityParticle of res.records) {
           this.fieldRows.getRow(entityParticle.QualifiedApiName).entityParticle = entityParticle;
         }
@@ -399,17 +460,20 @@ class FieldRowList extends RowList {
   createColumn(col) {
     return {
       name: col,
-      label: col == "name" ? "Field API Name"
+      label:
+        col == "name" ? "Field API Name"
         : col == "label" ? "Label"
         : col == "type" ? "Type"
         : col == "value" ? "Value"
         : col == "helptext" ? "Help text"
         : col == "desc" ? "Description"
         : col,
-      className: col == "name" ? "field-name"
+      className:
+        col == "name" ? "field-name"
         : col == "label" ? "field-label"
         : "field-column",
-      reactElement: col == "value" ? FieldValueCell
+      reactElement:
+        col == "value" ? FieldValueCell
         : col == "type" ? FieldTypeCell
         : DefaultCell,
       columnFilter: ""
@@ -422,6 +486,14 @@ class FieldRowList extends RowList {
     }
     super.showHideColumn(show, col);
   }
+  makeAllEditable() {
+    this.showHideColumn(true, "value");
+    for (let fieldRow of this.rows) {
+      if (fieldRow.canEdit()) {
+        fieldRow.dataEditValue = fieldRow.dataStringValue();
+      }
+    }
+  }
 }
 
 class ChildRowList extends RowList {
@@ -433,7 +505,8 @@ class ChildRowList extends RowList {
   createColumn(col) {
     return {
       name: col,
-      label: col == "name" ? "Relationship Name"
+      label:
+        col == "name" ? "Relationship Name"
         : col == "object" ? "Child Object"
         : col == "field" ? "Field"
         : col == "label" ? "Label"
@@ -479,6 +552,9 @@ class FieldRow extends TableRow {
     this.entityParticle = undefined;
     this.fieldParticleMetadata = undefined;
     this.recordIdPop = null;
+    this.fieldActionsOpen = false;
+    this.fieldSetupLinks = null;
+    this.fieldSetupLinksRequested = false;
   }
   rowProperties() {
     let props = {};
@@ -542,8 +618,8 @@ class FieldRow extends TableRow {
     let fieldDescribe = this.fieldDescribe;
     if (fieldDescribe) {
       return fieldDescribe.type == "reference"
-      ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
-      : (fieldDescribe.type || "")
+        ? "[" + fieldDescribe.referenceTo.join(", ") + "]"
+        : (fieldDescribe.type || "")
         + (fieldDescribe.length ? " (" + fieldDescribe.length + ")" : "")
         + (fieldDescribe.precision || fieldDescribe.scale ? " (" + fieldDescribe.precision + ", " + fieldDescribe.scale + ")" : "")
         + (fieldDescribe.autoNumber ? ", auto number" : "")
@@ -559,9 +635,9 @@ class FieldRow extends TableRow {
     }
     let particle = this.entityParticle;
     if (particle) {
-      return particle.DataType == "reference" && particle.FieldDefinition.ReferenceTo.referenceTo
-      ? "[" + particle.FieldDefinition.ReferenceTo.referenceTo.join(", ") + "]"
-      : (particle.DataType || "")
+      return particle.DataType == "reference" && particle.ReferenceTo.referenceTo
+        ? "[" + particle.ReferenceTo.referenceTo.join(", ") + "]"
+        : (particle.DataType || "")
         + (particle.Length ? " (" + particle.Length + ")" : "")
         + (particle.Precision || particle.Scale ? " (" + particle.Precision + ", " + particle.Scale + ")" : "")
         + (particle.IsAutonumber ? ", auto number" : "")
@@ -583,7 +659,7 @@ class FieldRow extends TableRow {
     }
     let particle = this.entityParticle;
     if (particle) {
-      return particle.DataType == "reference" ? particle.FieldDefinition.ReferenceTo.referenceTo : null;
+      return particle.DataType == "reference" ? particle.ReferenceTo.referenceTo : null;
     }
     return [];
   }
@@ -599,12 +675,19 @@ class FieldRow extends TableRow {
   fieldIsHidden() {
     return !this.fieldDescribe;
   }
-  openSetup() {
-    let args = new URLSearchParams();
-    args.set("host", this.rowList.model.sfHost);
-    args.set("object", this.rowList.model.objectName());
-    args.set("field", this.fieldName);
-    return "open-field-setup.html?" + args;
+  toggleFieldActions() {
+    this.fieldActionsOpen = !this.fieldActionsOpen;
+    if (this.fieldActionsOpen && !this.fieldSetupLinksRequested) {
+      this.fieldSetupLinksRequested = true;
+      this.rowList.model.spinFor(
+        "getting field setup links for" + this.fieldName,
+        getFieldSetupLinks(this.rowList.model.sfHost, this.rowList.model.objectName(), this.fieldName)
+          .then(setupLinks => this.fieldSetupLinks = setupLinks)
+      );
+    }
+  }
+  showFieldMetadata() {
+    this.rowList.model.showDetailsBox(this.fieldName, this.rowProperties(), this.rowList);
   }
   summary() {
     let fieldDescribe = this.fieldDescribe;
@@ -613,7 +696,7 @@ class FieldRow extends TableRow {
         + (fieldDescribe.calculatedFormula ? "Formula: " + fieldDescribe.calculatedFormula + "\n" : "")
         + (fieldDescribe.inlineHelpText ? "Help text: " + fieldDescribe.inlineHelpText + "\n" : "")
         + (fieldDescribe.picklistValues && fieldDescribe.picklistValues.length > 0 ? "Picklist values: " + fieldDescribe.picklistValues.map(pickval => pickval.value).join(", ") + "\n" : "")
-        ;
+      ;
     }
     // Entity particle does not contain any of this information
     return this.fieldName + "\n(Details not available)";
@@ -622,19 +705,35 @@ class FieldRow extends TableRow {
     return typeof this.dataEditValue == "string";
   }
   canEdit() {
-    return this.fieldDescribe && this.fieldDescribe.updateable;
+    switch (this.rowList.model.editMode) {
+      case "update":
+      case null:
+        return this.rowList.model.canUpdate() && this.fieldDescribe && this.fieldDescribe.updateable;
+      case "create":
+        return this.rowList.model.canCreate() && this.fieldDescribe && this.fieldDescribe.createable;
+      default:
+        return false;
+    }
   }
   tryEdit() {
-    if (!this.isEditing() && this.rowList.model.canEdit() && this.canEdit()) {
+    if (!this.isEditing() && this.canEdit()) {
       this.dataEditValue = this.dataStringValue();
-      this.rowList.model.isEditing = true;
+      if (this.rowList.model.editMode == null) {
+        this.rowList.model.editMode = "update";
+      }
       return true;
     }
     return false;
   }
   saveDataValue(recordData) {
     if (this.isEditing()) {
-      recordData[this.fieldDescribe.name] = this.dataEditValue == "" ? null : this.dataEditValue;
+      if (this.dataEditValue == "") {
+        if (this.rowList.model.editMode != "create") {
+          recordData[this.fieldDescribe.name] = null;
+        }
+      } else {
+        recordData[this.fieldDescribe.name] = this.dataEditValue;
+      }
     }
   }
   isId() {
@@ -697,7 +796,7 @@ class FieldRow extends TableRow {
     }
   }
   showFieldDescription() {
-    if (!this.entityParticle) {
+    if (!this.entityParticle || !this.entityParticle.FieldDefinition) {
       return;
     }
     this.rowList.model.spinFor(
@@ -717,6 +816,9 @@ class ChildRow extends TableRow {
     this.reactKey = reactKey;
     this.childDescribe = undefined;
     this.relatedListInfo = undefined;
+    this.childActionsOpen = false;
+    this.childSetupLinks = null;
+    this.childSetupLinksRequested = false;
   }
   rowProperties() {
     let props = {};
@@ -776,24 +878,21 @@ class ChildRow extends TableRow {
     }
     return "";
   }
-  openSetup() {
-    let childDescribe = this.childDescribe;
-    if (childDescribe) {
-      let args = new URLSearchParams();
-      args.set("host", this.rowList.model.sfHost);
-      args.set("object", childDescribe.childSObject);
-      args.set("field", childDescribe.field);
-      return "open-field-setup.html?" + args;
+  toggleChildActions() {
+    this.childActionsOpen = !this.childActionsOpen;
+    if (this.childActionsOpen && !this.childSetupLinksRequested) {
+      this.childSetupLinksRequested = true;
+      let sobjectName = (this.childDescribe && this.childDescribe.childSObject) || (this.relatedListInfo && this.relatedListInfo.relatedList.sobject);
+      let fieldName = (this.childDescribe && this.childDescribe.field) || (this.relatedListInfo && this.relatedListInfo.relatedList.field);
+      this.rowList.model.spinFor(
+        "getting relationship setup links for " + this.childName,
+        getFieldSetupLinks(this.rowList.model.sfHost, sobjectName, fieldName)
+          .then(setupLinks => this.childSetupLinks = setupLinks)
+      );
     }
-    let relatedListInfo = this.relatedListInfo;
-    if (relatedListInfo) {
-      let args = new URLSearchParams();
-      args.set("host", this.rowList.model.sfHost);
-      args.set("object", relatedListInfo.relatedList.sobject);
-      args.set("field", relatedListInfo.relatedList.field);
-      return "open-field-setup.html?" + args;
-    }
-    return "open-field-setup.html";
+  }
+  showChildMetadata() {
+    this.rowList.model.showDetailsBox(this.childName, this.rowProperties(), this.rowList);
   }
   summary() {
     return undefined;
@@ -839,7 +938,10 @@ class App extends React.Component {
     this.onRowsFilterInput = this.onRowsFilterInput.bind(this);
     this.onClearAndFocusFilter = this.onClearAndFocusFilter.bind(this);
     this.onShowObjectMetadata = this.onShowObjectMetadata.bind(this);
-    this.onDoEdit = this.onDoEdit.bind(this);
+    this.onToggleObjectActions = this.onToggleObjectActions.bind(this);
+    this.onDoUpdate = this.onDoUpdate.bind(this);
+    this.onDoDelete = this.onDoDelete.bind(this);
+    this.onDoCreate = this.onDoCreate.bind(this);
     this.onDoSave = this.onDoSave.bind(this);
     this.onCancelEdit = this.onCancelEdit.bind(this);
   }
@@ -882,9 +984,24 @@ class App extends React.Component {
     model.showObjectMetadata();
     model.didUpdate();
   }
-  onDoEdit() {
+  onToggleObjectActions() {
     let {model} = this.props;
-    model.doEdit();
+    model.toggleObjectActions();
+    model.didUpdate();
+  }
+  onDoUpdate() {
+    let {model} = this.props;
+    model.doUpdate();
+    model.didUpdate();
+  }
+  onDoDelete() {
+    let {model} = this.props;
+    model.doDelete();
+    model.didUpdate();
+  }
+  onDoCreate() {
+    let {model} = this.props;
+    model.doCreate();
     model.didUpdate();
   }
   onDoSave() {
@@ -959,14 +1076,37 @@ class App extends React.Component {
             model.recordHeading()
           ),
           h("span", {className: "object-actions"},
-            !model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", disabled: !model.canEdit() || !model.fieldRows.selectedColumnMap.has("value"), onClick: this.onDoEdit}, "Edit") : null,
-            model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", onClick: this.onDoSave}, "Save") : null,
-            model.isEditing && (model.useTab == "all" || model.useTab == "fields") ? h("button", {title: "Inline edit the values of this record", className: "button", onClick: this.onCancelEdit}, "Cancel") : null,
+            model.editMode == null && model.recordData && (model.useTab == "all" || model.useTab == "fields") ? h("button", {
+              title: "Inline edit the values of this record",
+              className: "button",
+              disabled: !model.canUpdate(),
+              onClick: this.onDoUpdate
+            }, "Edit") : null,
+            model.editMode == null && model.recordData && (model.useTab == "all" || model.useTab == "fields") ? h("button", {
+              title: "Delete this record",
+              className: "button",
+              disabled: !model.canDelete(),
+              onClick: this.onDoDelete
+            }, "Delete") : null,
+            model.editMode == null && (model.useTab == "all" || model.useTab == "fields") ? h("button", {
+              title: model.recordData ? "Inline edit the values of this record to be saved as a new cloned record" : "Inline create a new record",
+              className: "button",
+              disabled: !model.canCreate(),
+              onClick: this.onDoCreate
+            }, model.recordData ? "Clone" : "New") : null,
             model.exportLink() ? h("a", {href: model.exportLink(), title: "Export data from this object", className: "button"}, "Export") : null,
-            model.viewLink() ? h("a", {href: model.viewLink(), title: "View this record in Salesforce", className: "button"}, "View") : null,
-            model.editLayoutLink() ? h("a", {href: model.editLayoutLink(), title: "Open the page layout editor", className: "button"}, "Edit layout") : null,
             model.objectName() ? h("a", {href: "about:blank", onClick: this.onShowObjectMetadata, className: "button"}, "More") : null,
-            model.objectName() ? h("a", {href: model.openSetup(), className: "button"}, "Setup") : null
+            h("button", {className: "button", onClick: this.onToggleObjectActions},
+              h("svg", {className: "button-icon"},
+                h("use", {xlinkHref: "symbols.svg#down"})
+              )
+            ),
+            model.objectActionsOpen && h("div", {className: "pop-menu"},
+              model.viewLink() ? h("a", {href: model.viewLink()}, "View record in Salesforce") : null,
+              model.editLayoutLink() ? h("a", {href: model.editLayoutLink()}, "Edit page layout") : null,
+              model.objectSetupLinks && h("a", {href: model.objectSetupLinks.lightningSetupLink}, "Object setup (Lightning)"),
+              model.objectSetupLinks && h("a", {href: model.objectSetupLinks.classicSetupLink}, "Object setup (Classic)")
+            )
           )
         ),
         h("div", {className: "body " + (model.fieldRows.selectedColumnMap.size < 2 && model.childRows.selectedColumnMap.size < 2 ? "empty " : "")},
@@ -983,6 +1123,29 @@ class App extends React.Component {
             classNameForRow: () => ""
           }) : null
         ),
+        model.editMode != null && (model.useTab == "all" || model.useTab == "fields") ? h("span", {className: "edit-bar"},
+          h("button", {
+            title:
+              model.editMode == "update" ? "Cancel editing this record"
+              : model.editMode == "delete" ? "Cancel deleting this record"
+              : model.editMode == "create" ? "Cancel creating this record"
+              : null,
+            className: "button",
+            onClick: this.onCancelEdit
+          }, "Cancel"),
+          h("button", {
+            title:
+              model.editMode == "update" ? "Save the values of this record"
+              : model.editMode == "delete" ? "Delete this record"
+              : model.editMode == "create" ? "Save the values as a new record"
+              : null,
+            className: "button " + (model.editMode == "delete" ? "button-destructive" : "button-brand"),
+            onClick: this.onDoSave
+          }, model.editMode == "update" ? "Save"
+          : model.editMode == "delete" ? "Confirm delete"
+          : model.editMode == "create" ? "Save new"
+          : "???")
+        ) : null,
         model.detailsBox ? h(DetailsBox, {model}) : null
       )
     );
@@ -1052,7 +1215,7 @@ class RowTable extends React.Component {
           selectedColumns.map(col =>
             h(HeaderCell, {key: col.name, col, rowList})
           ),
-          h("th", {className: actionsColumn.className}, "Actions")
+          h("th", {className: actionsColumn.className}, "")
         ),
         rowList.model.useTab != "all" ? h("tr", {},
           selectedColumns.map(col =>
@@ -1139,7 +1302,7 @@ class FieldValueCell extends React.Component {
   onTryEdit(e) {
     let {row} = this.props;
     if (row.tryEdit()) {
-      let td = e.nativeEvent.currentTarget;
+      let td = e.currentTarget;
       row.rowList.model.didUpdate(() => td.querySelector("textarea").focus());
     }
   }
@@ -1169,8 +1332,10 @@ class FieldValueCell extends React.Component {
       );
     } else if (row.isId()) {
       return h("td", {className: col.className, onDoubleClick: this.onTryEdit},
-        h("div", {className: "value-text quick-select"}, h("a", {href: row.idLink() /*used to show visited color*/, onClick: this.onRecordIdClick}, row.dataStringValue())),
-        row.recordIdPop == null ? null : h("div", {className: "pop-menu"}, row.recordIdPop.map(link => h("a", {key: link.href, href: link.href}, link.text)))
+        h("div", {className: "pop-menu-container"},
+          h("div", {className: "value-text quick-select"}, h("a", {href: row.idLink() /*used to show visited color*/, onClick: this.onRecordIdClick}, row.dataStringValue())),
+          row.recordIdPop == null ? null : h("div", {className: "pop-menu"}, row.recordIdPop.map(link => h("a", {key: link.href, href: link.href}, link.text)))
+        )
       );
     } else {
       return h("td", {className: col.className, onDoubleClick: this.onTryEdit},
@@ -1214,28 +1379,44 @@ let TypedValue = props =>
       + (props.value === true ? "value-is-boolean-true " : "")
       + (props.value === undefined || props.value === null ? "" : "quick-select ")
   },
-    props.value === undefined ? "(Unknown)"
-      : props.value === null ? "(Blank)"
-      : "" + props.value
+  props.value === undefined ? "(Unknown)"
+  : props.value === null ? "(Blank)"
+  : typeof props.value == "object" ? JSON.stringify(props.value, null, "  ")
+  : "" + props.value
   );
 
 class FieldActionsCell extends React.Component {
   constructor(props) {
     super(props);
     this.onOpenDetails = this.onOpenDetails.bind(this);
+    this.onToggleFieldActions = this.onToggleFieldActions.bind(this);
   }
   onOpenDetails(e) {
     e.preventDefault();
     let {row} = this.props;
-    row.rowList.model.showDetailsBox(row.fieldName, row.rowProperties(), row.rowList);
+    row.showFieldMetadata();
+    row.rowList.model.didUpdate();
+  }
+  onToggleFieldActions() {
+    let {row} = this.props;
+    row.toggleFieldActions();
     row.rowList.model.didUpdate();
   }
   render() {
     let {row} = this.props;
     return h("td", {className: "field-actions"},
-      h("a", {href: "about:blank", onClick: this.onOpenDetails}, "More"),
-      " ",
-      h("a", {href: row.openSetup()}, "Setup")
+      h("div", {className: "pop-menu-container"},
+        h("button", {className: "actions-button", onClick: this.onToggleFieldActions},
+          h("svg", {className: "actions-icon"},
+            h("use", {xlinkHref: "symbols.svg#down"})
+          ),
+        ),
+        row.fieldActionsOpen && h("div", {className: "pop-menu"},
+          h("a", {href: "about:blank", onClick: this.onOpenDetails}, "All field metadata"),
+          row.fieldSetupLinks && h("a", {href: row.fieldSetupLinks.lightningSetupLink}, "Field setup (Lightning)"),
+          row.fieldSetupLinks && h("a", {href: row.fieldSetupLinks.classicSetupLink}, "Field setup (Classic)")
+        )
+      )
     );
   }
 }
@@ -1244,21 +1425,35 @@ class ChildActionsCell extends React.Component {
   constructor(props) {
     super(props);
     this.onOpenDetails = this.onOpenDetails.bind(this);
+    this.onToggleChildActions = this.onToggleChildActions.bind(this);
   }
   onOpenDetails(e) {
     e.preventDefault();
     let {row} = this.props;
-    row.rowList.model.showDetailsBox(row.childName, row.rowProperties(), row.rowList);
+    row.showChildMetadata();
+    row.rowList.model.didUpdate();
+  }
+  onToggleChildActions() {
+    let {row} = this.props;
+    row.toggleChildActions();
     row.rowList.model.didUpdate();
   }
   render() {
     let {row} = this.props;
     return h("td", {className: "child-actions"},
-      h("a", {href: "about:blank", onClick: this.onOpenDetails}, "More"),
-      " ",
-      row.queryListUrl() ? h("a", {href: row.queryListUrl(), title: "Export records in this related list"}, "List") : null,
-      " ",
-      h("a", {href: row.openSetup()}, "Setup")
+      h("div", {className: "pop-menu-container"},
+        h("button", {className: "actions-button", onClick: this.onToggleChildActions},
+          h("svg", {className: "actions-icon"},
+            h("use", {xlinkHref: "symbols.svg#down"})
+          ),
+        ),
+        row.childActionsOpen && h("div", {className: "pop-menu"},
+          h("a", {href: "about:blank", onClick: this.onOpenDetails}, "All relationship metadata"),
+          row.queryListUrl() ? h("a", {href: row.queryListUrl(), title: "Export records in this related list"}, "Export related records") : null,
+          row.childSetupLinks && h("a", {href: row.childSetupLinks.lightningSetupLink}, "Setup (Lightning)"),
+          row.childSetupLinks && h("a", {href: row.childSetupLinks.classicSetupLink}, "Setup (Classic)")
+        )
+      )
     );
   }
 }
