@@ -681,7 +681,6 @@ class Model {
     exportedData.describeInfo = vm.describeInfo;
     exportedData.sfHost = vm.sfHost;
     let query = vm.queryInput.value;
-    vm.queryInput.value = query;
     let queryMethod = exportedData.isTooling ? "tooling/query" : vm.queryAll ? "queryAll" : "query";
     function batchHandler(batch) {
       return batch.catch(err => {
