@@ -116,6 +116,9 @@ body {
   padding: 5px;
   max-height: 150px;
 }
+.columns-mapping .conf-line input[type=text] {
+  width: 100%;
+}
 #data {
   resize: none;
   white-space: pre;

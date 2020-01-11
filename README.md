@@ -33,48 +33,56 @@ Troubleshooting
 Development
 -----
 
+1. Install Node.js with npm
+2. `npm install`
+
 ### Chrome
-1. Open `chrome://extensions/`.
-2. Enable `Developer mode`.
-3. Click `Load unpacked extension...`.
-4. Select the `addon` subdirectory of this repository.
+1. `npm run chrome-dev-build`
+2. Open `chrome://extensions/`.
+3. Enable `Developer mode`.
+4. Click `Load unpacked extension...`.
+5. Select the `addon` subdirectory of this repository.
 
 ### Firefox
 
-The extension is located in the `addon` subdirectory of this repository. Run it as per [Mozilla's guide](https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Getting_started_with_web-ext).
+1. `npm run firefox-dev-build`
+2. In Firefox, open `about:debugging`.
+3. Click `Load Temporary Add-on…`.
+4. Select the file `addon/manifest.json`.
 
 Unit tests
 -----
-1. Set up a Developer Edition org with the customizations described in `test/org/`.
+1. Set up an org (e.g. a Developer Edition) and apply the following customizations:
+   1.a. Everything described in metadata in `test/org/`. Push to org with `sfdx force:mdapi:deploy --deploydir test/org -w 1000 -u [your-test-org-alias]`
+   1.b. Ensure _Allow users to relate a contact to multiple accounts_ is enabled (Setup→Account Settings)
+   1.c. Ensure the org has no _namespace prefix_ (Setup→Package Manager)
 2. Navigate to one of the extension pages and replace the file name with `test-framework.html`, for example `chrome-extension://example/test-framework.html?host=example.my.salesforce.com`.
 3. Wait until "Salesforce Inspector unit test finished successfully" is shown.
 4. If the test fails, open your browser's developer tools console to see error messages.
 
 ### Linting
 
-1. Install Node.js with npm
-2. `npm install`
-3. `npm run eslint`
+1. `npm run eslint`
 
 Release
 -------
-Version number must be manually incremented in [addon/manifest.json](addon/manifest.json) file
+Version number must be manually incremented in [addon/manifest-template.json](addon/manifest-template.json) file
 
 ### Chrome
 
-When commit message contains *#releaseIt* the revision will be packaged and uploaded to Chrome Web Store ready for manual release to the masses.
+If the version number is greater than the version currently in Chrome Web Store, the revision will be packaged and uploaded to the store ready for manual release to the masses.
 
 ### Firefox
 
 1. `npm run firefox-release-build`
-2. Upload the file from `target/firefox/salesforce_inspector-x.y.zip` to addons.mozilla.org
+2. Upload the file from `target/firefox/firefox-release-build.zip` to addons.mozilla.org
 
 Design Principles
 -----
 (we don't live up to all of them. pull requests welcome)
 * Stay completely inactive until the user explicitly interacts with it. The tool has the potential to break Salesforce functionality when used, since we rely on monkey patching and internal APIs. We must ensure that you cannot break Salesforce just by having the tool installed or enabled. For example, we won't fix the setup search placeholder bug.
 * For manual ad-hoc tasks only. The tool is designed to help administrators and developers interact with Salesforce in the browser. It is after all a browser add-on. Enabling automation is a non-goal.
-* User experience is important. Features should be intuitive and discoverable, but efficiency is more important than discoverability. More advanced features should be hidden, and primary features shuld be central. Performance is key.
+* User experience is important. Features should be intuitive and discoverable, but efficiency is more important than discoverability. More advanced features should be hidden, and primary features should be central. Performance is key.
 * Automatically provide as much contextual information as possible, without overwhelming the user. Information that is presented automatically when needed is a lot more useful than information you need to explicitly request. For example, provide autocomplete for every input.
 * Provide easy access to the raw Salesforce API. Enhance the interaction in a way that does not break the core use case, if our enhancements fails. For example, ensure we can display the result of a data export even if we cannot parse the SOQL query.
 * It is fine to implement features that are already available in the core Salesforce UI, if we can make it easier, smarter or faster.

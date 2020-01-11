@@ -1,12 +1,10 @@
-/* eslint-disable no-unused-vars */
-/* global sfConn apiVersion */
-/* exported dataImportTest */
-/* eslint-enable no-unused-vars */
-"use strict";
-async function dataImportTest(test) {
+import {sfConn} from "./inspector.js";
+
+export async function dataImportTest(test) {
   console.log("TEST data-import");
   let {assertEquals, assertNotEquals, assert, loadPage, anonApex} = test;
-  let {testData: {model}} = await loadPage("data-import.html");
+
+  let {model} = await loadPage("data-import.html");
   let vm = model;
 
   function waitForSpinner() {
@@ -42,7 +40,7 @@ async function dataImportTest(test) {
   // Autocomplete lists
   assert(vm.sobjectList().indexOf("Inspector_Test__c") > -1);
   assertEquals(["Id", "Name"], vm.idLookupList());
-  assertEquals(["Id", "OwnerId", "Owner:Group:Id", "Owner:Group:Name", "Owner:User:Id", "Owner:User:Username", "Owner:User:Email", "Owner:User:FederationIdentifier", "Name", "Checkbox__c", "Number__c", "Lookup__c", "Lookup__r:Inspector_Test__c:Id", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"], vm.columnList());
+  assertEquals(["Id", "OwnerId", "Owner:Group:Id", "Owner:Group:Name", "Owner:User:Id", "Owner:User:Username", "Owner:User:Email", "Owner:User:FederationIdentifier", "Name", "Checkbox__c", "Number__c", "Lookup__c", "Lookup__r:Inspector_Test__c:Id", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"].sort(), vm.columnList().sort());
 
   // See user info
   assert(vm.userInfo.indexOf(" / ") > -1);
@@ -219,6 +217,28 @@ async function dataImportTest(test) {
     {Name: "test7", Checkbox__c: false, Number__c: 700.07, Lookup__r: null}
   ], records);
 
+  // Save import options
+  vm.importAction = "update";
+  vm.didUpdate();
+  vm.copyOptions();
+  assertEquals("salesforce-inspector-import-options=&useToolingApi=0&action=update&object=Inspector_Test__c&batchSize=200&threads=6", window.testClipboardValue);
+
+  // Restore import options
+  vm.importAction = "create";
+  vm.didUpdate();
+  vm.importType = "Account";
+  vm.didUpdate();
+  vm.dataFormat = "excel";
+  vm.didUpdate();
+  vm.setData('"salesforce-inspector-import-options=&useToolingApi=0&action=update&object=Inspector_Test__c&batchSize=200&threads=6"\t""\r\n"Name"\t"Number__c"\r\n"test"\t"100"\r\n"test"\t"200"\r\n');
+  assertEquals(false, vm.useToolingApi);
+  assertEquals("update", vm.importAction);
+  assertEquals("Inspector_Test__c", vm.importType);
+  assertEquals("200", vm.batchSize);
+  assertEquals("6", vm.batchConcurrency);
+  assertEquals({Queued: 2, Processing: 0, Succeeded: 0, Failed: 0}, vm.importCounts());
+  assertEquals([["Name", "Number__c"], ["test", "100"], ["test", "200"]], vm.importTableResult.table);
+
   // Create multiple batches
   await anonApex("delete [select Id from Inspector_Test__c];");
   vm.dataFormat = "csv";
@@ -336,7 +356,7 @@ async function dataImportTest(test) {
   assertEquals([["Name", "unknownfield", "__Status", "__Id", "__Action", "__Errors"], ["test2", "222", "Processing", "", "", ""], ["test6", "666", "Processing", "", "", ""]], vm.importTableResult.table);
   await waitForSpinner();
   assertEquals({Queued: 0, Processing: 0, Succeeded: 0, Failed: 2}, vm.importCounts());
-  assertEquals([["Name", "unknownfield", "__Status", "__Id", "__Action", "__Errors"], ["test2", "222", "Failed", "", "", "INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."], ["test6", "666", "Failed", "", "", "INVALID_FIELD: No such column \'unknownfield\' on entity \'Inspector_Test__c\'. If you are attempting to use a custom field, be sure to append the \'__c\' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."]], vm.importTableResult.table);
+  assertEquals([["Name", "unknownfield", "__Status", "__Id", "__Action", "__Errors"], ["test2", "222", "Failed", "", "", "INVALID_FIELD: No such column 'unknownfield' on entity 'Inspector_Test__c'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."], ["test6", "666", "Failed", "", "", "INVALID_FIELD: No such column 'unknownfield' on entity 'Inspector_Test__c'. If you are attempting to use a custom field, be sure to append the '__c' after the custom field name. Please reference your WSDL or the describe call for the appropriate names."]], vm.importTableResult.table);
   records = getRecords(await sfConn.rest("/services/data/v35.0/query/?q=" + encodeURIComponent("select Name, Checkbox__c, Number__c, Lookup__r.Name from Inspector_Test__c order by Name")));
   assertEquals([], records);
 

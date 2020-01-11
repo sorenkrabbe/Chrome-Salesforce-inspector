@@ -1,13 +1,7 @@
-/* eslint-disable no-unused-vars */
-/* global sfConn apiVersion */
-/* exported popupTest */
-/* eslint-enable no-unused-vars */
-"use strict";
-async function popupTest(test) {
+export async function popupTest(test) {
   console.log("TEST popup");
   let {assertEquals, loadPage} = test;
-  let page = await loadPage("test-page.html");
-  let {getRecordId} = page[0];
+  let {getRecordId} = await loadPage("test-page.html");
   // Classic & Console
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://na1.salesforce.com/001i0000007BlV0"))); // classic record detail page
   assertEquals("001i0000007BlV0", getRecordId(new URL("https://cs81.salesforce.com/001i0000007BlV0"))); // in sandbox

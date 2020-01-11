@@ -1,34 +1,34 @@
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Light.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Light.woff) format("woff");
+  src:url(fonts/SalesforceSans-Light.woff2);
   font-weight:300
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-LightItalic.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-LightItalic.woff) format("woff");
+  src:url(fonts/SalesforceSans-LightItalic.woff2);
   font-style:italic;
   font-weight:300
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Regular.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Regular.woff) format("woff");
+  src:url(fonts/SalesforceSans-Regular.woff2);
   font-weight:400
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Italic.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Italic.woff) format("woff");
+  src:url(fonts/SalesforceSans-Italic.woff2);
   font-style:italic;
   font-weight:400
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Bold.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-Bold.woff) format("woff");
+  src:url(fonts/SalesforceSans-Bold.woff2);
   font-weight:700
 }
 @font-face {
   font-family:'Salesforce Sans';
-  src:url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-BoldItalic.woff2) format("woff2"),url(https://www2.sfdcstatic.com/system/shared/common/assets/fonts/SalesforceSans/SalesforceSans-BoldItalic.woff) format("woff");
- font-style:italic;
+  src:url(fonts/SalesforceSans-BoldItalic.woff2);
+  font-style:italic;
   font-weight:700
 }
 * {
@@ -163,6 +163,38 @@ th {
 .field-actions {
   text-align: right;
   white-space: nowrap;
+}
+.actions-button {
+  width: 1.25rem;
+  height: 1.25rem;
+  line-height: 1;
+  background-color: #fff;
+  vertical-align: middle;
+  color: #706e6b;
+  border: 1px solid #dddbda;
+  transition: border .15s linear;
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  border-radius: .25rem;
+  -webkit-appearance: none;
+  white-space: normal;
+  cursor: pointer;
+}
+.actions-button:hover,
+.actions-button:active,
+.actions-button:focus {
+  color: #005fb2;
+}
+.actions-button:focus {
+  outline: 0;
+  box-shadow: 0 0 3px #0070d2;
+}
+.actions-icon {
+  width: .75rem;
+  height: .75rem;
+  overflow: hidden;
+  fill: #b0adab;
 }
 th[tabindex] {
   text-decoration: underline;
@@ -337,6 +369,7 @@ th[tabindex] {
   width: .875rem;
   height: .875rem;
   fill: currentColor;
+  vertical-align: middle;
 }
 .object-name {
   flex: 1 1 0;
@@ -363,6 +396,14 @@ th[tabindex] {
   line-height: 1.875rem;
   transition: color 50ms linear,background-color 50ms linear;
 }
+.button[disabled] {
+  cursor: default;
+  color: #dddbda;
+  background-color: #fff;
+}
+.object-actions {
+  position: relative;
+}
 .object-actions .button:not(:first-child) {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
@@ -372,20 +413,49 @@ th[tabindex] {
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
-.button:active {
+.button:active:not([disabled]) {
   background-color: #eef1f6;
-    color: #00396b;
+  color: #00396b;
 }
 .button:focus {
-    outline: 0;
-    box-shadow: 0 0 3px #0070D2;
+  outline: 0;
+  box-shadow: 0 0 3px #0070D2;
 }
-.button:focus, .button:hover {
+.button:focus:not([disabled]), .button:hover:not([disabled]) {
   background-color: #f4f6f9;
-    color: #005fb2;
+  color: #005fb2;
 }
 .button:active, .button:focus, .button:hover, .button:visited {
-    text-decoration: none;
+  text-decoration: none;
+}
+.button-brand {
+  background-color: #0070d2;
+  border-color: #0070d2;
+  color: #fff;
+}
+.button-brand:focus:not([disabled]), .button-brand:hover:not([disabled]) {
+  background-color: #005fb2;
+  border-color: #005fb2;
+  color: #fff;
+}
+.button-brand:active:not([disabled]) {
+  background-color: #005fb2;
+  border-color: #005fb2;
+  color: #fff;
+}
+.button-destructive {
+  background-color: #c23934;
+  border-color: #c23934;
+  color: #fff;
+}
+.button-destructive:focus:not([disabled]), .button-destructive:hover:not([disabled]) {
+  background-color: #a61a14;
+  color: #fff;
+}
+.button-destructive:active:not([disabled]) {
+  background-color: #870500;
+  border-color: #870500;
+  color: #fff;
 }
 .column-button-outer {
   position: relative;
@@ -463,11 +533,22 @@ th[tabindex] {
 .body.empty {
   animation: spin 4s linear infinite;
 }
+.edit-bar {
+  text-align: center;
+  padding: 1rem 0;
+}
+.edit-bar .button {
+  margin: 0 .25rem;
+}
 .child-actions {
   text-align: right;
   white-space: nowrap;
 }
+.pop-menu-container {
+  position: relative;
+}
 .pop-menu {
+  z-index: 10;
   position: absolute;
   border: 1px solid gray;
   background-color: white;
@@ -477,4 +558,10 @@ th[tabindex] {
 }
 .pop-menu a {
   display: block;
+}
+.object-actions .pop-menu,
+.field-actions .pop-menu,
+.child-actions .pop-menu {
+  right: 0;
+  text-align: right;
 }

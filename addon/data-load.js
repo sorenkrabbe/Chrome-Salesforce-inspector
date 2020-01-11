@@ -1,11 +1,7 @@
-/* eslint-disable no-unused-vars */
-/* global sfConn apiVersion */
-/* exported Enumerable DescribeInfo copyToClipboard initScrollTable */
-/* eslint-enable no-unused-vars */
-"use strict";
+import {sfConn, apiVersion} from "./inspector.js";
 
 // Inspired by C# System.Linq.Enumerable
-function Enumerable(iterable) {
+export function Enumerable(iterable) {
   this[Symbol.iterator] = iterable[Symbol.iterator].bind(iterable);
 }
 Enumerable.prototype = {
@@ -47,7 +43,7 @@ Enumerable.prototype.flatMap.prototype = Enumerable.prototype;
 Enumerable.prototype.concat.prototype = Enumerable.prototype;
 
 // @param didUpdate: A callback function to listen for updates to describe data
-function DescribeInfo(spinFor, didUpdate) {
+export function DescribeInfo(spinFor, didUpdate) {
   function initialState() {
     return {
       data: {global: {globalStatus: "pending", globalDescribe: null}, sobjects: null},
@@ -128,7 +124,11 @@ function DescribeInfo(spinFor, didUpdate) {
 }
 
 // Copy text to the clipboard, without rendering it, since rendering is slow.
-function copyToClipboard(value) {
+export function copyToClipboard(value) {
+  if (parent && parent.isUnitTest) { // for unit tests
+    parent.testClipboardValue = value;
+    return;
+  }
   // Use execCommand to trigger an oncopy event and use an event handler to copy the text to the clipboard.
   // The oncopy event only works on editable elements, e.g. an input field.
   let temp = document.createElement("input");
@@ -284,7 +284,7 @@ interface ScrollTable {
   void dataChange(Table newData); // Must be called whenever the data changes. (even if it is the same object)
 }
 */
-function initScrollTable(scroller) {
+export function initScrollTable(scroller) {
   let data = null;
   let scrolled = document.createElement("div");
   scrolled.className = "scrolltable-scrolled";

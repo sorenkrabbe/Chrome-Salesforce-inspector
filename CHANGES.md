@@ -1,3 +1,60 @@
+Version 1.9
+===========
+
+Inspector menu
+--------------
+* Fix a bug fix hiding the "show field metadata" button (#150)
+
+Version 1.8
+===========
+
+Inspector menu
+--------------
+* Added user search aspect to simplify access to detailed user data and "login as".
+
+Version 1.7
+===========
+
+General
+-------
+* Update to Salesforce API v 47.0
+
+Inspector menu
+--------------
+* A new link to switch in and out of Salesforce Setup, where you can choose to open in a new tab or not.
+
+Show all data
+-------------
+* Fixed a bug causing errors when viewing some special objects.
+* Link to Salesforce Setup in both Classic and Lightning Experience.
+* Use default values for blank fields when creating a new record. This avoids the error message that OwnerId is required but missing.
+
+Data import
+-----------
+* Save import options in your excel sheet, so you can update the same data again and again with a single copy-paste.
+
+
+Version 1.6
+===========
+
+General
+-------
+* Update to Salesforce API v 45.0
+* Support for cloudforce.com orgs
+
+Show all data
+-------------
+* Buttons to Create, delete and clone records
+
+Data export
+-----------
+* Keyboard shortcut to do export (ctrl+enter)
+* Fixes saved query selection
+
+Data import
+-----------
+* Wider import fields
+
 Version 1.5
 ===========
 

@@ -5,21 +5,39 @@ module.exports = {
     "webextensions": true
   },
   "parserOptions": {
-    "ecmaVersion": 8
+    "ecmaVersion": 11,
+    "sourceType": "module"
   },
   "root": true,
   "extends": "eslint:recommended",
+  "overrides": [
+    {
+      "parserOptions": {
+        "sourceType": "script"
+      },
+      "files": [
+        // Extension scripts can not be loaded as modules
+        "addon/background.js",
+        "addon/button.js",
+        "addon/inspect-inline.js",
+        // React cannot be loaded as modules yet. See https://github.com/facebook/react/issues/10021 and https://github.com/facebook/react/issues/11503
+        "addon/react-dom.js",
+        "addon/react-dom.min.js",
+        "addon/react.js",
+        "addon/react.min.js",
+        // Node.js support for ES modules is still experimental. See https://nodejs.org/dist/latest-v12.x/docs/api/esm.html
+        "scripts/*"
+      ]
+    }
+  ],
   "rules": {
-    "indent": ["error", 2, {"SwitchCase": 1, "MemberExpression": 1, "FunctionDeclaration": {"parameters": 1}, "FunctionExpression": {"parameters": 1}, "CallExpression": {"arguments": 1}}],
+    "indent": ["error", 2, {"SwitchCase": 1, "flatTernaryExpressions": true}],
     "quotes": ["error", "double", {"avoidEscape": true}],
     "semi": ["error", "always"],
-    "no-console": "off",
-    "no-unsafe-negation": "error",
     "strict": ["error", "global"],
     "consistent-return": "error",
     "curly": ["error", "multi-line"],
     "dot-location": ["error", "property"],
-    "no-case-declarations": "error",
     "no-multi-spaces": "error",
     "array-bracket-spacing": "error",
     "block-spacing": "error",

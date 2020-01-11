@@ -1,10 +1,7 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
+import {sfConn, apiVersion} from "./inspector.js";
 /* global initButton */
-/* global Enumerable DescribeInfo copyToClipboard initScrollTable */
-/* eslint-enable no-unused-vars */
-"use strict";
+import {Enumerable, DescribeInfo, copyToClipboard, initScrollTable} from "./data-load.js";
 
 class QueryHistory {
   constructor(storageKey, max) {
@@ -153,7 +150,7 @@ class Model {
   }
   selectSavedEntry() {
     if (this.selectedSavedEntry != null) {
-      this.queryInput.value = this.selectedSavedEntry;
+      this.queryInput.value = this.selectedSavedEntry.query;
       this.queryTooling = this.selectedSavedEntry.useToolingApi;
       this.queryAutocompleteHandler();
       this.selectedSavedEntry = null;
@@ -435,7 +432,7 @@ class Model {
     The context sobjects for "Name" is {"Contact", "Lead"}.
     */
     let contextSobjectDescribes = new Enumerable([sobjectDescribe]);
-    let contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_\.]*$/)[0];
+    let contextPath = query.substring(0, contextEnd).match(/[a-zA-Z0-9_.]*$/)[0];
     let sobjectStatuses = new Map(); // Keys are error statuses, values are an object name with that status. Only one object name in the value, since we only show one error message.
     if (contextPath) {
       let contextFields = contextPath.split(".");
@@ -630,9 +627,9 @@ class Model {
           yield {value: "null", title: "null", suffix: " ", rank: 1};
         }
       })
-      .filter(res => res.value.toLowerCase().includes(searchTerm.toLowerCase()) || res.title.toLowerCase().includes(searchTerm.toLowerCase()))
-      .toArray()
-      .sort(resultsSort);
+        .filter(res => res.value.toLowerCase().includes(searchTerm.toLowerCase()) || res.title.toLowerCase().includes(searchTerm.toLowerCase()))
+        .toArray()
+        .sort(resultsSort);
       vm.autocompleteResults = {
         sobjectName,
         title: fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"),
@@ -667,7 +664,7 @@ class Model {
             }
           })
           .concat(
-            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"]) //  eslint-disable-line indent
+            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"])
               .filter(fn => fn.toLowerCase().startsWith(searchTerm.toLowerCase()))
               .map(fn => ({value: fn, title: fn + "()", suffix: "(", rank: 2}))
           )
@@ -969,9 +966,16 @@ class App extends React.Component {
     // We do not want to perform Salesforce API calls for autocomplete on every keystroke, so we only perform these when the user pressed Ctrl+Space
     // Chrome on Linux does not fire keypress when the Ctrl key is down, so we listen for keydown. Might be https://code.google.com/p/chromium/issues/detail?id=13891#c50
     queryInput.addEventListener("keydown", e => {
-      if (e.which == 32 /* space */ && e.ctrlKey) {
+      if (e.ctrlKey && e.key == " ") {
         e.preventDefault();
         model.queryAutocompleteHandler({ctrlSpace: true});
+        model.didUpdate();
+      }
+    });
+    addEventListener("keydown", e => {
+      if (e.ctrlKey && e.key == "Enter") {
+        e.preventDefault();
+        model.doExport();
         model.didUpdate();
       }
     });
@@ -1068,7 +1072,7 @@ class App extends React.Component {
         )
       ),
       h("div", {className: "action-arrow"},
-        h("div", {className: "arrow-body"}, h("button", {disabled: model.isWorking, onClick: this.onExport}, "Export")),
+        h("div", {className: "arrow-body"}, h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter"}, "Export")),
         h("div", {className: "arrow-head"})
       ),
       h("div", {className: "area", id: "result-area"},
@@ -1110,8 +1114,7 @@ class App extends React.Component {
     ReactDOM.render(h(App, {model}), root);
 
     if (parent && parent.isUnitTest) { // for unit tests
-      window.testData = {model};
-      parent.postMessage({insextTestLoaded: true}, "*");
+      parent.insextTestLoaded({model, sfConn});
     }
 
   });

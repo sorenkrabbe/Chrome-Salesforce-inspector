@@ -1,9 +1,6 @@
-/* eslint-disable no-unused-vars */
 /* global React ReactDOM */
-/* global sfConn apiVersion */
+import {sfConn, apiVersion} from "./inspector.js";
 /* global initButton */
-/* eslint-enable no-unused-vars */
-"use strict";
 
 class Model {
   constructor(sfHost) {
@@ -279,8 +276,6 @@ class App extends React.Component {
             : model.progress == "done" ? "Finished"
             : "Error!"
           ),
-          // Until https://github.com/sorenkrabbe/Chrome-Salesforce-inspector/issues/113 is fixed
-          navigator.userAgent.includes("Firefox") && (model.downloadLink || model.statusLink) ? "You need to open these links in a new tab or window for them to work:" : null,
           model.downloadLink ? h("a", {href: model.downloadLink, download: "metadata.zip", className: "button"}, "Save downloaded metadata") : null,
           model.statusLink ? h("a", {href: model.statusLink, download: "status.json", className: "button"}, "Save status info") : null,
           h("span", {className: "flex"}),
