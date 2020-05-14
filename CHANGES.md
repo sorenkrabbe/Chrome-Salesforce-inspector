@@ -1,3 +1,10 @@
+Version 1.10
+===========
+
+General
+-------
+* Update to Salesforce API v 48.0
+
 Version 1.9
 ===========
 
