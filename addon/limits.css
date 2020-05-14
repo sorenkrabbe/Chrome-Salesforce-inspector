@@ -16,7 +16,7 @@ figcaption {
 figcaption > div {
   font-weight: normal;
   font-size: 0.8em;
-  margin-top: 5px;
+  margin-top: 2px;
 }
 .gauge {
   display:inline-block;

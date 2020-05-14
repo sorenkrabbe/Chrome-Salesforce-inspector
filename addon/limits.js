@@ -91,7 +91,9 @@ class LimitData extends React.Component {
         )
         ),
         h("figcaption", {}, this.props.label,
-          h("div", {}, "(" + this.props.remaining + " of " + this.props.max + " left)")
+          h("div", {}, (this.props.max - this.props.remaining).toLocaleString() + " of " + (this.props.max).toLocaleString() + " consumed",
+            h("br", {}), "(" + (this.props.remaining).toLocaleString() + " left)"
+          ),
         )
       )
     );

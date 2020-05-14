@@ -5,6 +5,10 @@ General
 -------
 * Make inspector available on Visualforce pages on new visualforce.com domain. See #143
 
+Org Limits
+----------
+* Displays "consumed" count
+
 Version 1.10
 ===========
 
