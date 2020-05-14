@@ -16,6 +16,7 @@
     "https://*.salesforce.com/*",
     "https://*.force.com/*",
     "https://*.cloudforce.com/*",
+    "https://*.visualforce.com/*",
     "cookies"
   ],
   "content_scripts": [
@@ -24,7 +25,8 @@
         "https://*.salesforce.com/*",
         "https://*.visual.force.com/*",
         "https://*.lightning.force.com/*",
-        "https://*.cloudforce.com/*"
+        "https://*.cloudforce.com/*",
+        "https://*.visualforce.com/*"
       ],
       "all_frames": true,
       "css": [

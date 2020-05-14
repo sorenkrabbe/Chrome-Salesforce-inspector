@@ -1,3 +1,10 @@
+Version 1.11
+===========
+
+General
+-------
+* Make inspector available on Visualforce pages on new visualforce.com domain. See #143
+
 Version 1.10
 ===========
 
