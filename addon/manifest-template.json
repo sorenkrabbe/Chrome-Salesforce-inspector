@@ -51,7 +51,8 @@
     "inspect.html",
     "metadata-retrieve.html",
     "explore-api.html",
-    "limits.html"
+    "limits.html",
+    "dependencies.html"
   ],
   "incognito": "replaced-at-build",
   "manifest_version": 2
