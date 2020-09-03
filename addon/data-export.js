@@ -1067,6 +1067,7 @@ class App extends React.Component {
         h("div", {hidden: !model.showHelp},
           h("p", {}, "Use for quick one-off data exports. Enter a ", h("a", {href: "http://www.salesforce.com/us/developer/docs/soql_sosl/", target: "_blank"}, "SOQL query"), " in the box above and press Export."),
           h("p", {}, "Press Ctrl+Space to insert all field name autosuggestions or to load suggestions for field values."),
+          h("p", {}, "Press Ctrl+fn+Space on a Mac"),
           h("p", {}, "Supports the full SOQL language. The columns in the CSV output depend on the returned data. Using subqueries may cause the output to grow rapidly. Bulk API is not supported. Large data volumes may freeze or crash your browser.")
         )
       ),
