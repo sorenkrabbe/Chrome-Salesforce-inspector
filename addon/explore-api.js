@@ -326,6 +326,7 @@ class App extends React.Component {
 
     let root = document.getElementById("root");
     let model = new Model(sfHost, args);
+    window.sfConn = sfConn;
     window.display = apiPromise => {
       if (model.spinnerCount > 0) {
         throw new Error("API call already in progress");
