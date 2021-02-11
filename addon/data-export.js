@@ -664,9 +664,15 @@ class Model {
             }
           })
           .concat(
-            new Enumerable(["AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"])
+            new Enumerable(["FIELDS(ALL)", "FIELDS(STANDARD)", "FIELDS(CUSTOM)", "AVG", "COUNT", "COUNT_DISTINCT", "MIN", "MAX", "SUM", "CALENDAR_MONTH", "CALENDAR_QUARTER", "CALENDAR_YEAR", "DAY_IN_MONTH", "DAY_IN_WEEK", "DAY_IN_YEAR", "DAY_ONLY", "FISCAL_MONTH", "FISCAL_QUARTER", "FISCAL_YEAR", "HOUR_IN_DAY", "WEEK_IN_MONTH", "WEEK_IN_YEAR", "convertTimezone"])
               .filter(fn => fn.toLowerCase().startsWith(searchTerm.toLowerCase()))
-              .map(fn => ({value: fn, title: fn + "()", suffix: "(", rank: 2}))
+              .map(fn => {
+                if (fn.includes(")")) { //Exception to easily support functions with hardcoded parameter options
+                  return {value: fn, title: fn, suffix: "", rank: 2};
+                } else {
+                  return {value: fn, title: fn + "()", suffix: "(", rank: 2};
+                }
+              })
           )
           .toArray()
           .sort(resultsSort)
