@@ -1,3 +1,10 @@
+Version 1.12
+===========
+
+General
+-------
+* Update to Salesforce API v 51.0 (Spring '21)
+
 Version 1.11
 ===========
 
