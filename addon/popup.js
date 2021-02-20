@@ -131,7 +131,7 @@ class App extends React.PureComponent {
             h("a", {ref: "dataExportBtn", href: "data-export.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "E"), "xport"),
             h("a", {ref: "dataImportBtn", href: "data-import.html?" + hostArg, target: linkTarget, className: "button"}, "Data ", h("u", {}, "I"), "mport"),
             h("a", {ref: "limitsBtn", href: "limits.html?" + hostArg, target: linkTarget, className: "button"}, "Org ", h("u", {}, "L"), "imits"),
-            // Advanded features should be put below this line, and the layout adjusted so they are below the fold
+            // Advanced features should be put below this line, and the layout adjusted so they are below the fold
             h("a", {ref: "metaRetrieveBtn", href: "metadata-retrieve.html?" + hostArg, target: linkTarget, className: "button"}, h("u", {}, "D"), "ownload Metadata"),
             h("a", {ref: "apiExploreBtn", href: "explore-api.html?" + hostArg, target: linkTarget, className: "button"}, "E", h("u", {}, "x"), "plore API"),
             // Workaround for in Lightning the link to Setup always opens a new tab, and the link back cannot open a new tab.
@@ -849,6 +849,13 @@ class AllDataSelection extends React.PureComponent {
   getObjectSetupLink(sobjectName) {
     return "https://" + this.props.sfHost + "/lightning/setup/ObjectManager/" + sobjectName + "/FieldsAndRelationships/view";
   }
+  getRecordLink(linkTarget, sobjectName, keyPrefix, recordId) {
+    // If the recordId ends with 0000000000AAA it is a dummy ID such as the ID for the master record type 012000000000000AAA
+    if (recordId && isRecordId(recordId) && !recordId.endsWith("0000000000AAA")) {
+      return React.createElement("a", {href: "https://" + this.props.sfHost + "/" + recordId, target: linkTarget, title: "View in Salesforce"}, keyPrefix + " " + ((recordId) ? " / " + recordId : ""));
+    }
+    return React.createElement("span", keyPrefix);
+  }
   render() {
     let {sfHost, showDetailsSupported, contextRecordId, selectedValue, linkTarget, recordIdDetails} = this.props;
     // Show buttons for the available APIs.
@@ -866,7 +873,7 @@ class AllDataSelection extends React.PureComponent {
               h("tr", {},
                 h("th", {}, "Name:"),
                 h("td", {},
-                  h("a", {href: this.getObjectSetupLink(selectedValue.sobject.name), target: linkTarget}, selectedValue.sobject.name)
+                  h("a", {href: this.getObjectSetupLink(selectedValue.sobject.name), target: linkTarget, title: "Edit in Setup -> Object Manager"}, "Edit " + selectedValue.sobject.name + " Object")
                 )
               ),
               h("tr", {},
@@ -876,8 +883,7 @@ class AllDataSelection extends React.PureComponent {
               h("tr", {},
                 h("th", {}, "Id:"),
                 h("td", {},
-                  h("span", {}, selectedValue.sobject.keyPrefix),
-                  h("span", {}, (selectedValue.recordId) ? " / " + selectedValue.recordId : ""),
+                  this.getRecordLink(linkTarget, selectedValue.sobject.name, selectedValue.sobject.keyPrefix, selectedValue.recordId),
                 )
               ))),
 
@@ -1177,6 +1183,14 @@ class Autocomplete extends React.PureComponent {
       )
     );
   }
+}
+
+function isRecordId(recordId) {
+  // We assume a string is a Salesforce ID if it is 18 characters,
+  // contains only alphanumeric characters,
+  // the record part (after the 3 character object key prefix and 2 character instance id) starts with at least four zeroes,
+  // and the 3 character object key prefix is not all zeroes.
+  return /^[a-z0-9]{5}0000[a-z0-9]{9}$/i.exec(recordId) && !recordId.startsWith("000");
 }
 
 function getRecordId(href) {
