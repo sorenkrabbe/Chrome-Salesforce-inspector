@@ -2,3 +2,5 @@ https://unpkg.com/react@15.4.0/dist/react.js
 https://unpkg.com/react-dom@15.4.0/dist/react-dom.js
 https://unpkg.com/react@15.4.0/dist/react.min.js
 https://unpkg.com/react-dom@15.4.0/dist/react-dom.min.js
+https://unpkg.com/vis-network@7.10.0/standalone/esm/vis-network.js
+https://unpkg.com/vis-network@7.10.0/standalone/esm/vis-network.min.js

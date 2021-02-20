@@ -32,7 +32,7 @@ module.exports = {
   ],
   "rules": {
     "indent": ["error", 2, {"SwitchCase": 1, "flatTernaryExpressions": true}],
-    "quotes": ["error", "double", {"avoidEscape": true}],
+    "quotes": ["error", "double", {"allowTemplateLiterals": true, "avoidEscape": true}],
     "semi": ["error", "always"],
     "strict": ["error", "global"],
     "consistent-return": "error",

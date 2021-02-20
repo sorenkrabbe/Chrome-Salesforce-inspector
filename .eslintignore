@@ -2,4 +2,6 @@ addon/react-dom.js
 addon/react-dom.min.js
 addon/react.js
 addon/react.min.js
+addon/vis-network.js
+addon/vis-network.min.js
 target/
