@@ -328,7 +328,7 @@ class Model {
         title: "Objects:",
         results: new Enumerable(globalDescribe.sobjects)
           .filter(sobjectDescribe => sobjectDescribe.name.toLowerCase().includes(searchTerm.toLowerCase()) || sobjectDescribe.label.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map(sobjectDescribe => ({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " ", rank: 1}))
+          .map(sobjectDescribe => ({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " ", rank: 1, autocompleteType: "object", dataType: ""}))
           .toArray()
           .sort(resultsSort)
       };
@@ -549,7 +549,7 @@ class Model {
               results: new Enumerable(data.records)
                 .map(record => record[contextValueField.field.name])
                 .filter(value => value)
-                .map(value => ({value: "'" + value + "'", title: value, suffix: " ", rank: 1}))
+                .map(value => ({value: "'" + value + "'", title: value, suffix: " ", rank: 1, autocompleteType: "fieldValue"}))
                 .toArray()
                 .sort(resultsSort)
             };
@@ -562,7 +562,7 @@ class Model {
         return;
       }
       let ar = new Enumerable(contextValueFields).flatMap(function*({field}) {
-        yield* field.picklistValues.map(pickVal => ({value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " ", rank: 1}));
+        yield* field.picklistValues.map(pickVal => ({value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " ", rank: 1, autocompleteType: "picklistValue", dataType: ""}));
         if (field.type == "boolean") {
           yield {value: "true", title: "true", suffix: " ", rank: 1};
           yield {value: "false", title: "false", suffix: " ", rank: 1};
@@ -658,9 +658,9 @@ class Model {
           .flatMap(sobjectDescribe => sobjectDescribe.fields)
           .filter(field => field.name.toLowerCase().includes(searchTerm.toLowerCase()) || field.label.toLowerCase().includes(searchTerm.toLowerCase()))
           .flatMap(function*(field) {
-            yield {value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", ", rank: 1};
+            yield {value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", ", rank: 1, autocompleteType: "fieldName", dataType: field.type};
             if (field.relationshipName) {
-              yield {value: field.relationshipName + ".", title: field.label, suffix: "", rank: 1};
+              yield {value: field.relationshipName + ".", title: field.label, suffix: "", rank: 1, autocompleteType: "relationshipName", dataType: ""};
             }
           })
           .concat(
@@ -1017,6 +1017,7 @@ class App extends React.Component {
   }
   render() {
     let {model} = this.props;
+    console.log(model.autocompleteResults.results);
     return h("div", {},
       h("img", {id: "spinner", src: "data:image/gif;base64,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", hidden: model.spinnerCount == 0}),
       h("div", {id: "user-info"},
@@ -1026,45 +1027,52 @@ class App extends React.Component {
           ),
           " Salesforce Home"
         ),
-        " \xa0 ",
-        h("span", {}, model.userInfo)
+        h("span", {}, model.userInfo),
+        h("a", {href: "about:blank", id: "export-help-btn", title: "Export Help", onClick: this.onToggleHelp}, "?"),
       ),
       h("div", {className: "area"},
-        h("h1", {}, "Export query"),
-        h("label", {},
-          h("input", {type: "checkbox", checked: model.queryAll, onChange: this.onQueryAllChange, disabled: model.queryTooling}),
-          " ",
-          h("span", {}, "Include deleted and archived records?")
+        h("div", {className: "area-header"},
+          h("h1", {}, "Export query")
         ),
-        h("label", {title: "With the tooling API you can query more metadata, but you cannot query regular data"},
-          h("input", {type: "checkbox", checked: model.queryTooling, onChange: this.onQueryToolingChange, disabled: model.queryAll}),
-          " ",
-          h("span", {}, "Use Tooling API?")
-        ),
-        h("label", {},
-          h("select", {value: JSON.stringify(model.selectedHistoryEntry), onChange: this.onSelectHistoryEntry, className: "query-history"},
-            h("option", {value: JSON.stringify(null)}, "Query history"),
-            model.queryHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+        h("div", {className: "query-controls"},
+          h("div", {className: "query-options"},
+            h("label", {},
+              h("input", {type: "checkbox", checked: model.queryAll, onChange: this.onQueryAllChange, disabled: model.queryTooling}),
+              " ",
+              h("span", {}, "Include deleted and archived records?")
+            ),
+            h("label", {title: "With the tooling API you can query more metadata, but you cannot query regular data"},
+              h("input", {type: "checkbox", checked: model.queryTooling, onChange: this.onQueryToolingChange, disabled: model.queryAll}),
+              " ",
+              h("span", {}, "Use Tooling API?")
+            ),
           ),
-          h("a", {href: "about:blank", onClick: this.onClearHistory, title: "Clear query history", className: "char-btn"}, "X")
-        ),
-        h("label", {},
-          h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
-            h("option", {value: JSON.stringify(null)}, "Saved queries"),
-            model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+          h("div", {className: "query-history-controls"},
+            h("div", {className: "button-group"},
+              h("select", {value: JSON.stringify(model.selectedHistoryEntry), onChange: this.onSelectHistoryEntry, className: "query-history"},
+                h("option", {value: JSON.stringify(null)}, "Query History"),
+                model.queryHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+              ),
+              h("button", {onClick: this.onClearHistory, title: "Clear query history"}, "Clear")
+            ),
+            h("div", {className: "button-group"},
+              h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
+                h("option", {value: JSON.stringify(null)}, "Saved Queries"),
+                model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+              ),
+              h("button", {onClick: this.onAddToHistory, title: "Add query to saved history"}, "Save Query"),
+              h("button", {onClick: this.onRemoveFromHistory, title: "Remove query from saved history"}, "Remove Saved Query"),
+              h("button", {onClick: this.onClearSavedHistory, title: "Clear saved history"}, "Clear Saved Queries")
+            ),
           ),
-          h("a", {href: "about:blank", onClick: this.onAddToHistory, title: "Add query to saved history", className: "char-btn"}, "+"),
-          h("a", {href: "about:blank", onClick: this.onRemoveFromHistory, title: "Remove query from saved history", className: "char-btn"}, "X"),
-          h("a", {href: "about:blank", onClick: this.onClearSavedHistory, title: "Clear saved history", className: "char-btn"}, "XX")
         ),
-        h("a", {href: "about:blank", id: "export-help-btn", onClick: this.onToggleHelp}, "Export help"),
         h("textarea", {id: "query", ref: "query", style: {maxHeight: (model.winInnerHeight - 200) + "px"}}),
         h("div", {className: "autocomplete-box" + (model.expandAutocomplete ? " expanded" : "")},
           h("span", {className: "autocomplete-results"},
             h("span", {}, model.autocompleteResults.title),
             " ",
             model.autocompleteResults.results.map(r =>
-              h("span", {key: r.value}, h("a", {title: r.title, onClick: e => { e.preventDefault(); model.autocompleteClick(r); model.didUpdate(); }, href: "about:blank"}, r.value), " ")
+              h("span", {key: r.value}, h("a", {title: r.title, onClick: e => { e.preventDefault(); model.autocompleteClick(r); model.didUpdate(); }, href: "about:blank", className:r.autocompleteType + ' ' + r.dataType}, r.value), " ")
             )
           ),
           h("a", {className: "char-btn", hidden: !model.autocompleteResults.sobjectName, href: model.showDescribeUrl(), title: "Show field info for the " + model.autocompleteResults.sobjectName + " object"}, "i"),
