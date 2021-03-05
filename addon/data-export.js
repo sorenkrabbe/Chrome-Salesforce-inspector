@@ -702,7 +702,7 @@ class Model {
         if (!data.done) {
           let pr = batchHandler(sfConn.rest(data.nextRecordsUrl, {progressHandler: vm.exportProgress}));
           vm.isWorking = true;
-          vm.exportStatus = "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).";
+          vm.exportStatus = "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s)";
           vm.exportError = null;
           vm.exportedData = exportedData;
           vm.updatedExportedData();
@@ -719,7 +719,7 @@ class Model {
           return null;
         }
         vm.isWorking = false;
-        vm.exportStatus = "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s).";
+        vm.exportStatus = "Exported " + exportedData.records.length + (exportedData.records.length != exportedData.totalSize ? " of " + exportedData.totalSize : "") + " record(s)";
         vm.exportError = null;
         vm.exportedData = exportedData;
         vm.updatedExportedData();
@@ -882,9 +882,12 @@ class App extends React.Component {
   }
   onClearHistory(e) {
     e.preventDefault();
-    let {model} = this.props;
-    model.clearHistory();
-    model.didUpdate();
+    let r = confirm("Are you sure you want to clear the query history?");
+    if (r == true) {
+      let {model} = this.props;
+      model.clearHistory();
+      model.didUpdate();
+    }
   }
   onSelectSavedEntry(e) {
     let {model} = this.props;
@@ -900,15 +903,21 @@ class App extends React.Component {
   }
   onRemoveFromHistory(e) {
     e.preventDefault();
-    let {model} = this.props;
-    model.removeFromHistory();
-    model.didUpdate();
+    let r = confirm("Are you sure you want to remove this saved query?");
+    if (r == true) {
+      let {model} = this.props;
+      model.removeFromHistory();
+      model.didUpdate();
+    }
   }
   onClearSavedHistory(e) {
     e.preventDefault();
-    let {model} = this.props;
-    model.clearSavedHistory();
-    model.didUpdate();
+    let r = confirm("Are you sure you want to remove all saved queries?");
+    if (r == true) {
+      let {model} = this.props;
+      model.clearSavedHistory();
+      model.didUpdate();
+    }
   }
   onToggleHelp(e) {
     e.preventDefault();
@@ -978,7 +987,7 @@ class App extends React.Component {
       }
     });
     addEventListener("keydown", e => {
-      if (e.ctrlKey && e.key == "Enter") {
+      if (e.ctrlKey && e.key == "Enter" || e.key == "F5") {
         e.preventDefault();
         model.doExport();
         model.didUpdate();
@@ -1019,7 +1028,6 @@ class App extends React.Component {
     let {model} = this.props;
     console.log(model.autocompleteResults.results);
     return h("div", {},
-      h("img", {id: "spinner", src: "data:image/gif;base64,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", hidden: model.spinnerCount == 0}),
       h("div", {id: "user-info"},
         h("a", {href: model.sfLink, className: "sf-link"},
           h("svg", {viewBox: "0 0 24 24"},
@@ -1028,11 +1036,20 @@ class App extends React.Component {
           " Salesforce Home"
         ),
         h("span", {}, model.userInfo),
-        h("a", {href: "about:blank", id: "export-help-btn", title: "Export Help", onClick: this.onToggleHelp}, "?"),
+        h("div", {className: "flex-right"},
+          h("div", {id: "spinner", role: "status", className: "slds-spinner slds-spinner_small slds-spinner_inline", hidden: model.spinnerCount == 0},
+            h("span", {className: "slds-assistive-text"}),
+            h("div", {className: "slds-spinner__dot-a"}),
+            h("div", {className: "slds-spinner__dot-b"}),
+          ),
+          h("a", {href: "#", id: "export-help-btn", title: "Export Help", onClick: this.onToggleHelp}, 
+            h("div", {className: "icon"})
+          ),
+        ),
       ),
       h("div", {className: "area"},
         h("div", {className: "area-header"},
-          h("h1", {}, "Export query")
+          h("h1", {}, "Export Query")
         ),
         h("div", {className: "query-controls"},
           h("div", {className: "query-options"},
@@ -1050,14 +1067,14 @@ class App extends React.Component {
           h("div", {className: "query-history-controls"},
             h("div", {className: "button-group"},
               h("select", {value: JSON.stringify(model.selectedHistoryEntry), onChange: this.onSelectHistoryEntry, className: "query-history"},
-                h("option", {value: JSON.stringify(null)}, "Query History"),
+                h("option", {value: JSON.stringify(null), disabled: true}, "Query History"),
                 model.queryHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
               ),
               h("button", {onClick: this.onClearHistory, title: "Clear query history"}, "Clear")
             ),
             h("div", {className: "button-group"},
               h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
-                h("option", {value: JSON.stringify(null)}, "Saved Queries"),
+                h("option", {value: JSON.stringify(null) , disabled: true}, "Saved Queries"),
                 model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
               ),
               h("button", {onClick: this.onAddToHistory, title: "Add query to saved history"}, "Save Query"),
@@ -1070,40 +1087,48 @@ class App extends React.Component {
         h("div", {className: "autocomplete-box" + (model.expandAutocomplete ? " expanded" : "")},
           h("div", {className: "autocomplete-header"},
             h("span", {}, model.autocompleteResults.title),
-            h("div", {className: "button-group"},
+            h("div", {className: "button-group flex-right"},
               h("a", {className: "button", hidden: !model.autocompleteResults.sobjectName, href: model.showDescribeUrl(), target: "_blank", title: "Show field info for the " + model.autocompleteResults.sobjectName + " object"}, model.autocompleteResults.sobjectName + " Field Info"),
-              h("button", {href: "about:blank", className: model.expandAutocomplete ? "toggle contract" : "toggle expand", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, h("div", {className: "button-icon"}))
+              h("button", {href: "#", className: model.expandAutocomplete ? "toggle contract" : "toggle expand", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, h("div", {className: "button-icon"}))
             ),
           ),
           h("div", {className: "autocomplete-results"},
             model.autocompleteResults.results.map(r =>
-              h("div", {className: "autocomplete-result", key: r.value}, h("a", {title: r.title, onClick: e => { e.preventDefault(); model.autocompleteClick(r); model.didUpdate(); }, href: "about:blank", className:r.autocompleteType + ' ' + r.dataType}, h("div", {className: "autocomplete-icon"}), r.value), " ")
+              h("div", {className: "autocomplete-result", key: r.value}, h("a", {title: r.title, onClick: e => { e.preventDefault(); model.autocompleteClick(r); model.didUpdate(); }, href: "#", className:r.autocompleteType + ' ' + r.dataType}, h("div", {className: "autocomplete-icon"}), r.value), " ")
             )
           ),
         ),
-        h("div", {hidden: !model.showHelp},
+        h("div", {hidden: !model.showHelp, className: "help-text"},
+          h("h3", {}, "Export Help"), 
           h("p", {}, "Use for quick one-off data exports. Enter a ", h("a", {href: "http://www.salesforce.com/us/developer/docs/soql_sosl/", target: "_blank"}, "SOQL query"), " in the box above and press Export."),
           h("p", {}, "Press Ctrl+Space to insert all field name autosuggestions or to load suggestions for field values."),
+          h("p", {}, "Press Ctrl+Enter or F5 to execute the export."),
           h("p", {}, "Supports the full SOQL language. The columns in the CSV output depend on the returned data. Using subqueries may cause the output to grow rapidly. Bulk API is not supported. Large data volumes may freeze or crash your browser.")
         )
       ),
       h("div", {className: "action-arrow"},
-        h("div", {className: "arrow-body"}, h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter"}, "Export")),
+        h("div", {className: "arrow-body"},
+          h("div", {className: "button-group"},
+            h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter / F5", className: "highlighted"}, "Export")),
+        ),
         h("div", {className: "arrow-head"})
       ),
       h("div", {className: "area", id: "result-area"},
         h("div", {className: "result-bar"},
-          h("h1", {}, "Export result"),
-          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcel, title: "Copy exported data to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
-          " ",
-          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsv, title: "Copy exported data to clipboard for saving as a CSV file"}, "Copy (CSV)"),
-          " ",
-          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard"}, "Copy (JSON)"),
-          " ",
-          h("input", {placeholder: "Filter results", value: model.resultsFilter, onInput: this.onResultsFilterInput}),
-          h("span", {className: "result-status"},
+          h("h1", {}, "Export Result"),
+          h("div", {className: "button-group"},
+            h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcel, title: "Copy exported data to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
+            h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsv, title: "Copy exported data to clipboard for saving as a CSV file"}, "Copy (CSV)"),
+            h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard"}, "Copy (JSON)"),
+          ),
+          h("div", {className: "button-group"},
+            h("input", {placeholder: "Filter Results", type: "search", value: model.resultsFilter, onInput: this.onResultsFilterInput}),
+          ),
+          h("span", {className: "result-status flex-right"},
             h("span", {}, model.exportStatus),
-            h("button", {className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport}, "Stop")
+            h("div", {className: "button-group"},
+              h("button", {className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport}, "Stop")
+            ),
           )
         ),
         h("textarea", {id: "result-text", readOnly: true, value: model.exportError || "", hidden: model.exportError == null}),

@@ -175,15 +175,25 @@ function renderCell(rt, cell, td) {
           args.set("recordId", recordId);
         }
         aShow.href = "inspect.html?" + args;
+        aShow.target = "_blank";
         aShow.textContent = "Show all data";
+        aShow.className = "view-inspector";
+        let aShowIcon = document.createElement("div");
+        aShowIcon.className = "icon"
         pop.appendChild(aShow);
+        aShow.prepend(aShowIcon);
       }
       // If the recordId ends with 0000000000AAA it is a dummy ID such as the ID for the master record type 012000000000000AAA
       if (recordId && isRecordId(recordId) && !recordId.endsWith("0000000000AAA")) {
         let aView = document.createElement("a");
         aView.href = "https://" + rt.sfHost + "/" + recordId;
+        aView.target = "_blank";
         aView.textContent = "View in Salesforce";
+        aView.className = "view-salesforce";
+        let aviewIcon = document.createElement("div");
+        aviewIcon.className = "icon";
         pop.appendChild(aView);
+        aView.prepend(aviewIcon);
       }
       function closer(ev) {
         if (ev != e && ev.target.closest(".pop-menu") != pop) {

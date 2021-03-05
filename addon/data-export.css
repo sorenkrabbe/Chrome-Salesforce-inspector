@@ -100,18 +100,30 @@ textarea {
 textarea[hidden] {
   display: none;
 }
+.help-text {
+  background: #fff;
+  border: 1px solid #DDDBDA;
+  padding: 0 15px;
+  border-radius: 0.25rem;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
 #query {
   height: 5em;
   min-height: 5em;
 }
 #result-area {
   flex: 1 1 0;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   display: flex;
   flex-direction: column;
+  padding: 0;
 }
 .result-bar {
   margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
 }
 #result-text {
   flex: 1 1 0;
@@ -121,6 +133,93 @@ textarea[hidden] {
 #result-table {
   overflow: auto;
   flex: 1 1 0;
+  background-color: #fff;
+  border-top: 1px solid #DDDBDA;
+}
+#result-table table {
+  border: none;
+}
+#result-table table tr td:first-child {
+  border-left: none;
+}
+.scrolltable-scrolled {
+  position: relative;
+}
+.scrolltable-scrolled table {
+  border-collapse: collapse;
+  position: absolute;
+}
+.scrolltable-cell {
+  border: 1px solid #DDDBDA;
+  overflow: hidden;
+  padding: 0 4px;
+  background-color: white;
+  white-space: pre;
+  box-sizing: border-box;
+}
+.scrolltable-cell.header {
+  font-weight: 700;
+  background-color: #FAFAF9;
+  border-top: none;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  /* position: sticky; */
+  /* top: 0; */
+  /* z-index: 1; */
+}
+.scrolltable-cell a {
+    color: #006dcc;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+}
+.pop-menu {
+  position: absolute;
+  padding: 7px 0;
+  margin-left: 5px;
+  margin-top: -5px;
+  background: rgb(255, 255, 255);
+  box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.16);
+  border: 1px solid rgb(221, 219, 218);
+  border-radius: 0.25rem;
+}
+.pop-menu a {
+  display: block;
+  text-decoration: none;
+  color: rgb(0, 112, 210);
+  padding: 5px 15px;
+  display: flex;
+  align-items: center;
+}
+.pop-menu a .icon {
+  /* background-color: #706E6B; */
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 8px;
+}
+.pop-menu a.view-salesforce .icon {
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 1rem;
+  -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/salesforce1.svg');
+  -webkit-mask-position: center;
+}
+.pop-menu a.view-inspector .icon {
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 1rem;
+  -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/salesforce-inspector-logo.svg');
+  -webkit-mask-position: center;
+}
+.pop-menu a.view-salesforce .icon{
+  background-color: #009DDC;
+}
+.pop-menu a.view-inspector .icon {
+  background-color: #D8BE5F;
+}
+.pop-menu a:hover {
+  background-color: #F3F2F2;
+}
+.pop-menu a:active {
+  background-color: #ECEBEA;
 }
 .area {
   background-color: #F8F8F8;
@@ -141,17 +240,17 @@ h1 {
   text-align: center;
 }
 .arrow-body {
-  background-color: green;
+  background-color: #1589ee;
   width: 100px;
   margin: 0 auto;
-  padding-top: 5px;
+  padding-top: 8px;
 }
 .arrow-head {
   border-left: 50px solid transparent;
   border-right: 50px solid transparent;
-  border-top: 15px solid green;
+  border-top: 25px solid #1589ee;
   width: 0;
-  margin: 0 auto -8px;
+  margin: 0 auto -37px auto;
   position: relative;
 }
 .query-controls {
@@ -176,27 +275,64 @@ h1 {
 .query-history-controls {
   display: flex;
 }
-.query-history {
+select, input[type=search] {
   width: 12rem;
   font-family: inherit;
   padding: 5px 13px;
   border: 1px solid #DDDBDA;
+  border-left: none;
   height: 32px;
+  position: relative;
 }
-.query-history:focus, textarea:focus, button:active, button:focus {
+
+input[type=search] {
+  background-image: url('chrome-extension://__MSG_@@extension_id__/images/search.svg');
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  background-position: 10px 7px;
+  padding-left: 35px;
+}
+.query-history:focus, textarea:not([readonly]):focus, button:active, button:focus, input:active, input:focus {
   border-color: rgb(21, 137, 238) !important;
   border: 1px solid;
   box-shadow: rgb(6, 28, 63) 0px 0px 3px 0px;
   outline: none;
   z-index: 1;
 }
-button:active, button:focus {
+button:active:not(:first-child), button:focus:not(:first-child), input:active:not(:first-child), input:focus:not(:first-child) {
   margin-left: -1px;
 }
-
 button:active, button:focus {
   background-color: rgb(238, 241, 246);
   color: #005fb2;
+}
+:disabled {
+  color: #dddbda !important;
+  cursor: default;
+}
+:disabled:hover {
+  background-color: #fff;
+}
+.highlighted {
+  background-color: rgb(0, 112, 210);
+  border-color: rgb(0, 112, 210) !important;
+  color: #fff;
+}
+.highlighted:hover, .highlighted:active {
+  background-color: rgb(0, 95, 178);
+  color: #fff;
+}
+.highlighted:disabled:hover {
+  background-color: rgb(0, 112, 210);;
+}
+option[value="null"][disabled] {
+  display: none;
+}
+textarea[readonly] {
+  outline: none;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid #DDDBDA;
 }
 #export-help-btn {
   margin-left: auto;
@@ -204,14 +340,30 @@ button:active, button:focus {
   font-size: 1.5rem;
   font-weight: 700;
   color: #919191;
+  display: flex;
+  align-items: center;
 }
-#export-help-btn:hover {
-  color: #818181;
+#export-help-btn:hover .icon{
+  background-color: #818181;
+}
+#export-help-btn .icon {
+  display: inline-block;
+  width: 1.4rem;
+  height: 1.4rem;;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 1.4rem;;
+  -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/help.svg');
+  -webkit-mask-position: center;
+  background-color: #919191;
 }
 #spinner {
-  position: absolute;
   left: -15px;
-  top: -15px;
+  top: 9px;
+}
+.flex-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 #result-area  h1 {
   margin-right: 1em;
@@ -270,7 +422,7 @@ button.toggle {
 }
 button.toggle .button-icon{
   -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: 0.95rem;
+  -webkit-mask-size: 1rem;
   background-color: #706E6B;
   display: inline-block;
   width: 16px;
@@ -284,9 +436,6 @@ button.expand .button-icon{
 }
 button.contract .button-icon{
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/up.svg');
-}
-.result-status {
-  float: right;
 }
 .autocomplete-box {
   /* display: flex; */
@@ -302,9 +451,6 @@ button.contract .button-icon{
 }
 .autocomplete-header span {
   font-size: 1rem;
-}
-.autocomplete-header .button-group {
-  margin-left: auto;
 }
 .autocomplete-results {
   /* flex: 1 1 0; */
