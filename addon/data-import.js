@@ -802,130 +802,135 @@ class App extends React.Component {
         h("h1", {}, "Data Import"),
         h("span", {}, " / " + model.userInfo)
       ),
-      h("div", {className: "conf-section"},
-        h("div", {className: "conf-subsection"},
-          h("div", {className: "conf-line"},
-            h("label", {className: "conf-input", title: "With the tooling API you can query more metadata, but you cannot query regular data"},
-              h("span", {className: "conf-label"}),
-              h("span", {className: "conf-value"},
-                h("input", {type: "checkbox", checked: model.useToolingApi, onChange: this.onUseToolingApiChange, disabled: model.isWorking()}),
-                " Use Tooling API?"
-              )
-            )
-          ),
-          h("div", {className: "conf-line"},
-            h("label", {className: "conf-input"},
-              h("span", {className: "conf-label"}, "Action"),
-              h("span", {className: "conf-value"},
-                h("select", {value: model.importAction, onChange: this.onImportActionChange, disabled: model.isWorking()},
-                  h("option", {value: "create"}, "Insert"),
-                  h("option", {value: "update"}, "Update"),
-                  h("option", {value: "upsert"}, "Upsert"),
-                  h("option", {value: "delete"}, "Delete")
+      h("div", {className: "area"},
+        h("div", {className: "area-header"},
+          h("h1", {}, "Configure Import")
+        ),
+        h("div", {className: "conf-section"},
+          h("div", {className: "conf-subsection"},
+            h("div", {className: "conf-line"},
+              h("label", {className: "conf-input", title: "With the tooling API you can query more metadata, but you cannot query regular data"},
+                h("span", {className: "conf-label"}),
+                h("span", {className: "conf-value"},
+                  h("input", {type: "checkbox", checked: model.useToolingApi, onChange: this.onUseToolingApiChange, disabled: model.isWorking()}),
+                  " Use Tooling API?"
                 )
               )
-            )
-          ),
-          h("div", {className: "conf-line"},
-            h("label", {className: "conf-input"},
-              h("span", {className: "conf-label"}, "Object"),
-              h("span", {className: "conf-value"},
-                h("input", {type: "text", value: model.importType, onChange: this.onImportTypeChange, className: model.importTypeError() ? "confError" : "", disabled: model.isWorking(), list: "sobjectlist"}),
-                h("div", {className: "conf-error", hidden: !model.importTypeError()}, model.importTypeError())
+            ),
+            h("div", {className: "conf-line"},
+              h("label", {className: "conf-input"},
+                h("span", {className: "conf-label"}, "Action"),
+                h("span", {className: "conf-value"},
+                  h("select", {value: model.importAction, onChange: this.onImportActionChange, disabled: model.isWorking()},
+                    h("option", {value: "create"}, "Insert"),
+                    h("option", {value: "update"}, "Update"),
+                    h("option", {value: "upsert"}, "Upsert"),
+                    h("option", {value: "delete"}, "Delete")
+                  )
+                )
               )
             ),
-            h("a", {className: "char-btn", href: model.showDescribeUrl(), title: "Show field info for the selected object"}, "i")
-          ),
-          h("div", {className: "conf-line"},
-            h("span", {className: "conf-label"}, "Format"),
-            h("label", {}, h("input", {type: "radio", name: "data-input-format", value: "excel", checked: model.dataFormat == "excel", onChange: this.onDataFormatChange, disabled: model.isWorking()}), " ", h("span", {}, "Excel")),
-            " ",
-            h("label", {}, h("input", {type: "radio", name: "data-input-format", value: "csv", checked: model.dataFormat == "csv", onChange: this.onDataFormatChange, disabled: model.isWorking()}), " ", h("span", {}, "CSV"))
-          ),
-          h("div", {className: "conf-line"},
-            h("label", {className: "conf-input"},
-              h("span", {className: "conf-label"}, "Data"),
-              h("span", {className: "conf-value"},
-                h("textarea", {id: "data", value: model.message(), onPaste: this.onDataPaste, className: model.dataError ? "confError" : "", disabled: model.isWorking(), readOnly: true, rows: 1}),
-                h("div", {className: "conf-error", hidden: !model.dataError}, model.dataError)
+            h("div", {className: "conf-line"},
+              h("label", {className: "conf-input"},
+                h("span", {className: "conf-label"}, "Object"),
+                h("span", {className: "conf-value"},
+                  h("input", {type: "text", value: model.importType, onChange: this.onImportTypeChange, className: model.importTypeError() ? "confError" : "", disabled: model.isWorking(), list: "sobjectlist"}),
+                  h("div", {className: "conf-error", hidden: !model.importTypeError()}, model.importTypeError())
+                )
+              ),
+              h("a", {className: "char-btn", href: model.showDescribeUrl(), title: "Show field info for the selected object"}, "i")
+            ),
+            h("div", {className: "conf-line"},
+              h("span", {className: "conf-label"}, "Format"),
+              h("label", {}, h("input", {type: "radio", name: "data-input-format", value: "excel", checked: model.dataFormat == "excel", onChange: this.onDataFormatChange, disabled: model.isWorking()}), " ", h("span", {}, "Excel")),
+              " ",
+              h("label", {}, h("input", {type: "radio", name: "data-input-format", value: "csv", checked: model.dataFormat == "csv", onChange: this.onDataFormatChange, disabled: model.isWorking()}), " ", h("span", {}, "CSV"))
+            ),
+            h("div", {className: "conf-line"},
+              h("label", {className: "conf-input"},
+                h("span", {className: "conf-label"}, "Data"),
+                h("span", {className: "conf-value"},
+                  h("textarea", {id: "data", value: model.message(), onPaste: this.onDataPaste, className: model.dataError ? "confError" : "", disabled: model.isWorking(), readOnly: true, rows: 1}),
+                  h("div", {className: "conf-error", hidden: !model.dataError}, model.dataError)
+                )
               )
-            )
-          ),
-          h("div", {className: "conf-line", hidden: model.importAction != "upsert"},
-            h("label", {className: "conf-input", title: "Used in upserts to determine if an existing record should be updated or a new record should be created"},
-              h("span", {className: "conf-label"}, "External ID:"),
-              h("span", {className: "conf-value"},
-                h("input", {type: "text", value: model.externalId, onChange: this.onExternalIdChange, className: model.externalIdError() ? "confError" : "", disabled: model.isWorking(), list: "idlookuplist"}),
-                h("div", {className: "conf-error", hidden: !model.externalIdError()}, model.externalIdError())
+            ),
+            h("div", {className: "conf-line", hidden: model.importAction != "upsert"},
+              h("label", {className: "conf-input", title: "Used in upserts to determine if an existing record should be updated or a new record should be created"},
+                h("span", {className: "conf-label"}, "External ID:"),
+                h("span", {className: "conf-value"},
+                  h("input", {type: "text", value: model.externalId, onChange: this.onExternalIdChange, className: model.externalIdError() ? "confError" : "", disabled: model.isWorking(), list: "idlookuplist"}),
+                  h("div", {className: "conf-error", hidden: !model.externalIdError()}, model.externalIdError())
+                )
               )
-            )
-          ),
-          h("div", {className: "conf-line"},
-            h("label", {className: "conf-input", title: "The number of records per batch. A higher value is faster but increases the risk of errors due to governor limits."},
-              h("span", {className: "conf-label"}, "Batch size"),
-              h("span", {className: "conf-value"},
-                h("input", {type: "number", value: model.batchSize, onChange: this.onBatchSizeChange, className: (model.batchSizeError() ? "confError" : "") + " batch-size"}),
-                h("div", {className: "conf-error", hidden: !model.batchSizeError()}, model.batchSizeError())
+            ),
+            h("div", {className: "conf-line"},
+              h("label", {className: "conf-input", title: "The number of records per batch. A higher value is faster but increases the risk of errors due to governor limits."},
+                h("span", {className: "conf-label"}, "Batch size"),
+                h("span", {className: "conf-value"},
+                  h("input", {type: "number", value: model.batchSize, onChange: this.onBatchSizeChange, className: (model.batchSizeError() ? "confError" : "") + " batch-size"}),
+                  h("div", {className: "conf-error", hidden: !model.batchSizeError()}, model.batchSizeError())
+                )
               )
-            )
-          ),
-          h("div", {className: "conf-line"},
-            h("label", {className: "conf-input", title: "The number of batches to execute concurrently. A higher number is faster but increases the risk of errors due to lock congestion."},
-              h("span", {className: "conf-label"}, "Threads"),
-              h("span", {className: "conf-value"},
-                h("input", {type: "number", value: model.batchConcurrency, onChange: this.onBatchConcurrencyChange, className: (model.batchConcurrencyError() ? "confError" : "") + " batch-size"}),
-                h("span", {hidden: !model.isWorking()}, model.activeBatches),
-                h("div", {className: "conf-error", hidden: !model.batchConcurrencyError()}, model.batchConcurrencyError())
+            ),
+            h("div", {className: "conf-line"},
+              h("label", {className: "conf-input", title: "The number of batches to execute concurrently. A higher number is faster but increases the risk of errors due to lock congestion."},
+                h("span", {className: "conf-label"}, "Threads"),
+                h("span", {className: "conf-value"},
+                  h("input", {type: "number", value: model.batchConcurrency, onChange: this.onBatchConcurrencyChange, className: (model.batchConcurrencyError() ? "confError" : "") + " batch-size"}),
+                  h("span", {hidden: !model.isWorking()}, model.activeBatches),
+                  h("div", {className: "conf-error", hidden: !model.batchConcurrencyError()}, model.batchConcurrencyError())
+                )
               )
-            )
+            ),
+            h("datalist", {id: "sobjectlist"}, model.sobjectList().map(data => h("option", {key: data, value: data}))),
+            h("datalist", {id: "idlookuplist"}, model.idLookupList().map(data => h("option", {key: data, value: data}))),
+            h("datalist", {id: "columnlist"}, model.columnList().map(data => h("option", {key: data, value: data})))
           ),
-          h("datalist", {id: "sobjectlist"}, model.sobjectList().map(data => h("option", {key: data, value: data}))),
-          h("datalist", {id: "idlookuplist"}, model.idLookupList().map(data => h("option", {key: data, value: data}))),
-          h("datalist", {id: "columnlist"}, model.columnList().map(data => h("option", {key: data, value: data})))
+          h("div", {className: "conf-subsection columns-mapping"},
+            h("div", {className: "columns-label"}, "Field mapping"),
+            h("div", {className: "conf-error confError", hidden: !model.importIdColumnError()}, model.importIdColumnError()),
+            h("div", {className: "conf-value"}, model.columns().map((column, index) => h(ColumnMapper, {key: index, model, column})))
+          )
         ),
-        h("div", {className: "conf-subsection columns-mapping"},
-          h("div", {className: "columns-label"}, "Field mapping"),
-          h("div", {className: "conf-error confError", hidden: !model.importIdColumnError()}, model.importIdColumnError()),
-          h("div", {className: "conf-value"}, model.columns().map((column, index) => h(ColumnMapper, {key: index, model, column})))
-        )
-      ),
-      h("div", {className: "conf-line"},
-        h("span", {className: "conf-label"}),
-        h("a", {href: "about:blank", id: "import-help-btn", onClick: this.onToggleHelpClick}, "Import help"),
-        h("button", {onClick: this.onDoImportClick, disabled: model.invalidInput() || model.isWorking() || model.importCounts().Queued == 0}, "Import"),
-        h("button", {disabled: !model.isWorking(), onClick: this.onToggleProcessingClick}, model.isWorking() && !model.isProcessingQueue ? "Resume queued" : "Cancel queued"),
-        h("button", {disabled: !model.importCounts().Failed > 0, onClick: this.onRetryFailedClick, className: "button-space"}, "Retry failed"),
-        h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcelClick, title: "Copy import result to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
-        h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsvClick, className: "button-space", title: "Copy import result to clipboard for saving as a CSV file"}, "Copy (CSV)"),
-        h("button", {onClick: this.onCopyOptionsClick, title: "Save these import options by pasting them into Excel in the top left cell, just above the header row"}, "Copy options")
-      ),
-      h("div", {hidden: !model.showHelp},
-        h("p", {}, "Use for quick one-off data imports."),
-        h("ul", {},
-          h("li", {}, "Enter your CSV or Excel data in the box above.",
-            h("ul", {},
-              h("li", {}, "The input must contain a header row with field API names."),
-              h("li", {}, "To use an external ID for a lookup field, the header row should contain the lookup relation name, the target sobject name and the external ID name separated by colons, e.g. \"MyLookupField__r:MyObject__c:MyExternalIdField__c\"."),
-              h("li", {}, "Empty cells insert null values."),
-              h("li", {}, "Number, date, time and checkbox values must conform to the relevant ", h("a", {href: "http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes", target: "_blank"}, "XSD datatypes"), "."),
-              h("li", {}, "Columns starting with an underscore are ignored."),
-              h("li", {}, "You can resume a previous import by including the \"__Status\" column in your input."),
-              h("li", {}, "You can supply the other import options by clicking \"Copy options\" and pasting the options into Excel in the top left cell, just above the header row.")
-            )
-          ),
-          h("li", {}, "Select your input format"),
-          h("li", {}, "Select an action (insert, update, upsert or delete)"),
-          h("li", {}, "Enter the API name of the object to import"),
-          h("li", {}, "Press Import")
+        h("div", {className: "conf-line"},
+          h("span", {className: "conf-label"}),
+          h("a", {href: "about:blank", id: "import-help-btn", onClick: this.onToggleHelpClick}, "Import help"),
+          h("button", {onClick: this.onDoImportClick, disabled: model.invalidInput() || model.isWorking() || model.importCounts().Queued == 0}, "Import"),
+          h("button", {disabled: !model.isWorking(), onClick: this.onToggleProcessingClick}, model.isWorking() && !model.isProcessingQueue ? "Resume queued" : "Cancel queued"),
+          h("button", {disabled: !model.importCounts().Failed > 0, onClick: this.onRetryFailedClick, className: "button-space"}, "Retry failed"),
+          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcelClick, title: "Copy import result to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
+          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsvClick, className: "button-space", title: "Copy import result to clipboard for saving as a CSV file"}, "Copy (CSV)"),
+          h("button", {onClick: this.onCopyOptionsClick, title: "Save these import options by pasting them into Excel in the top left cell, just above the header row"}, "Copy options")
         ),
-        h("p", {}, "Bulk API is not supported. Large data volumes may freeze or crash your browser.")
-      ),
-      h("div", {className: "status-group"},
-        h("span", {className: "conf-label"}, "Status"),
-        h(StatusBox, {model, name: "Queued"}),
-        h(StatusBox, {model, name: "Processing"}),
-        h(StatusBox, {model, name: "Succeeded"}),
-        h(StatusBox, {model, name: "Failed"})
+        h("div", {hidden: !model.showHelp},
+          h("p", {}, "Use for quick one-off data imports."),
+          h("ul", {},
+            h("li", {}, "Enter your CSV or Excel data in the box above.",
+              h("ul", {},
+                h("li", {}, "The input must contain a header row with field API names."),
+                h("li", {}, "To use an external ID for a lookup field, the header row should contain the lookup relation name, the target sobject name and the external ID name separated by colons, e.g. \"MyLookupField__r:MyObject__c:MyExternalIdField__c\"."),
+                h("li", {}, "Empty cells insert null values."),
+                h("li", {}, "Number, date, time and checkbox values must conform to the relevant ", h("a", {href: "http://www.w3.org/TR/xmlschema-2/#built-in-primitive-datatypes", target: "_blank"}, "XSD datatypes"), "."),
+                h("li", {}, "Columns starting with an underscore are ignored."),
+                h("li", {}, "You can resume a previous import by including the \"__Status\" column in your input."),
+                h("li", {}, "You can supply the other import options by clicking \"Copy options\" and pasting the options into Excel in the top left cell, just above the header row.")
+              )
+            ),
+            h("li", {}, "Select your input format"),
+            h("li", {}, "Select an action (insert, update, upsert or delete)"),
+            h("li", {}, "Enter the API name of the object to import"),
+            h("li", {}, "Press Import")
+          ),
+          h("p", {}, "Bulk API is not supported. Large data volumes may freeze or crash your browser.")
+        ),
+        h("div", {className: "status-group"},
+          h("span", {className: "conf-label"}, "Status"),
+          h(StatusBox, {model, name: "Queued"}),
+          h(StatusBox, {model, name: "Processing"}),
+          h(StatusBox, {model, name: "Succeeded"}),
+          h(StatusBox, {model, name: "Failed"})
+        ),
       ),
       h("div", {id: "result-table", ref: "scroller"}),
       model.confirmPopup ? h("div", {},
