@@ -141,6 +141,10 @@ textarea[hidden] {
 }
 #result-table table tr td:first-child {
   border-left: none;
+  padding-left: 8px;
+}
+#result-table table tr:hover>td {
+  background-color: #F3F2F2;
 }
 .scrolltable-scrolled {
   position: relative;
@@ -175,12 +179,16 @@ textarea[hidden] {
 .pop-menu {
   position: absolute;
   padding: 7px 0;
-  margin-left: 5px;
-  margin-top: -5px;
   background: rgb(255, 255, 255);
   box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.16);
   border: 1px solid rgb(221, 219, 218);
   border-radius: 0.25rem;
+}
+.pop-menu.saveOptions {
+  right: 0;
+  top: 0;
+  margin: 124px 25px 0 0;
+  z-index: 2;
 }
 .pop-menu a {
   display: block;
@@ -236,27 +244,15 @@ h1 {
   font-weight: 700;
   line-height: 1.25;
 }
-.action-arrow {
-  text-align: center;
-}
-.arrow-body {
-  background-color: #1589ee;
-  width: 100px;
-  margin: 0 auto;
-  padding-top: 8px;
-}
-.arrow-head {
-  border-left: 50px solid transparent;
-  border-right: 50px solid transparent;
-  border-top: 25px solid #1589ee;
-  width: 0;
-  margin: 0 auto -37px auto;
-  position: relative;
-}
 .query-controls {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+}
+.query-controls .button-group {
+  margin-bottom: 8px;
+}
+.query-options {
   margin-bottom: 8px;
 }
 .query-options label {
@@ -274,6 +270,8 @@ h1 {
 }
 .query-history-controls {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 select, input[type=search] {
   width: 12rem;
@@ -299,7 +297,10 @@ input[type=search] {
   outline: none;
   z-index: 1;
 }
-button:active:not(:first-child), button:focus:not(:first-child), input:active:not(:first-child), input:focus:not(:first-child) {
+button:active:not(:first-child), 
+button:focus:not(:first-child),
+input:active:not(:first-child), 
+input:focus:not(:first-child) {
   margin-left: -1px;
 }
 button:active, button:focus {
@@ -386,8 +387,11 @@ textarea[readonly] {
 .char-btn[hidden], button[hidden], .button[hidden] {
   display: none;
 }
-.button-group:not(:last-child) {
-  margin-right: 10px;
+.button-group{
+  white-space: nowrap;
+}
+div.button-group:not(:only-of-type) {
+  margin-left: 10px;
 }
 .button-group > :first-child,
 .button-group > [hidden] + * {
@@ -420,7 +424,7 @@ button:hover, .button:hover {
 button.toggle {
   padding: 0 11px;
 }
-button.toggle .button-icon{
+button.toggle .button-toggle-icon, button.toggle .button-icon {
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: 1rem;
   background-color: #706E6B;
@@ -428,14 +432,17 @@ button.toggle .button-icon{
   width: 16px;
   height: 16px;
 }
-button.toggle:hover .button-icon{
+button.toggle:hover .button-icon, button.toggle:hover .button-toggle-icon  {
   background-color: #004487;
 }
-button.expand .button-icon{
+button.expand .button-toggle-icon {
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/down.svg');
 }
-button.contract .button-icon{
+button.contract .button-toggle-icon {
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/up.svg');
+}
+button.toggle .button-icon {
+  -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/light_bulb.svg');
 }
 .autocomplete-box {
   /* display: flex; */
@@ -446,7 +453,7 @@ button.contract .button-icon{
 }
 .autocomplete-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   margin-top: 8px;
 }
 .autocomplete-header span {
@@ -470,7 +477,7 @@ button.contract .button-icon{
   color: #006dcc;
 }
 .autocomplete-results a:hover, .autocomplete-results a:active  {
-  background-color: #F4F6F9;
+  background-color: #eff1f5;
   color: #005fb2;
 }
 .autocomplete-result, .autocomplete-results span{

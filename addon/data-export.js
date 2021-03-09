@@ -84,6 +84,7 @@ class Model {
     this.savedHistory = new QueryHistory("insextSavedQueryHistory", 50);
     this.selectedSavedEntry = null;
     this.expandAutocomplete = false;
+    this.expandSavedOptions = false;
     this.resultsFilter = "";
     this.autocompleteState = "";
     this.autocompleteProgress = {};
@@ -127,6 +128,9 @@ class Model {
   }
   toggleExpand() {
     this.expandAutocomplete = !this.expandAutocomplete;
+  }
+  toggleSavedOptions() {
+    this.expandSavedOptions = !this.expandSavedOptions;
   }
   showDescribeUrl() {
     let args = new URLSearchParams();
@@ -856,6 +860,7 @@ class App extends React.Component {
     this.onClearSavedHistory = this.onClearSavedHistory.bind(this);
     this.onToggleHelp = this.onToggleHelp.bind(this);
     this.onToggleExpand = this.onToggleExpand.bind(this);
+    this.onToggleSavedOptions = this.onToggleSavedOptions.bind(this);
     this.onExport = this.onExport.bind(this);
     this.onCopyAsExcel = this.onCopyAsExcel.bind(this);
     this.onCopyAsCsv = this.onCopyAsCsv.bind(this);
@@ -904,20 +909,22 @@ class App extends React.Component {
   onRemoveFromHistory(e) {
     e.preventDefault();
     let r = confirm("Are you sure you want to remove this saved query?");
+    let {model} = this.props;
     if (r == true) {
-      let {model} = this.props;
       model.removeFromHistory();
-      model.didUpdate();
     }
+    model.toggleSavedOptions();
+    model.didUpdate();
   }
   onClearSavedHistory(e) {
     e.preventDefault();
     let r = confirm("Are you sure you want to remove all saved queries?");
+    let {model} = this.props;
     if (r == true) {
-      let {model} = this.props;
       model.clearSavedHistory();
-      model.didUpdate();
     }
+    model.toggleSavedOptions();
+    model.didUpdate();
   }
   onToggleHelp(e) {
     e.preventDefault();
@@ -929,6 +936,12 @@ class App extends React.Component {
     e.preventDefault();
     let {model} = this.props;
     model.toggleExpand();
+    model.didUpdate();
+  }
+  onToggleSavedOptions(e) {
+    e.preventDefault();
+    let {model} = this.props;
+    model.toggleSavedOptions();
     model.didUpdate();
   }
   onExport() {
@@ -1026,7 +1039,8 @@ class App extends React.Component {
   }
   render() {
     let {model} = this.props;
-    console.log(model.autocompleteResults.results);
+    // console.log(model.autocompleteResults.results);
+    // console.log(model.autocompleteResults.sobjectName);
     return h("div", {},
       h("div", {id: "user-info"},
         h("a", {href: model.sfLink, className: "sf-link"},
@@ -1070,7 +1084,11 @@ class App extends React.Component {
                 h("option", {value: JSON.stringify(null), disabled: true}, "Query History"),
                 model.queryHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
               ),
-              h("button", {onClick: this.onClearHistory, title: "Clear query history"}, "Clear")
+              h("button", {onClick: this.onClearHistory, title: "Clear Query History"}, "Clear")
+            ),
+            h("div", {className: "pop-menu saveOptions", hidden: !model.expandSavedOptions},
+              h("a", {href: "#", onClick: this.onRemoveFromHistory, title: "Remove query from saved history"}, "Removed Saved Query"),
+              h("a", {href: "#", onClick: this.onClearSavedHistory, title: "Clear saved history"}, "Clear Saved Queries")
             ),
             h("div", {className: "button-group"},
               h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
@@ -1078,8 +1096,7 @@ class App extends React.Component {
                 model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
               ),
               h("button", {onClick: this.onAddToHistory, title: "Add query to saved history"}, "Save Query"),
-              h("button", {onClick: this.onRemoveFromHistory, title: "Remove query from saved history"}, "Remove Saved Query"),
-              h("button", {onClick: this.onClearSavedHistory, title: "Clear saved history"}, "Clear Saved Queries")
+              h("button", {className: model.expandSavedOptions ? "toggle contract" : "toggle expand", title: "Show More Options", onClick: this.onToggleSavedOptions}, h("div", {className: "button-toggle-icon"})),
             ),
           ),
         ),
@@ -1087,9 +1104,17 @@ class App extends React.Component {
         h("div", {className: "autocomplete-box" + (model.expandAutocomplete ? " expanded" : "")},
           h("div", {className: "autocomplete-header"},
             h("span", {}, model.autocompleteResults.title),
-            h("div", {className: "button-group flex-right"},
+            h("div", {className: "flex-right"},
+              h("div", {className: "button-group"},
+                h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter / F5", className: "highlighted"}, "Run Export")
+              ),
+            ),
+            h("div", {className: "button-group"},
               h("a", {className: "button", hidden: !model.autocompleteResults.sobjectName, href: model.showDescribeUrl(), target: "_blank", title: "Show field info for the " + model.autocompleteResults.sobjectName + " object"}, model.autocompleteResults.sobjectName + " Field Info"),
-              h("button", {href: "#", className: model.expandAutocomplete ? "toggle contract" : "toggle expand", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, h("div", {className: "button-icon"}))
+              h("button", {href: "#", className: model.expandAutocomplete ? "toggle contract" : "toggle expand", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, 
+                h("div", {className: "button-icon"}),
+                h("div", {className: "button-toggle-icon"})
+              )
             ),
           ),
           h("div", {className: "autocomplete-results"},
@@ -1105,13 +1130,6 @@ class App extends React.Component {
           h("p", {}, "Press Ctrl+Enter or F5 to execute the export."),
           h("p", {}, "Supports the full SOQL language. The columns in the CSV output depend on the returned data. Using subqueries may cause the output to grow rapidly. Bulk API is not supported. Large data volumes may freeze or crash your browser.")
         )
-      ),
-      h("div", {className: "action-arrow"},
-        h("div", {className: "arrow-body"},
-          h("div", {className: "button-group"},
-            h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter / F5", className: "highlighted"}, "Export")),
-        ),
-        h("div", {className: "arrow-head"})
       ),
       h("div", {className: "area", id: "result-area"},
         h("div", {className: "result-bar"},
