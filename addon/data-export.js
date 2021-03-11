@@ -1056,7 +1056,7 @@ class App extends React.Component {
             h("div", {className: "slds-spinner__dot-a"}),
             h("div", {className: "slds-spinner__dot-b"}),
           ),
-          h("a", {href: "#", id: "export-help-btn", title: "Export Help", onClick: this.onToggleHelp}, 
+          h("a", {href: "#", id: "help-btn", title: "Export Help", onClick: this.onToggleHelp}, 
             h("div", {className: "icon"})
           ),
         ),
