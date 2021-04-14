@@ -646,7 +646,7 @@ class Model {
           .toArray();
         if (ar.length > 0) {
           vm.queryInput.focus();
-          vm.queryInput.setRangeText(ar.join(", ") + (isAfterFrom ? " " : ", "), selStart - contextPath.length, selEnd, "end");
+          vm.queryInput.setRangeText(ar.join(", ") + (isAfterFrom ? " " : ""), selStart - contextPath.length, selEnd, "end");
         }
         vm.queryAutocompleteHandler();
         return;
