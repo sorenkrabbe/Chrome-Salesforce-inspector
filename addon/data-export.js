@@ -79,7 +79,7 @@ class Model {
     this.exportStatus = "Ready";
     this.exportError = null;
     this.exportedData = null;
-    this.queryHistory = new QueryHistory("insextQueryHistory", 20);
+    this.queryHistory = new QueryHistory("insextQueryHistory", 100);
     this.selectedHistoryEntry = null;
     this.savedHistory = new QueryHistory("insextSavedQueryHistory", 50);
     this.selectedSavedEntry = null;
@@ -299,7 +299,7 @@ class Model {
     }
 
     // If we are just after the "from" keyword, autocomplete the sobject name
-    if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
+    if (query.substring(0, selStart).match(/(^|\s)from\s*$/i)) {
       let {globalStatus, globalDescribe} = vm.describeInfo.describeGlobal(useToolingApi);
       if (!globalDescribe) {
         switch (globalStatus) {
