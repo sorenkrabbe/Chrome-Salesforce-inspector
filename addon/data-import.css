@@ -61,17 +61,22 @@ body {
   flex-direction: column;
   width: 100%;
 }
+[hidden] {
+  display: none !important;
+}
 #user-info {
   background: #f7f9fb;
-  height: 48px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   padding: 0 12px;
   flex-wrap: wrap;
 }
+#user-info h1 {
+  padding: 0 6px 0 10px;
+}
 #user-info span{
   font-size: 1.2em;
-  padding-left: 10px;
 }
 .sf-link {
   background-color: rgb(6, 28, 63);
@@ -125,6 +130,14 @@ body {
   display: flex;
   align-items: center;
 }
+.help-text {
+  background: #fff;
+  border: 1px solid #DDDBDA;
+  padding: 0 15px;
+  border-radius: 0.25rem;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
 #result-table {
   margin-top: 3px;
   overflow: auto;
@@ -160,7 +173,7 @@ h1 {
 .conf-section {
   display: flex;
   flex-direction: row;
-  max-height: 50%;
+  max-height: calc(50% - 79px);
 }
 @media (max-width: 670px) {
   .conf-section {
@@ -178,9 +191,11 @@ h1 {
 .area.import-actions {
   flex-grow: 0;
 }
-.conf-label, .columns-label {
+.conf-label, .columns-label, label {
   font-weight: normal;
   color: #4a4a56;
+  display: flex;
+  align-items: center;
 }
 .conf-label {
   display: inline-block;
@@ -188,41 +203,69 @@ h1 {
   width: 9em;
   padding-right: 1em;
 }
-@media (max-width: 670px) {
+/* @media (max-width: 670px) {
   .columns-label {
     display: inline-block;
     text-align: right;
     width: 90px;
     padding-right: 1em;
   }
+} */
+.radio-buttons label {
+  margin-right: 10px;
+  align-items: end;
 }
 .conf-value {
   display: inline-block;
 }
-.conf-value::-webkit-scrollbar { 
-  /* Force scrollbar to show in div instead of being hidden by Chrome */
+/* Force scrollbar to show in div instead of being hidden by Chrome */
+/* .conf-value::-webkit-scrollbar,
+#result-table::-webkit-scrollbar { 
   -webkit-appearance: none;
   width: 7px;
+  height: 7px;
 }
-.conf-value::-webkit-scrollbar-thumb {
+.conf-value::-webkit-scrollbar-thumb,
+#result-table::-webkit-scrollbar-thumb {
   border-radius: 4px;
   background-color: rgba(0,0,0,.5);
   -webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
-}
-.conf-line textarea, .conf-line input[type=text], .conf-line select {
+} */
+.conf-line textarea,
+.conf-line input[type=text],
+.conf-line select {
   /* width: 200px; */
 }
 .conf-line {
-  margin-top: 3px;
+  margin-top: 5px;
+}
+.configure-import .conf-line {
+  display: flex;
+  align-items: flex-start;
 }
 .conf-error {
   color: #a00;
-  margin: 5px;
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
+}
+.conf-error button{
+  margin: 0 0 0 6px;
 }
 .confError {
-  box-shadow: 0 0 4px 2px #a00;
+  box-shadow: 0 0 3px 1px #a00;
 }
-.columns-mapping {
+.columns-mapping .conf-line {
+  padding: 5px 0;
+  margin: 0;
+}
+.flex-wrapper {
+  display: flex;
+  align-items: center;
+}
+.columns-mapping label {
+  display: block;
+  margin-bottom: 2px;
 }
 .columns-mapping .conf-label {
   display: block;
@@ -234,17 +277,27 @@ h1 {
   padding: 5px;
   max-height: calc(100% - 34px);
 }
-.columns-mapping .conf-line input[type=text] {
-  width: 100%;
+.columns-mapping .conf-line input[type=search] {
+  flex-grow: 1;
 }
 .status-group {
-  margin-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  /* min-width: 270px; */
+  justify-content: center;
+}
+.status-group div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  /* width: 250px; */
 }
 .status-group label {
   font-weight: bold;
   color: #4a4a56;
   padding-right: 15px;
   white-space: nowrap;
+  width: 130px;
 }
 * {
   vertical-align: middle;
@@ -291,7 +344,7 @@ label.statusGroupEmpty {
   margin-right: 20px;
 }
 select, input[type=search], input[type=number], input[type=text] {
-  width: 17rem;
+  width: 335px;
   font-family: inherit;
   padding: 5px 13px;
   border: 1px solid #DDDBDA;
@@ -299,57 +352,81 @@ select, input[type=search], input[type=number], input[type=text] {
   height: 32px;
   position: relative;
 }
-input[type=search] {
+/* input[type=search] {
   background-image: url('chrome-extension://__MSG_@@extension_id__/images/search.svg');
   background-repeat: no-repeat;
   background-size: 1rem;
   background-position: 10px 7px;
   padding-left: 35px;
+} */
+input.object-list {
+  width: 296px;
 }
 input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
 }
-.query-history:focus, textarea:not([readonly]):focus, button:active, button:focus, input:active, input:focus {
-  border-color: rgb(21, 137, 238) !important;
-  border: 1px solid;
+.configure-import input[type="checkbox"] {
+  margin: 0;
+}
+textarea:focus,
+button:active,
+button:focus,
+input:active,
+input:focus,
+select:active,
+select:focus {
+  border: 1px solid rgb(21, 137, 238);
   box-shadow: rgb(6, 28, 63) 0px 0px 3px 0px;
   outline: none;
   z-index: 1;
 }
-button:active:not(:first-child), 
-button:focus:not(:first-child),
-input:active:not(:first-child), 
-input:focus:not(:first-child) {
+.button-group button:active:not(:first-child), 
+.button-group button:focus:not(:first-child),
+.button-group input:active:not(:first-child), 
+.button-group input:focus:not(:first-child),
+.button-group select:focus:not(:first-child),
+.button-group select:focus:not(:first-child) {
   margin-left: -1px;
+  border: 1px solid rgb(21, 137, 238);
 }
-button:active, button:focus {
+button:active,
+button:focus {
   background-color: rgb(238, 241, 246);
   color: #005fb2;
 }
-:disabled {
-  color: #dddbda !important;
+button:disabled,
+input:disabled {
+  color: #dddbda;
   cursor: default;
 }
-:disabled:hover {
+button:disabled:hover {
   background-color: #fff;
+  color: #dddbda;
 }
 .highlighted {
   background-color: rgb(0, 112, 210);
-  border-color: rgb(0, 112, 210) !important;
+  border-color: rgb(0, 112, 210);
   color: #fff;
 }
-.highlighted:hover, .highlighted:active {
+.highlighted:hover,
+.highlighted:active {
   background-color: rgb(0, 95, 178);
   color: #fff;
 }
+.highlighted:disabled {
+  background-color: #c9c7c5;
+  border-color: #c9c7c5;
+  color: #fff;
+}
 .highlighted:disabled:hover {
-  background-color: rgb(0, 112, 210);;
+  background-color: #c9c7c5;
+  color: #fff;
 }
 option[value="null"][disabled] {
   display: none;
 }
-textarea[readonly] {
+textarea {
   outline: none;
   /* font-size: 0.9rem; */
   /* padding: 16px 10px; */
@@ -361,33 +438,40 @@ textarea[readonly] {
   white-space: pre;
   word-wrap: normal;
   height: auto;
-  width: 17rem;
+  width: 335px;
   overflow: hidden;
   text-align: center;
   color: #777;
   padding: 1.5em;
   font: inherit;
 }
+.import-actions .conf-line {
+  display: flex;
+  /* justify-content: space-between; */
+  align-items: center;
+  margin: 0;
+}
 .button-group{
   white-space: nowrap;
 }
 .button-group button,
-.button-group select
+.button-group .button,
+.button-group select,
 .button-group input {
-  border-left: none;
-}
-div.button-group:not(:only-of-type) {
-  margin-left: 10px;
+  border-left-width: 0;
+  border-radius: 0;
+  margin-right: 0
 }
 .button-group > :first-child,
 .button-group > [hidden] + * {
   border-top-left-radius: 0.25rem;
   border-bottom-left-radius: 0.25rem;
-  border-left: 1px solid #DDDBDA;
+  border-left-width: 1px;
 }
 .button-group > :last-child {
   border-top-right-radius: 0.25rem;
   border-bottom-right-radius: 0.25rem;
+  margin-right: 10px;
 }
 button, .button {
   border: 1px solid #DDDBDA;
@@ -402,6 +486,8 @@ button, .button {
   position: relative;
   line-height: 32px;
   border-radius: 0.25rem;
+  margin-right: 10px;
+  white-space: nowrap;
 }
 button:hover, .button:hover {
   background-color: #F4F6F9;
@@ -410,7 +496,13 @@ button:hover, .button:hover {
 button.toggle {
   padding: 0 11px;
 }
-button.toggle .button-toggle-icon, button.toggle .button-icon {
+.button.field-info {
+  margin: 0 0 0 5px;
+  padding: 0 8px;
+  line-height: 28px;
+}
+.button-toggle-icon,
+.button-icon {
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: 1rem;
   background-color: #706E6B;
@@ -418,8 +510,12 @@ button.toggle .button-toggle-icon, button.toggle .button-icon {
   width: 16px;
   height: 16px;
 }
-button.toggle:hover .button-icon, button.toggle:hover .button-toggle-icon  {
+button.toggle:hover .button-icon,
+button.toggle:hover .button-toggle-icon  {
   background-color: #004487;
+}
+.flex-right button:last-child {
+  margin-right: 0;
 }
 button.expand .button-toggle-icon {
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/down.svg');
@@ -427,6 +523,25 @@ button.expand .button-toggle-icon {
 button.contract .button-toggle-icon {
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/up.svg');
 }
-button.toggle .button-icon {
-  -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/light_bulb.svg');
+.button.field-info .button-icon {
+  -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/salesforce-inspector-logo.svg');
+}
+.cancel-btn {
+  color: #c23934;
+}
+.cancel-btn:not(:disabled):hover,
+.cancel-btn:not(:disabled):active,
+.cancel-btn:not(:disabled):focus {
+  color: #a12b2b;
+}
+.area.result-area {
+  padding: 0;
+  height: 40%;
+}
+#result-table {
+  overflow: auto;
+  background-color: #fff;
+  margin: 0;
+  height: 100%;
+  /* flex: 1 1 0; */
 }

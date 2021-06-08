@@ -329,7 +329,7 @@ class Model {
       }
       vm.autocompleteResults = {
         sobjectName: "",
-        title: "Objects:",
+        title: "Object suggestions:",
         results: new Enumerable(globalDescribe.sobjects)
           .filter(sobjectDescribe => sobjectDescribe.name.toLowerCase().includes(searchTerm.toLowerCase()) || sobjectDescribe.label.toLowerCase().includes(searchTerm.toLowerCase()))
           .map(sobjectDescribe => ({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " ", rank: 1, autocompleteType: "object", dataType: ""}))
@@ -549,7 +549,7 @@ class Model {
             }
             vm.autocompleteResults = {
               sobjectName,
-              title: fieldNames + " values:",
+              title: fieldNames + " value suggestions:",
               results: new Enumerable(data.records)
                 .map(record => record[contextValueField.field.name])
                 .filter(value => value)
@@ -636,7 +636,7 @@ class Model {
         .sort(resultsSort);
       vm.autocompleteResults = {
         sobjectName,
-        title: fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space):" : " values:"),
+        title: fieldNames + (ar.length == 0 ? " values (Press Ctrl+Space to load value suggestions):" : " values:"),
         results: ar
       };
       return;
@@ -657,7 +657,7 @@ class Model {
       }
       vm.autocompleteResults = {
         sobjectName,
-        title: contextSobjectDescribes.map(sobjectDescribe => sobjectDescribe.name).toArray().join(", ") + " fields:",
+        title: contextSobjectDescribes.map(sobjectDescribe => sobjectDescribe.name).toArray().join(", ") + " field suggestions:",
         results: contextSobjectDescribes
           .flatMap(sobjectDescribe => sobjectDescribe.fields)
           .filter(field => field.name.toLowerCase().includes(searchTerm.toLowerCase()) || field.label.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -1049,7 +1049,8 @@ class App extends React.Component {
           ),
           " Salesforce Home"
         ),
-        h("span", {}, model.userInfo),
+        h("h1", {}, "Data Export"),
+        h("span", {}, " / " + model.userInfo),
         h("div", {className: "flex-right"},
           h("div", {id: "spinner", role: "status", className: "slds-spinner slds-spinner_small slds-spinner_inline", hidden: model.spinnerCount == 0},
             h("span", {className: "slds-assistive-text"}),
@@ -1105,11 +1106,7 @@ class App extends React.Component {
           h("div", {className: "autocomplete-header"},
             h("span", {}, model.autocompleteResults.title),
             h("div", {className: "flex-right"},
-              h("div", {className: "button-group"},
-                h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter / F5", className: "highlighted"}, "Run Export")
-              ),
-            ),
-            h("div", {className: "button-group"},
+              h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter / F5", className: "highlighted"}, "Run Export"),
               h("a", {className: "button", hidden: !model.autocompleteResults.sobjectName, href: model.showDescribeUrl(), target: "_blank", title: "Show field info for the " + model.autocompleteResults.sobjectName + " object"}, model.autocompleteResults.sobjectName + " Field Info"),
               h("button", {href: "#", className: model.expandAutocomplete ? "toggle contract" : "toggle expand", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, 
                 h("div", {className: "button-icon"}),
@@ -1139,14 +1136,10 @@ class App extends React.Component {
             h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsv, title: "Copy exported data to clipboard for saving as a CSV file"}, "Copy (CSV)"),
             h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard"}, "Copy (JSON)"),
           ),
-          h("div", {className: "button-group"},
-            h("input", {placeholder: "Filter Results", type: "search", value: model.resultsFilter, onInput: this.onResultsFilterInput}),
-          ),
+          h("input", {placeholder: "Filter Results", type: "search", value: model.resultsFilter, onInput: this.onResultsFilterInput}),
           h("span", {className: "result-status flex-right"},
             h("span", {}, model.exportStatus),
-            h("div", {className: "button-group"},
-              h("button", {className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport}, "Stop")
-            ),
+            h("button", {className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport}, "Stop"),
           )
         ),
         h("textarea", {id: "result-text", readOnly: true, value: model.exportError || "", hidden: model.exportError == null}),

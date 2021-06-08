@@ -19,6 +19,7 @@ class Model {
     this.useToolingApi = false;
     this.dataFormat = "excel";
     this.importAction = "create";
+    this.importActionName = "Insert";
     this.importType = "Account";
     this.externalId = "Id";
     this.batchSize = "200";
@@ -119,7 +120,7 @@ class Model {
       return;
     }
     this.dataError = "";
-    let header = data.shift().map(c => this.makeColumn(c));
+    let header = data.shift().map((c, index) => this.makeColumn(c, index));
     this.updateResult(null); // Two updates, the first clears state from the scrolltable
     this.updateResult({header, data});
   }
@@ -383,7 +384,7 @@ class Model {
     let importedRecords = this.importData.counts.Queued + this.importData.counts.Processing;
     let skippedRecords = this.importData.counts.Succeeded + this.importData.counts.Failed;
     this.confirmPopup = {
-      text: importedRecords + " records will be imported."
+      text: importedRecords + " records will be actioned."
         + (skippedRecords > 0 ? " " + skippedRecords + " records will be skipped because they have __Status Succeeded or Failed." : "")
     };
   }
@@ -434,11 +435,13 @@ class Model {
     this.updateImportTableResult();
   }
 
-  makeColumn(column) {
+  makeColumn(column, index) {
     let self = this;
     let xmlName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // A (subset of a) valid XML name
     let columnVm = {
+      columnIndex: index,
       columnValue: column,
+      columnOriginalValue: column,
       columnIgnore() { return columnVm.columnValue.startsWith("_"); },
       columnSkip() {
         columnVm.columnValue = "_" + columnVm.columnValue;
@@ -669,6 +672,7 @@ class App extends React.Component {
   onImportActionChange(e) {
     let {model} = this.props;
     model.importAction = e.target.value;
+    model.importActionName = e.target.options[e.target.selectedIndex].text;
     model.didUpdate();
   }
   onImportTypeChange(e) {
@@ -789,8 +793,8 @@ class App extends React.Component {
   }
   render() {
     let {model} = this.props;
+    //console.log(model);
     return h("div", {},
-      /* h("img", {id: "spinner", src: "data:image/gif;base64,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", hidden: model.spinnerCount == 0}), */
       h("div", {id: "user-info"},
         h("a", {href: model.sfLink, className: "sf-link"},
           h("svg", {viewBox: "0 0 24 24"},
@@ -798,7 +802,6 @@ class App extends React.Component {
           ),
           " Salesforce Home"
         ),
-        " \xa0 ",
         h("h1", {}, "Data Import"),
         h("span", {}, " / " + model.userInfo),
         h("div", {className: "flex-right"},
@@ -843,13 +846,15 @@ class App extends React.Component {
               h("label", {className: "conf-input"},
                 h("span", {className: "conf-label"}, "Object"),
                 h("span", {className: "conf-value"},
-                  h("input", {type: "text", value: model.importType, onChange: this.onImportTypeChange, className: model.importTypeError() ? "confError" : "", disabled: model.isWorking(), list: "sobjectlist"}),
+                  h("input", {type: "search", value: model.importType, onChange: this.onImportTypeChange, className: model.importTypeError() ? "object-list confError" : "object-list", disabled: model.isWorking(), list: "sobjectlist"}),
                   h("div", {className: "conf-error", hidden: !model.importTypeError()}, model.importTypeError())
                 )
               ),
-              h("a", {className: "char-btn", href: model.showDescribeUrl(), title: "Show field info for the selected object"}, "i")
+              h("a", {className: "button field-info", href: model.showDescribeUrl(), target: "_blank", title: "Show field info for the selected object"}, 
+                h("div", {className: "button-icon"}),
+              )
             ),
-            h("div", {className: "conf-line"},
+            h("div", {className: "conf-line radio-buttons"},
               h("span", {className: "conf-label"}, "Format"),
               h("label", {}, h("input", {type: "radio", name: "data-input-format", value: "excel", checked: model.dataFormat == "excel", onChange: this.onDataFormatChange, disabled: model.isWorking()}), " ", h("span", {}, "Excel")),
               " ",
@@ -910,18 +915,31 @@ class App extends React.Component {
       ),
       h("div", {className: "area import-actions"},
         h("div", {className: "conf-line"},
-          h("span", {className: "conf-label"}),
-          /* h("a", {href: "about:blank", id: "help-btn", onClick: this.onToggleHelpClick}, "Import help"), */
-          h("button", {onClick: this.onDoImportClick, disabled: model.invalidInput() || model.isWorking() || model.importCounts().Queued == 0}, "Import"),
-          h("button", {disabled: !model.isWorking(), onClick: this.onToggleProcessingClick}, model.isWorking() && !model.isProcessingQueue ? "Resume queued" : "Cancel queued"),
-          h("button", {disabled: !model.importCounts().Failed > 0, onClick: this.onRetryFailedClick, className: "button-space"}, "Retry failed"),
-          h("div", {className: "button-group"},
-            h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcelClick, title: "Copy import result to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
-            h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsvClick, className: "button-space", title: "Copy import result to clipboard for saving as a CSV file"}, "Copy (CSV)"),
+          h("div", {className: "flex-wrapper"},
+            h("button", {onClick: this.onDoImportClick, disabled: model.invalidInput() || model.isWorking() || model.importCounts().Queued == 0, className: "highlighted"}, "Run " + model.importActionName),
+            h("button", {disabled: !model.isWorking(), onClick: this.onToggleProcessingClick, className: model.isWorking() && !model.isProcessingQueue ? "": "cancel-btn"}, model.isWorking() && !model.isProcessingQueue ? "Resume Queued" : "Cancel Queued"),
+            h("button", {disabled: !model.importCounts().Failed > 0, onClick: this.onRetryFailedClick}, "Retry Failed"),
+            h("div", {className: "button-group"},
+              h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcelClick, title: "Copy import result to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
+              h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsvClick, title: "Copy import result to clipboard for saving as a CSV file"}, "Copy (CSV)"),
+            ),
           ),
-          h("button", {onClick: this.onCopyOptionsClick, title: "Save these import options by pasting them into Excel in the top left cell, just above the header row"}, "Copy options")
+          h("div", {className: "status-group"},
+            h("div", {},
+              h(StatusBox, {model, name: "Queued"}),
+              h(StatusBox, {model, name: "Processing"})
+            ),
+            h("div", {},
+              h(StatusBox, {model, name: "Succeeded"}),
+              h(StatusBox, {model, name: "Failed"})
+            ),
+          ),
+          h("div", {className: "flex-right"},
+            h("button", {onClick: this.onCopyOptionsClick, title: "Save these import options by pasting them into Excel in the top left cell, just above the header row"}, "Copy Options")
+          ),
         ),
-        h("div", {hidden: !model.showHelp},
+        h("div", {hidden: !model.showHelp, className: "help-text"},
+          h("h3", {}, "Import Help"), 
           h("p", {}, "Use for quick one-off data imports."),
           h("ul", {},
             h("li", {}, "Enter your CSV or Excel data in the box above.",
@@ -938,19 +956,12 @@ class App extends React.Component {
             h("li", {}, "Select your input format"),
             h("li", {}, "Select an action (insert, update, upsert or delete)"),
             h("li", {}, "Enter the API name of the object to import"),
-            h("li", {}, "Press Import")
+            h("li", {}, "Press the Run button")
           ),
           h("p", {}, "Bulk API is not supported. Large data volumes may freeze or crash your browser.")
         ),
-        h("div", {className: "status-group"},
-          h("span", {className: "conf-label"}, "Status"),
-          h(StatusBox, {model, name: "Queued"}),
-          h(StatusBox, {model, name: "Processing"}),
-          h(StatusBox, {model, name: "Succeeded"}),
-          h(StatusBox, {model, name: "Failed"})
-        ),
       ),
-      h("div", {className: "area"},
+      h("div", {className: "area result-area"},
         h("div", {id: "result-table", ref: "scroller"}),
         model.confirmPopup ? h("div", {},
           h("div", {id: "confirm-background"},
@@ -959,8 +970,8 @@ class App extends React.Component {
               h("p", {}, "You are about to modify your data in Salesforce. This action cannot be undone."),
               h("p", {}, model.confirmPopup.text),
               h("div", {className: "dialog-buttons"},
-                h("button", {onClick: this.onConfirmPopupYesClick}, "Import"),
-                h("button", {onClick: this.onConfirmPopupNoClick}, "Cancel")
+                h("button", {onClick: this.onConfirmPopupYesClick}, model.importActionName),
+                h("button", {onClick: this.onConfirmPopupNoClick, className: "cancel-btn"}, "Cancel")
               )
             )
           )
@@ -990,8 +1001,11 @@ class ColumnMapper extends React.Component {
   render() {
     let {model, column} = this.props;
     return h("div", {className: "conf-line"},
-      h("input", {type: "text", list: "columnlist", value: column.columnValue, onChange: this.onColumnValueChange, className: column.columnError() ? "confError" : "", disabled: model.isWorking()}),
-      h("div", {className: "conf-error", hidden: !column.columnError()}, h("span", {}, column.columnError()), " ", h("a", {href: "about:blank", onClick: this.onColumnSkipClick, hidden: model.isWorking(), title: "Don't import this column"}, "Skip"))
+      h("label", {htmlFor: "col-" + column.columnIndex}, column.columnOriginalValue),
+      h("div", {className: "flex-wrapper"},
+        h("input", {type: "search", list: "columnlist", value: column.columnValue, onChange: this.onColumnValueChange, className: column.columnError() ? "confError" : "", disabled: model.isWorking(), id: "col-" + column.columnIndex}),
+        h("div", {className: "conf-error", hidden: !column.columnError()}, h("span", {}, column.columnError()), " ", h("button", {onClick: this.onColumnSkipClick, hidden: model.isWorking(), title: "Don't import this column"}, "Skip"))
+      )
     );
   }
 }
