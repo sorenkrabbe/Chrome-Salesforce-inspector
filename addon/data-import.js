@@ -94,7 +94,7 @@ class Model {
     try {
       data = csvParse(text, separator);
     } catch (e) {
-      console.log(e);
+      /* console.log(e); */
       this.dataError = "Error: " + e.message;
       this.updateResult(null);
       return;
