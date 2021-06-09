@@ -397,13 +397,6 @@ button.contract .button-toggle-icon {
 button.toggle .button-icon {
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/light_bulb.svg');
 }
-.autocomplete-box {
-  /* display: flex; */
-  /* white-space: nowrap; */
-}
-.autocomplete-box.expanded {
-  /* white-space: normal; */
-}
 .autocomplete-header {
   display: flex;
   align-items: flex-end;
@@ -413,7 +406,6 @@ button.toggle .button-icon {
   font-size: 1rem;
 }
 .autocomplete-results {
-  /* flex: 1 1 0; */
   overflow: hidden;
   margin-top: 7px;
   display: flex;

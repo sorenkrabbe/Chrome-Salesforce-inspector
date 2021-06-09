@@ -33,6 +33,7 @@
 }
 * {
   box-sizing: border-box;
+  vertical-align: middle;
 }
 html {
   height: 100%;
@@ -203,38 +204,12 @@ h1 {
   width: 9em;
   padding-right: 1em;
 }
-/* @media (max-width: 670px) {
-  .columns-label {
-    display: inline-block;
-    text-align: right;
-    width: 90px;
-    padding-right: 1em;
-  }
-} */
 .radio-buttons label {
   margin-right: 10px;
   align-items: end;
 }
 .conf-value {
   display: inline-block;
-}
-/* Force scrollbar to show in div instead of being hidden by Chrome */
-/* .conf-value::-webkit-scrollbar,
-#result-table::-webkit-scrollbar { 
-  -webkit-appearance: none;
-  width: 7px;
-  height: 7px;
-}
-.conf-value::-webkit-scrollbar-thumb,
-#result-table::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background-color: rgba(0,0,0,.5);
-  -webkit-box-shadow: 0 0 1px rgba(255,255,255,.5);
-} */
-.conf-line textarea,
-.conf-line input[type=text],
-.conf-line select {
-  /* width: 200px; */
 }
 .conf-line {
   margin-top: 5px;
@@ -279,28 +254,22 @@ h1 {
 }
 .columns-mapping .conf-line input[type=search] {
   flex-grow: 1;
+  width: auto;
 }
 .status-group {
   display: flex;
   flex-wrap: wrap;
-  /* min-width: 270px; */
-  justify-content: center;
 }
 .status-group div {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  /* width: 250px; */
 }
 .status-group label {
   font-weight: bold;
   color: #4a4a56;
   padding-right: 15px;
   white-space: nowrap;
-  width: 130px;
-}
-* {
-  vertical-align: middle;
 }
 label.statusGroupEmpty {
   color: lightgray;
@@ -343,7 +312,10 @@ label.statusGroupEmpty {
 .button-space {
   margin-right: 20px;
 }
-select, input[type=search], input[type=number], input[type=text] {
+select,
+input[type=search],
+input[type=number],
+input[type=text] {
   width: 335px;
   font-family: inherit;
   padding: 5px 13px;
@@ -352,13 +324,6 @@ select, input[type=search], input[type=number], input[type=text] {
   height: 32px;
   position: relative;
 }
-/* input[type=search] {
-  background-image: url('chrome-extension://__MSG_@@extension_id__/images/search.svg');
-  background-repeat: no-repeat;
-  background-size: 1rem;
-  background-position: 10px 7px;
-  padding-left: 35px;
-} */
 input.object-list {
   width: 296px;
 }
@@ -428,8 +393,6 @@ option[value="null"][disabled] {
 }
 textarea {
   outline: none;
-  /* font-size: 0.9rem; */
-  /* padding: 16px 10px; */
   border-radius: 0.25rem;
   border: 1px solid #DDDBDA;
 }
@@ -447,7 +410,6 @@ textarea {
 }
 .import-actions .conf-line {
   display: flex;
-  /* justify-content: space-between; */
   align-items: center;
   margin: 0;
 }
@@ -543,5 +505,4 @@ button.contract .button-toggle-icon {
   background-color: #fff;
   margin: 0;
   height: 100%;
-  /* flex: 1 1 0; */
 }
