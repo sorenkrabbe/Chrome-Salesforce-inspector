@@ -66,7 +66,7 @@ body {
   padding: 0 6px 0 10px;
 }
 #user-info span{
-  font-size: 1.2em;
+  font-size: 1em;
 }
 .sf-link {
   background-color: rgb(6, 28, 63);
@@ -112,7 +112,7 @@ textarea[hidden] {
 }
 #query {
   height: 5em;
-  min-height: 9em;
+  min-height: 7em;
 }
 #result-area {
   flex: 1 1 0;
@@ -146,7 +146,7 @@ textarea[hidden] {
   margin: 12px 12px 0 12px;
 }
 h1 {
-  font-size: 1.125rem;
+  font-size: 1rem;
   margin: 0px;
   display: inline;
   color: #080707;
