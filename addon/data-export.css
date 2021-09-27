@@ -112,7 +112,7 @@ textarea[hidden] {
 }
 #query {
   height: 5em;
-  min-height: 5em;
+  min-height: 9em;
 }
 #result-area {
   flex: 1 1 0;
