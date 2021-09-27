@@ -1071,18 +1071,6 @@ class App extends React.Component {
           h("h1", {}, "Export Query")
         ),
         h("div", { className: "query-controls" },
-          h("div", { className: "query-options" },
-            h("label", {},
-              h("input", { type: "checkbox", checked: model.queryAll, onChange: this.onQueryAllChange, disabled: model.queryTooling }),
-              " ",
-              h("span", {}, "Include deleted and archived records?")
-            ),
-            h("label", { title: "With the tooling API you can query more metadata, but you cannot query regular data" },
-              h("input", { type: "checkbox", checked: model.queryTooling, onChange: this.onQueryToolingChange, disabled: model.queryAll }),
-              " ",
-              h("span", {}, "Use Tooling API?")
-            ),
-          ),
           h("div", { className: "query-history-controls" },
             h("div", { className: "button-group" },
               h("select", { value: JSON.stringify(model.selectedHistoryEntry), onChange: this.onSelectHistoryEntry, className: "query-history" },
@@ -1102,6 +1090,18 @@ class App extends React.Component {
               ),
               h("button", { onClick: this.onAddToHistory, title: "Add query to saved history" }, "Save Query"),
               h("button", { className: model.expandSavedOptions ? "toggle contract" : "toggle expand", title: "Show More Options", onClick: this.onToggleSavedOptions }, h("div", { className: "button-toggle-icon" })),
+            ),
+          ),
+          h("div", { className: "query-options" },
+            h("label", {},
+              h("input", { type: "checkbox", checked: model.queryAll, onChange: this.onQueryAllChange, disabled: model.queryTooling }),
+              " ",
+              h("span", {}, "Include deleted and archived records?")
+            ),
+            h("label", { title: "With the tooling API you can query more metadata, but you cannot query regular data" },
+              h("input", { type: "checkbox", checked: model.queryTooling, onChange: this.onQueryToolingChange, disabled: model.queryAll }),
+              " ",
+              h("span", {}, "Use Tooling API?")
             ),
           ),
         ),
