@@ -55,6 +55,7 @@ textarea[hidden] {
 #query {
   height: 5em;
   margin-top: 3px;
+  min-height: 130px;
 }
 #result-area {
   flex: 1 1 0;
