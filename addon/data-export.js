@@ -1,7 +1,7 @@
 /* global React ReactDOM */
-import {sfConn, apiVersion} from "./inspector.js";
+import { sfConn, apiVersion } from "./inspector.js";
 /* global initButton */
-import {Enumerable, DescribeInfo, copyToClipboard, initScrollTable} from "./data-load.js";
+import { Enumerable, DescribeInfo, copyToClipboard, initScrollTable } from "./data-load.js";
 
 class QueryHistory {
   constructor(storageKey, max) {
@@ -57,12 +57,12 @@ class QueryHistory {
 }
 
 class Model {
-  constructor({sfHost, args}) {
+  constructor({ sfHost, args }) {
     this.sfHost = sfHost;
     this.queryInput = null;
     this.initialQuery = "";
     this.describeInfo = new DescribeInfo(this.spinFor.bind(this), () => {
-      this.queryAutocompleteHandler({newDescribe: true});
+      this.queryAutocompleteHandler({ newDescribe: true });
       this.didUpdate();
     });
 
@@ -73,7 +73,7 @@ class Model {
     this.winInnerHeight = 0;
     this.queryAll = false;
     this.queryTooling = false;
-    this.autocompleteResults = {sobjectName: "", title: "\u00A0", results: []};
+    this.autocompleteResults = { sobjectName: "", title: "\u00A0", results: [] };
     this.autocompleteClick = null;
     this.isWorking = false;
     this.exportStatus = "Ready";
@@ -160,10 +160,10 @@ class Model {
     this.savedHistory.clear();
   }
   addToHistory() {
-    this.savedHistory.add({query: this.queryInput.value, useToolingApi: this.queryTooling});
+    this.savedHistory.add({ query: this.queryInput.value, useToolingApi: this.queryTooling });
   }
   removeFromHistory() {
-    this.savedHistory.remove({query: this.queryInput.value, useToolingApi: this.queryTooling});
+    this.savedHistory.remove({ query: this.queryInput.value, useToolingApi: this.queryTooling });
   }
   autocompleteReload() {
     this.describeInfo.reloadAll();
@@ -246,8 +246,12 @@ class Model {
       vm.autocompleteProgress.abort();
     }
 
-    vm.autocompleteClick = ({value, suffix}) => {
+    vm.autocompleteClick = ({ value, suffix }) => {
       vm.queryInput.focus();
+      //handle when selected field is the last one before "FROM" keyword
+      if (selEnd + 1 === vm.queryInput.value.toLowerCase().indexOf("from")) {
+        suffix = "";
+      }
       vm.queryInput.setRangeText(value + suffix, selStart, selEnd, "end");
       vm.queryAutocompleteHandler();
     };
@@ -258,7 +262,7 @@ class Model {
       : query.substring(0, selStart).match(/[a-zA-Z0-9_]*$/)[0];
     selStart = selEnd - searchTerm.length;
 
-    function sortRank({value, title}) {
+    function sortRank({ value, title }) {
       let i = 0;
       if (value.toLowerCase() == searchTerm.toLowerCase()) {
         return i;
@@ -296,7 +300,7 @@ class Model {
 
     // If we are just after the "from" keyword, autocomplete the sobject name
     if (query.substring(0, selStart).match(/(^|\s)from\s*$/)) {
-      let {globalStatus, globalDescribe} = vm.describeInfo.describeGlobal(useToolingApi);
+      let { globalStatus, globalDescribe } = vm.describeInfo.describeGlobal(useToolingApi);
       if (!globalDescribe) {
         switch (globalStatus) {
           case "loading":
@@ -310,7 +314,7 @@ class Model {
             vm.autocompleteResults = {
               sobjectName: "",
               title: "Loading metadata failed.",
-              results: [{value: "Retry", title: "Retry"}]
+              results: [{ value: "Retry", title: "Retry" }]
             };
             vm.autocompleteClick = vm.autocompleteReload.bind(vm);
             return;
@@ -328,7 +332,7 @@ class Model {
         title: "Objects:",
         results: new Enumerable(globalDescribe.sobjects)
           .filter(sobjectDescribe => sobjectDescribe.name.toLowerCase().includes(searchTerm.toLowerCase()) || sobjectDescribe.label.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map(sobjectDescribe => ({value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " ", rank: 1}))
+          .map(sobjectDescribe => ({ value: sobjectDescribe.name, title: sobjectDescribe.label, suffix: " ", rank: 1 }))
           .toArray()
           .sort(resultsSort)
       };
@@ -367,7 +371,7 @@ class Model {
         isAfterFrom = selStart > fromKeywordMatch.index + fromKeywordMatch[0].length;
       }
     }
-    let {sobjectStatus, sobjectDescribe} = vm.describeInfo.describeSobject(useToolingApi, sobjectName);
+    let { sobjectStatus, sobjectDescribe } = vm.describeInfo.describeSobject(useToolingApi, sobjectName);
     if (!sobjectDescribe) {
       switch (sobjectStatus) {
         case "loading":
@@ -381,7 +385,7 @@ class Model {
           vm.autocompleteResults = {
             sobjectName,
             title: "Loading " + sobjectName + " metadata failed.",
-            results: [{value: "Retry", title: "Retry"}]
+            results: [{ value: "Retry", title: "Retry" }]
           };
           vm.autocompleteClick = vm.autocompleteReload.bind(vm);
           return;
@@ -444,7 +448,7 @@ class Model {
           .filter(field => field.relationshipName && field.relationshipName.toLowerCase() == referenceFieldName.toLowerCase())
           .flatMap(field => field.referenceTo)
         ) {
-          let {sobjectStatus, sobjectDescribe} = vm.describeInfo.describeSobject(useToolingApi, referencedSobjectName);
+          let { sobjectStatus, sobjectDescribe } = vm.describeInfo.describeSobject(useToolingApi, referencedSobjectName);
           if (sobjectDescribe) {
             newContextSobjectDescribes.add(sobjectDescribe);
           } else {
@@ -468,7 +472,7 @@ class Model {
         vm.autocompleteResults = {
           sobjectName,
           title: "Loading " + sobjectStatuses.get("loadfailed") + " metadata failed.",
-          results: [{value: "Retry", title: "Retry"}]
+          results: [{ value: "Retry", title: "Retry" }]
         };
         vm.autocompleteClick = vm.autocompleteReload.bind(vm);
         return;
@@ -502,7 +506,7 @@ class Model {
       let contextValueFields = contextSobjectDescribes
         .flatMap(sobjectDescribe => sobjectDescribe.fields
           .filter(field => field.name.toLowerCase() == fieldName.toLowerCase())
-          .map(field => ({sobjectDescribe, field}))
+          .map(field => ({ sobjectDescribe, field }))
         )
         .toArray();
       if (contextValueFields.length == 0) {
@@ -527,7 +531,7 @@ class Model {
         let contextValueField = contextValueFields[0];
         let queryMethod = useToolingApi ? "tooling/query" : vm.queryAll ? "queryAll" : "query";
         let acQuery = "select " + contextValueField.field.name + " from " + contextValueField.sobjectDescribe.name + " where " + contextValueField.field.name + " like '%" + searchTerm.replace(/'/g, "\\'") + "%' group by " + contextValueField.field.name + " limit 100";
-        vm.spinFor(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), {progressHandler: vm.autocompleteProgress})
+        vm.spinFor(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(acQuery), { progressHandler: vm.autocompleteProgress })
           .catch(err => {
             if (err.name != "AbortError") {
               vm.autocompleteResults = {
@@ -549,7 +553,7 @@ class Model {
               results: new Enumerable(data.records)
                 .map(record => record[contextValueField.field.name])
                 .filter(value => value)
-                .map(value => ({value: "'" + value + "'", title: value, suffix: " ", rank: 1}))
+                .map(value => ({ value: "'" + value + "'", title: value, suffix: " ", rank: 1 }))
                 .toArray()
                 .sort(resultsSort)
             };
@@ -561,17 +565,17 @@ class Model {
         };
         return;
       }
-      let ar = new Enumerable(contextValueFields).flatMap(function*({field}) {
-        yield* field.picklistValues.map(pickVal => ({value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " ", rank: 1}));
+      let ar = new Enumerable(contextValueFields).flatMap(function* ({ field }) {
+        yield* field.picklistValues.map(pickVal => ({ value: "'" + pickVal.value + "'", title: pickVal.label, suffix: " ", rank: 1 }));
         if (field.type == "boolean") {
-          yield {value: "true", title: "true", suffix: " ", rank: 1};
-          yield {value: "false", title: "false", suffix: " ", rank: 1};
+          yield { value: "true", title: "true", suffix: " ", rank: 1 };
+          yield { value: "false", title: "false", suffix: " ", rank: 1 };
         }
         if (field.type == "date" || field.type == "datetime") {
           let pad = (n, d) => ("000" + n).slice(-d);
           let d = new Date();
           if (field.type == "date") {
-            yield {value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2), title: "Today", suffix: " ", rank: 1};
+            yield { value: pad(d.getFullYear(), 4) + "-" + pad(d.getMonth() + 1, 2) + "-" + pad(d.getDate(), 2), title: "Today", suffix: " ", rank: 1 };
           }
           if (field.type == "datetime") {
             yield {
@@ -585,46 +589,46 @@ class Model {
             };
           }
           // from http://www.salesforce.com/us/developer/docs/soql_sosl/Content/sforce_api_calls_soql_select_dateformats.htm Spring 15
-          yield {value: "YESTERDAY", title: "Starts 12:00:00 the day before and continues for 24 hours.", suffix: " ", rank: 1};
-          yield {value: "TODAY", title: "Starts 12:00:00 of the current day and continues for 24 hours.", suffix: " ", rank: 1};
-          yield {value: "TOMORROW", title: "Starts 12:00:00 after the current day and continues for 24 hours.", suffix: " ", rank: 1};
-          yield {value: "LAST_WEEK", title: "Starts 12:00:00 on the first day of the week before the most recent first day of the week and continues for seven full days. First day of the week is determined by your locale.", suffix: " ", rank: 1};
-          yield {value: "THIS_WEEK", title: "Starts 12:00:00 on the most recent first day of the week before the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " ", rank: 1};
-          yield {value: "NEXT_WEEK", title: "Starts 12:00:00 on the most recent first day of the week after the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " ", rank: 1};
-          yield {value: "LAST_MONTH", title: "Starts 12:00:00 on the first day of the month before the current day and continues for all the days of that month.", suffix: " ", rank: 1};
-          yield {value: "THIS_MONTH", title: "Starts 12:00:00 on the first day of the month that the current day is in and continues for all the days of that month.", suffix: " ", rank: 1};
-          yield {value: "NEXT_MONTH", title: "Starts 12:00:00 on the first day of the month after the month that the current day is in and continues for all the days of that month.", suffix: " ", rank: 1};
-          yield {value: "LAST_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the last 90 days.", suffix: " ", rank: 1};
-          yield {value: "NEXT_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the next 90 days.", suffix: " ", rank: 1};
-          yield {value: "LAST_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the last n days.", suffix: " ", rank: 1};
-          yield {value: "NEXT_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the next n days.", suffix: " ", rank: 1};
-          yield {value: "NEXT_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next week and continues for the next n weeks.", suffix: " ", rank: 1};
-          yield {value: "LAST_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous week and continues for the last n weeks.", suffix: " ", rank: 1};
-          yield {value: "NEXT_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next month and continues for the next n months.", suffix: " ", rank: 1};
-          yield {value: "LAST_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous month and continues for the last n months.", suffix: " ", rank: 1};
-          yield {value: "THIS_QUARTER", title: "Starts 12:00:00 of the current quarter and continues to the end of the current quarter.", suffix: " ", rank: 1};
-          yield {value: "LAST_QUARTER", title: "Starts 12:00:00 of the previous quarter and continues to the end of that quarter.", suffix: " ", rank: 1};
-          yield {value: "NEXT_QUARTER", title: "Starts 12:00:00 of the next quarter and continues to the end of that quarter.", suffix: " ", rank: 1};
-          yield {value: "NEXT_N_QUARTERS:n", title: "Starts 12:00:00 of the next quarter and continues to the end of the nth quarter.", suffix: " ", rank: 1};
-          yield {value: "LAST_N_QUARTERS:n", title: "Starts 12:00:00 of the previous quarter and continues to the end of the previous nth quarter.", suffix: " ", rank: 1};
-          yield {value: "THIS_YEAR", title: "Starts 12:00:00 on January 1 of the current year and continues through the end of December 31 of the current year.", suffix: " ", rank: 1};
-          yield {value: "LAST_YEAR", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of that year.", suffix: " ", rank: 1};
-          yield {value: "NEXT_YEAR", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of that year.", suffix: " ", rank: 1};
-          yield {value: "NEXT_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of the nth year.", suffix: " ", rank: 1};
-          yield {value: "LAST_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of the previous nth year.", suffix: " ", rank: 1};
-          yield {value: "THIS_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the current fiscal quarter and continues through the end of the last day of the fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "LAST_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "NEXT_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "NEXT_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of the nth fiscal quarter. The fiscal year is defined in the company profile under Setup atCompany Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "LAST_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of the previous nth fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "THIS_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the current fiscal year and continues through the end of the last day of the fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "LAST_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "NEXT_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "NEXT_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of the nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
-          yield {value: "LAST_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of the previous nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1};
+          yield { value: "YESTERDAY", title: "Starts 12:00:00 the day before and continues for 24 hours.", suffix: " ", rank: 1 };
+          yield { value: "TODAY", title: "Starts 12:00:00 of the current day and continues for 24 hours.", suffix: " ", rank: 1 };
+          yield { value: "TOMORROW", title: "Starts 12:00:00 after the current day and continues for 24 hours.", suffix: " ", rank: 1 };
+          yield { value: "LAST_WEEK", title: "Starts 12:00:00 on the first day of the week before the most recent first day of the week and continues for seven full days. First day of the week is determined by your locale.", suffix: " ", rank: 1 };
+          yield { value: "THIS_WEEK", title: "Starts 12:00:00 on the most recent first day of the week before the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_WEEK", title: "Starts 12:00:00 on the most recent first day of the week after the current day and continues for seven full days. First day of the week is determined by your locale.", suffix: " ", rank: 1 };
+          yield { value: "LAST_MONTH", title: "Starts 12:00:00 on the first day of the month before the current day and continues for all the days of that month.", suffix: " ", rank: 1 };
+          yield { value: "THIS_MONTH", title: "Starts 12:00:00 on the first day of the month that the current day is in and continues for all the days of that month.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_MONTH", title: "Starts 12:00:00 on the first day of the month after the month that the current day is in and continues for all the days of that month.", suffix: " ", rank: 1 };
+          yield { value: "LAST_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the last 90 days.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_90_DAYS", title: "Starts 12:00:00 of the current day and continues for the next 90 days.", suffix: " ", rank: 1 };
+          yield { value: "LAST_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the last n days.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_N_DAYS:n", title: "For the number n provided, starts 12:00:00 of the current day and continues for the next n days.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next week and continues for the next n weeks.", suffix: " ", rank: 1 };
+          yield { value: "LAST_N_WEEKS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous week and continues for the last n weeks.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the first day of the next month and continues for the next n months.", suffix: " ", rank: 1 };
+          yield { value: "LAST_N_MONTHS:n", title: "For the number n provided, starts 12:00:00 of the last day of the previous month and continues for the last n months.", suffix: " ", rank: 1 };
+          yield { value: "THIS_QUARTER", title: "Starts 12:00:00 of the current quarter and continues to the end of the current quarter.", suffix: " ", rank: 1 };
+          yield { value: "LAST_QUARTER", title: "Starts 12:00:00 of the previous quarter and continues to the end of that quarter.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_QUARTER", title: "Starts 12:00:00 of the next quarter and continues to the end of that quarter.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_N_QUARTERS:n", title: "Starts 12:00:00 of the next quarter and continues to the end of the nth quarter.", suffix: " ", rank: 1 };
+          yield { value: "LAST_N_QUARTERS:n", title: "Starts 12:00:00 of the previous quarter and continues to the end of the previous nth quarter.", suffix: " ", rank: 1 };
+          yield { value: "THIS_YEAR", title: "Starts 12:00:00 on January 1 of the current year and continues through the end of December 31 of the current year.", suffix: " ", rank: 1 };
+          yield { value: "LAST_YEAR", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of that year.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_YEAR", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of that year.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the following year and continues through the end of December 31 of the nth year.", suffix: " ", rank: 1 };
+          yield { value: "LAST_N_YEARS:n", title: "Starts 12:00:00 on January 1 of the previous year and continues through the end of December 31 of the previous nth year.", suffix: " ", rank: 1 };
+          yield { value: "THIS_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the current fiscal quarter and continues through the end of the last day of the fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "LAST_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_FISCAL_QUARTER", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of that fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the next fiscal quarter and continues through the end of the last day of the nth fiscal quarter. The fiscal year is defined in the company profile under Setup atCompany Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "LAST_N_FISCAL_QUARTERS:n", title: "Starts 12:00:00 on the first day of the last fiscal quarter and continues through the end of the last day of the previous nth fiscal quarter. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "THIS_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the current fiscal year and continues through the end of the last day of the fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "LAST_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_FISCAL_YEAR", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of that fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "NEXT_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the next fiscal year and continues through the end of the last day of the nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
+          yield { value: "LAST_N_FISCAL_YEARS:n", title: "Starts 12:00:00 on the first day of the last fiscal year and continues through the end of the last day of the previous nth fiscal year. The fiscal year is defined in the company profile under Setup at Company Profile | Fiscal Year.", suffix: " ", rank: 1 };
         }
         if (field.nillable) {
-          yield {value: "null", title: "null", suffix: " ", rank: 1};
+          yield { value: "null", title: "null", suffix: " ", rank: 1 };
         }
       })
         .filter(res => res.value.toLowerCase().includes(searchTerm.toLowerCase()) || res.title.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -657,10 +661,10 @@ class Model {
         results: contextSobjectDescribes
           .flatMap(sobjectDescribe => sobjectDescribe.fields)
           .filter(field => field.name.toLowerCase().includes(searchTerm.toLowerCase()) || field.label.toLowerCase().includes(searchTerm.toLowerCase()))
-          .flatMap(function*(field) {
-            yield {value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", ", rank: 1};
+          .flatMap(function* (field) {
+            yield { value: field.name, title: field.label, suffix: isAfterFrom ? " " : ", ", rank: 1 };
             if (field.relationshipName) {
-              yield {value: field.relationshipName + ".", title: field.label, suffix: "", rank: 1};
+              yield { value: field.relationshipName + ".", title: field.label, suffix: "", rank: 1 };
             }
           })
           .concat(
@@ -668,9 +672,9 @@ class Model {
               .filter(fn => fn.toLowerCase().startsWith(searchTerm.toLowerCase()))
               .map(fn => {
                 if (fn.includes(")")) { //Exception to easily support functions with hardcoded parameter options
-                  return {value: fn, title: fn, suffix: "", rank: 2};
+                  return { value: fn, title: fn, suffix: "", rank: 2 };
                 } else {
-                  return {value: fn, title: fn + "()", suffix: "(", rank: 2};
+                  return { value: fn, title: fn + "()", suffix: "(", rank: 2 };
                 }
               })
           )
@@ -691,7 +695,7 @@ class Model {
     function batchHandler(batch) {
       return batch.catch(err => {
         if (err.name == "AbortError") {
-          return {records: [], done: true, totalSize: -1};
+          return { records: [], done: true, totalSize: -1 };
         }
         throw err;
       }).then(data => {
@@ -700,7 +704,7 @@ class Model {
           exportedData.totalSize = data.totalSize;
         }
         if (!data.done) {
-          let pr = batchHandler(sfConn.rest(data.nextRecordsUrl, {progressHandler: vm.exportProgress}));
+          let pr = batchHandler(sfConn.rest(data.nextRecordsUrl, { progressHandler: vm.exportProgress }));
           vm.isWorking = true;
           vm.exportStatus = "Exporting... Completed " + exportedData.records.length + " of " + exportedData.totalSize + " record(s).";
           vm.exportError = null;
@@ -709,7 +713,7 @@ class Model {
           vm.didUpdate();
           return pr;
         }
-        vm.queryHistory.add({query, useToolingApi: exportedData.isTooling});
+        vm.queryHistory.add({ query, useToolingApi: exportedData.isTooling });
         if (exportedData.records.length == 0) {
           vm.isWorking = false;
           vm.exportStatus = data.totalSize > 0 ? "No data exported. " + data.totalSize + " record(s)." : "No data exported.";
@@ -745,7 +749,7 @@ class Model {
         return null;
       });
     }
-    vm.spinFor(batchHandler(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), {progressHandler: vm.exportProgress}))
+    vm.spinFor(batchHandler(sfConn.rest("/services/data/v" + apiVersion + "/" + queryMethod + "/?q=" + encodeURIComponent(query), { progressHandler: vm.exportProgress }))
       .catch(error => {
         console.error(error);
         vm.isWorking = false;
@@ -864,96 +868,96 @@ class App extends React.Component {
     this.onStopExport = this.onStopExport.bind(this);
   }
   onQueryAllChange(e) {
-    let {model} = this.props;
+    let { model } = this.props;
     model.queryAll = e.target.checked;
     model.didUpdate();
   }
   onQueryToolingChange(e) {
-    let {model} = this.props;
+    let { model } = this.props;
     model.queryTooling = e.target.checked;
     model.queryAutocompleteHandler();
     model.didUpdate();
   }
   onSelectHistoryEntry(e) {
-    let {model} = this.props;
+    let { model } = this.props;
     model.selectedHistoryEntry = JSON.parse(e.target.value);
     model.selectHistoryEntry();
     model.didUpdate();
   }
   onClearHistory(e) {
     e.preventDefault();
-    let {model} = this.props;
+    let { model } = this.props;
     model.clearHistory();
     model.didUpdate();
   }
   onSelectSavedEntry(e) {
-    let {model} = this.props;
+    let { model } = this.props;
     model.selectedSavedEntry = JSON.parse(e.target.value);
     model.selectSavedEntry();
     model.didUpdate();
   }
   onAddToHistory(e) {
     e.preventDefault();
-    let {model} = this.props;
+    let { model } = this.props;
     model.addToHistory();
     model.didUpdate();
   }
   onRemoveFromHistory(e) {
     e.preventDefault();
-    let {model} = this.props;
+    let { model } = this.props;
     model.removeFromHistory();
     model.didUpdate();
   }
   onClearSavedHistory(e) {
     e.preventDefault();
-    let {model} = this.props;
+    let { model } = this.props;
     model.clearSavedHistory();
     model.didUpdate();
   }
   onToggleHelp(e) {
     e.preventDefault();
-    let {model} = this.props;
+    let { model } = this.props;
     model.toggleHelp();
     model.didUpdate();
   }
   onToggleExpand(e) {
     e.preventDefault();
-    let {model} = this.props;
+    let { model } = this.props;
     model.toggleExpand();
     model.didUpdate();
   }
   onExport() {
-    let {model} = this.props;
+    let { model } = this.props;
     model.doExport();
     model.didUpdate();
   }
   onCopyAsExcel() {
-    let {model} = this.props;
+    let { model } = this.props;
     model.copyAsExcel();
     model.didUpdate();
   }
   onCopyAsCsv() {
-    let {model} = this.props;
+    let { model } = this.props;
     model.copyAsCsv();
     model.didUpdate();
   }
   onCopyAsJson() {
-    let {model} = this.props;
+    let { model } = this.props;
     model.copyAsJson();
     model.didUpdate();
   }
   onResultsFilterInput(e) {
-    let {model} = this.props;
+    let { model } = this.props;
     model.setResultsFilter(e.target.value);
     model.didUpdate();
   }
   onStopExport() {
-    let {model} = this.props;
+    let { model } = this.props;
     model.stopExport();
     model.didUpdate();
   }
   componentDidMount() {
-    let {model} = this.props;
+    let { model } = this.props;
     let queryInput = this.refs.query;
 
     model.setQueryInput(queryInput);
@@ -973,7 +977,7 @@ class App extends React.Component {
     queryInput.addEventListener("keydown", e => {
       if (e.ctrlKey && e.key == " ") {
         e.preventDefault();
-        model.queryAutocompleteHandler({ctrlSpace: true});
+        model.queryAutocompleteHandler({ ctrlSpace: true });
         model.didUpdate();
       }
     });
@@ -992,7 +996,7 @@ class App extends React.Component {
     if (!window.webkitURL) {
       // Firefox
       // Firefox does not fire a resize event. The next best thing is to listen to when the browser changes the style.height attribute.
-      new MutationObserver(recalculateHeight).observe(queryInput, {attributes: true});
+      new MutationObserver(recalculateHeight).observe(queryInput, { attributes: true });
     } else {
       // Chrome
       // Chrome does not fire a resize event and does not allow us to get notified when the browser changes the style.height attribute.
@@ -1016,87 +1020,87 @@ class App extends React.Component {
     this.scrollTable.viewportChange();
   }
   render() {
-    let {model} = this.props;
+    let { model } = this.props;
     return h("div", {},
-      h("img", {id: "spinner", src: "data:image/gif;base64,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", hidden: model.spinnerCount == 0}),
-      h("div", {id: "user-info"},
-        h("a", {href: model.sfLink, className: "sf-link"},
-          h("svg", {viewBox: "0 0 24 24"},
-            h("path", {d: "M18.9 12.3h-1.5v6.6c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-5.1h-3.6v5.1c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-6.6H5.1c-.1 0-.3-.1-.3-.2s0-.2.1-.3l6.9-7c.1-.1.3-.1.4 0l7 7v.3c0 .1-.2.2-.3.2z"})
+      h("img", { id: "spinner", src: "data:image/gif;base64,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", hidden: model.spinnerCount == 0 }),
+      h("div", { id: "user-info" },
+        h("a", { href: model.sfLink, className: "sf-link" },
+          h("svg", { viewBox: "0 0 24 24" },
+            h("path", { d: "M18.9 12.3h-1.5v6.6c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-5.1h-3.6v5.1c0 .2-.1.3-.3.3h-3c-.2 0-.3-.1-.3-.3v-6.6H5.1c-.1 0-.3-.1-.3-.2s0-.2.1-.3l6.9-7c.1-.1.3-.1.4 0l7 7v.3c0 .1-.2.2-.3.2z" })
           ),
           " Salesforce Home"
         ),
         " \xa0 ",
         h("span", {}, model.userInfo)
       ),
-      h("div", {className: "area"},
+      h("div", { className: "area" },
         h("h1", {}, "Export query"),
         h("label", {},
-          h("input", {type: "checkbox", checked: model.queryAll, onChange: this.onQueryAllChange, disabled: model.queryTooling}),
+          h("input", { type: "checkbox", checked: model.queryAll, onChange: this.onQueryAllChange, disabled: model.queryTooling }),
           " ",
           h("span", {}, "Include deleted and archived records?")
         ),
-        h("label", {title: "With the tooling API you can query more metadata, but you cannot query regular data"},
-          h("input", {type: "checkbox", checked: model.queryTooling, onChange: this.onQueryToolingChange, disabled: model.queryAll}),
+        h("label", { title: "With the tooling API you can query more metadata, but you cannot query regular data" },
+          h("input", { type: "checkbox", checked: model.queryTooling, onChange: this.onQueryToolingChange, disabled: model.queryAll }),
           " ",
           h("span", {}, "Use Tooling API?")
         ),
         h("label", {},
-          h("select", {value: JSON.stringify(model.selectedHistoryEntry), onChange: this.onSelectHistoryEntry, className: "query-history"},
-            h("option", {value: JSON.stringify(null)}, "Query history"),
-            model.queryHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+          h("select", { value: JSON.stringify(model.selectedHistoryEntry), onChange: this.onSelectHistoryEntry, className: "query-history" },
+            h("option", { value: JSON.stringify(null) }, "Query history"),
+            model.queryHistory.list.map(q => h("option", { key: JSON.stringify(q), value: JSON.stringify(q) }, q.query.substring(0, 300)))
           ),
-          h("a", {href: "about:blank", onClick: this.onClearHistory, title: "Clear query history", className: "char-btn"}, "X")
+          h("a", { href: "about:blank", onClick: this.onClearHistory, title: "Clear query history", className: "char-btn" }, "X")
         ),
         h("label", {},
-          h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
-            h("option", {value: JSON.stringify(null)}, "Saved queries"),
-            model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+          h("select", { value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history" },
+            h("option", { value: JSON.stringify(null) }, "Saved queries"),
+            model.savedHistory.list.map(q => h("option", { key: JSON.stringify(q), value: JSON.stringify(q) }, q.query.substring(0, 300)))
           ),
-          h("a", {href: "about:blank", onClick: this.onAddToHistory, title: "Add query to saved history", className: "char-btn"}, "+"),
-          h("a", {href: "about:blank", onClick: this.onRemoveFromHistory, title: "Remove query from saved history", className: "char-btn"}, "X"),
-          h("a", {href: "about:blank", onClick: this.onClearSavedHistory, title: "Clear saved history", className: "char-btn"}, "XX")
+          h("a", { href: "about:blank", onClick: this.onAddToHistory, title: "Add query to saved history", className: "char-btn" }, "+"),
+          h("a", { href: "about:blank", onClick: this.onRemoveFromHistory, title: "Remove query from saved history", className: "char-btn" }, "X"),
+          h("a", { href: "about:blank", onClick: this.onClearSavedHistory, title: "Clear saved history", className: "char-btn" }, "XX")
         ),
-        h("a", {href: "about:blank", id: "export-help-btn", onClick: this.onToggleHelp}, "Export help"),
-        h("textarea", {id: "query", ref: "query", style: {maxHeight: (model.winInnerHeight - 200) + "px"}}),
-        h("div", {className: "autocomplete-box" + (model.expandAutocomplete ? " expanded" : "")},
-          h("span", {className: "autocomplete-results"},
+        h("a", { href: "about:blank", id: "export-help-btn", onClick: this.onToggleHelp }, "Export help"),
+        h("textarea", { id: "query", ref: "query", style: { maxHeight: (model.winInnerHeight - 200) + "px" } }),
+        h("div", { className: "autocomplete-box" + (model.expandAutocomplete ? " expanded" : "") },
+          h("span", { className: "autocomplete-results" },
             h("span", {}, model.autocompleteResults.title),
             " ",
             model.autocompleteResults.results.map(r =>
-              h("span", {key: r.value}, h("a", {title: r.title, onClick: e => { e.preventDefault(); model.autocompleteClick(r); model.didUpdate(); }, href: "about:blank"}, r.value), " ")
+              h("span", { key: r.value }, h("a", { title: r.title, onClick: e => { e.preventDefault(); model.autocompleteClick(r); model.didUpdate(); }, href: "about:blank" }, r.value), " ")
             )
           ),
-          h("a", {className: "char-btn", hidden: !model.autocompleteResults.sobjectName, href: model.showDescribeUrl(), title: "Show field info for the " + model.autocompleteResults.sobjectName + " object"}, "i"),
-          h("a", {href: "about:blank", className: "char-btn", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line"}, model.expandAutocomplete ? "-" : "+")
+          h("a", { className: "char-btn", hidden: !model.autocompleteResults.sobjectName, href: model.showDescribeUrl(), title: "Show field info for the " + model.autocompleteResults.sobjectName + " object" }, "i"),
+          h("a", { href: "about:blank", className: "char-btn", onClick: this.onToggleExpand, title: "Show all suggestions or only the first line" }, model.expandAutocomplete ? "-" : "+")
         ),
-        h("div", {hidden: !model.showHelp},
-          h("p", {}, "Use for quick one-off data exports. Enter a ", h("a", {href: "http://www.salesforce.com/us/developer/docs/soql_sosl/", target: "_blank"}, "SOQL query"), " in the box above and press Export."),
+        h("div", { hidden: !model.showHelp },
+          h("p", {}, "Use for quick one-off data exports. Enter a ", h("a", { href: "http://www.salesforce.com/us/developer/docs/soql_sosl/", target: "_blank" }, "SOQL query"), " in the box above and press Export."),
           h("p", {}, "Press Ctrl+Space to insert all field name autosuggestions or to load suggestions for field values."),
           h("p", {}, "Supports the full SOQL language. The columns in the CSV output depend on the returned data. Using subqueries may cause the output to grow rapidly. Bulk API is not supported. Large data volumes may freeze or crash your browser.")
         )
       ),
-      h("div", {className: "action-arrow"},
-        h("div", {className: "arrow-body"}, h("button", {disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter"}, "Export")),
-        h("div", {className: "arrow-head"})
+      h("div", { className: "action-arrow" },
+        h("div", { className: "arrow-body" }, h("button", { disabled: model.isWorking, onClick: this.onExport, title: "Ctrl+Enter" }, "Export")),
+        h("div", { className: "arrow-head" })
       ),
-      h("div", {className: "area", id: "result-area"},
-        h("div", {className: "result-bar"},
+      h("div", { className: "area", id: "result-area" },
+        h("div", { className: "result-bar" },
           h("h1", {}, "Export result"),
-          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcel, title: "Copy exported data to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
+          h("button", { disabled: !model.canCopy(), onClick: this.onCopyAsExcel, title: "Copy exported data to clipboard for pasting into Excel or similar" }, "Copy (Excel format)"),
           " ",
-          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsv, title: "Copy exported data to clipboard for saving as a CSV file"}, "Copy (CSV)"),
+          h("button", { disabled: !model.canCopy(), onClick: this.onCopyAsCsv, title: "Copy exported data to clipboard for saving as a CSV file" }, "Copy (CSV)"),
           " ",
-          h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard"}, "Copy (JSON)"),
+          h("button", { disabled: !model.canCopy(), onClick: this.onCopyAsJson, title: "Copy raw API output to clipboard" }, "Copy (JSON)"),
           " ",
-          h("input", {placeholder: "Filter results", value: model.resultsFilter, onInput: this.onResultsFilterInput}),
-          h("span", {className: "result-status"},
+          h("input", { placeholder: "Filter results", value: model.resultsFilter, onInput: this.onResultsFilterInput }),
+          h("span", { className: "result-status" },
             h("span", {}, model.exportStatus),
-            h("button", {className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport}, "Stop")
+            h("button", { className: "cancel-btn", disabled: !model.isWorking, onClick: this.onStopExport }, "Stop")
           )
         ),
-        h("textarea", {id: "result-text", readOnly: true, value: model.exportError || "", hidden: model.exportError == null}),
-        h("div", {id: "result-table", ref: "scroller", hidden: model.exportError != null}
+        h("textarea", { id: "result-text", readOnly: true, value: model.exportError || "", hidden: model.exportError == null }),
+        h("div", { id: "result-table", ref: "scroller", hidden: model.exportError != null }
           /* the scroll table goes here */
         )
       )
@@ -1112,14 +1116,14 @@ class App extends React.Component {
   sfConn.getSession(sfHost).then(() => {
 
     let root = document.getElementById("root");
-    let model = new Model({sfHost, args});
+    let model = new Model({ sfHost, args });
     model.reactCallback = cb => {
-      ReactDOM.render(h(App, {model}), root, cb);
+      ReactDOM.render(h(App, { model }), root, cb);
     };
-    ReactDOM.render(h(App, {model}), root);
+    ReactDOM.render(h(App, { model }), root);
 
     if (parent && parent.isUnitTest) { // for unit tests
-      parent.insextTestLoaded({model, sfConn});
+      parent.insextTestLoaded({ model, sfConn });
     }
 
   });
