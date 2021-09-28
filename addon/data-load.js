@@ -206,6 +206,7 @@ function renderCell(rt, cell, td) {
       aCopy.prepend(acopyIcon);
       aCopy.addEventListener("click", e => {
         navigator.clipboard.writeText(e.target.id);
+        td.removeChild(pop);
       });
       function closer(ev) {
         if (ev != e && ev.target.closest(".pop-menu") != pop) {
