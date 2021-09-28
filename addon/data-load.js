@@ -195,6 +195,18 @@ function renderCell(rt, cell, td) {
         pop.appendChild(aView);
         aView.prepend(aviewIcon);
       }
+      //copy to clipboard
+      let aCopy = document.createElement("a");
+      aCopy.className = "copy-id";
+      aCopy.textContent = "Copy Id";
+      aCopy.id = recordId;
+      let acopyIcon = document.createElement("div");
+      acopyIcon.className = "icon";
+      pop.appendChild(aCopy);
+      aCopy.prepend(acopyIcon);
+      aCopy.addEventListener("click", e => {
+        navigator.clipboard.writeText(e.target.id);
+      });
       function closer(ev) {
         if (ev != e && ev.target.closest(".pop-menu") != pop) {
           removeEventListener("click", closer);

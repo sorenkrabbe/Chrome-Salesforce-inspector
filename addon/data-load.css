@@ -119,6 +119,16 @@
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/salesforce-inspector-logo.svg');
   -webkit-mask-position: center;
 }
+.pop-menu a.copy-id .icon {
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 1rem;
+  -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/copy.svg');
+  -webkit-mask-position: center;
+  background-color: #706E6B;
+}
+.pop-menu a.copy-id {
+  cursor: pointer;
+}
 .pop-menu a.view-salesforce .icon{
   background-color: #009DDC;
 }
