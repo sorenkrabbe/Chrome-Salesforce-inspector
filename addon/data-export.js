@@ -254,7 +254,7 @@ class Model {
       vm.queryInput.focus();
       //handle when selected field is the last one before "FROM" keyword
       let indexFrom = vm.queryInput.value.toLowerCase().indexOf("from");
-      if (selEnd + 1 === indexFrom || vm.queryInput.value.substring(selEnd + 1, indexFrom).trim().length == 0) {
+      if (vm.queryInput.value.substring(selEnd + 1, indexFrom).trim().length == 0) {
         suffix = "";
       }
       vm.queryInput.setRangeText(value + suffix, selStart, selEnd, "end");
