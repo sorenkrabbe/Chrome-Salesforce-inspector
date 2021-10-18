@@ -182,7 +182,7 @@ h1 {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
-select, input[type=search] {
+select, input[type=search],input[type=save] {
   width: 12rem;
   font-family: inherit;
   padding: 5px 13px;
@@ -193,6 +193,13 @@ select, input[type=search] {
 }
 input[type=search] {
   background-image: url('chrome-extension://__MSG_@@extension_id__/images/search.svg');
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  background-position: 10px 7px;
+  padding-left: 35px;
+}
+input[type=save] {
+  background-image: url('chrome-extension://__MSG_@@extension_id__/images/save.svg');
   background-repeat: no-repeat;
   background-size: 1rem;
   background-position: 10px 7px;
