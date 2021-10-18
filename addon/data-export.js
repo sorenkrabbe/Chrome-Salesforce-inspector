@@ -181,10 +181,13 @@ class Model {
     this.savedHistory.clear();
   }
   addToHistory() {
-    this.savedHistory.add({ query: this.queryName + ":" + this.queryInput.value, useToolingApi: this.queryTooling });
+    this.savedHistory.add({ query: this.getQueryToSave(), useToolingApi: this.queryTooling });
   }
   removeFromHistory() {
-    this.savedHistory.remove({ query: this.queryName + ":" + this.queryInput.value, useToolingApi: this.queryTooling });
+    this.savedHistory.remove({ query: this.getQueryToSave(), useToolingApi: this.queryTooling });
+  }
+  getQueryToSave() {
+    return this.queryName != "" ? this.queryName + ":" + this.queryInput.value : this.queryInput.value;
   }
   autocompleteReload() {
     this.describeInfo.reloadAll();
