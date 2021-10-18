@@ -87,7 +87,6 @@
   border-radius: 0.25rem;
 }
 .pop-menu.saveOptions {
-  right: 0;
   top: 0;
   margin: 124px 25px 0 0;
   z-index: 2;
