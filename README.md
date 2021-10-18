@@ -6,18 +6,15 @@ Chrome and Firefox extension to add a metadata layout on top of the standard Sal
 
 [![Test Status](https://travis-ci.org/sorenkrabbe/Chrome-Salesforce-inspector.svg?branch=master)](https://travis-ci.org/sorenkrabbe/Chrome-Salesforce-inspector)
 
-Installation
-------------
-
-| [:sunny: Add to Chrome](https://chrome.google.com/webstore/detail/salesforce-inspector/aodjmnfhjibkcdimpodiifdjnnncaafh) | [:sunny: Add to Firefox](https://addons.mozilla.org/firefox/addon/salesforce-inspector/) |
-| --- | --- |
-
 New Features / Fix
 -----
+* Add label to saved query and sort list.
 * Remove extra comma when autocomplete query in data export, or select a field from suggested fields juste before 'FROM' keyword.
 <img alt="Inspector menu" src="https://raw.githubusercontent.com/tprouvot/Chrome-Salesforce-inspector/master/docs/screenshots/7_latest_comma.png" height="100">
+
 * Add "Copy Id" option when clicking on a Sobject field or Id in data export page.
 <img alt="Inspector menu" src="https://raw.githubusercontent.com/tprouvot/Chrome-Salesforce-inspector/master/docs/screenshots/8_copy_id.png" height="100">
+
 * Integrate UI updates from Garywoo's fork (https://github.com/Garywoo/Chrome-Salesforce-inspector).
 
 Features
