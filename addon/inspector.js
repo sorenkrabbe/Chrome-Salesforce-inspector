@@ -1,16 +1,16 @@
-export let apiVersion = "51.0";
+export let apiVersion = "53.0";
 export let sfConn = {
 
   async getSession(sfHost) {
     let message = await new Promise(resolve =>
-      chrome.runtime.sendMessage({message: "getSession", sfHost}, resolve));
+      chrome.runtime.sendMessage({ message: "getSession", sfHost }, resolve));
     if (message) {
       this.instanceHostname = message.hostname;
       this.sessionId = message.key;
     }
   },
 
-  async rest(url, {logErrors = true, method = "GET", api = "normal", body = undefined, bodyType = "json", headers = {}, progressHandler = null} = {}) {
+  async rest(url, { logErrors = true, method = "GET", api = "normal", body = undefined, bodyType = "json", headers = {}, progressHandler = null } = {}) {
     if (!this.instanceHostname || !this.sessionId) {
       throw new Error("Session not found");
     }
@@ -116,7 +116,7 @@ export let sfConn = {
     return wsdl;
   },
 
-  async soap(wsdl, method, args, {headers} = {}) {
+  async soap(wsdl, method, args, { headers } = {}) {
     if (!this.instanceHostname || !this.sessionId) {
       throw new Error("Session not found");
     }
@@ -126,13 +126,13 @@ export let sfConn = {
     xhr.setRequestHeader("Content-Type", "text/xml");
     xhr.setRequestHeader("SOAPAction", '""');
 
-    let sessionHeader = {SessionHeader: {sessionId: this.sessionId}};
+    let sessionHeader = { SessionHeader: { sessionId: this.sessionId } };
     let requestBody = XML.stringify({
       name: "soapenv:Envelope",
       attributes: ` xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"${wsdl.targetNamespaces}`,
       value: {
         "soapenv:Header": Object.assign({}, sessionHeader, headers),
-        "soapenv:Body": {[method]: args}
+        "soapenv:Body": { [method]: args }
       }
     });
 
@@ -172,7 +172,7 @@ export let sfConn = {
 };
 
 class XML {
-  static stringify({name, attributes, value}) {
+  static stringify({ name, attributes, value }) {
     function buildRequest(el, params) {
       if (params == null) {
         el.setAttribute("xsi:nil", "true");
