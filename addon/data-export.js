@@ -22,7 +22,7 @@ class QueryHistory {
     }
     // A previous version stored just strings. Skip entries from that to avoid errors.
     history = history.filter(e => typeof e == "object");
-    this.sort(history);
+    this.sort(this.storageKey, history);
     return history;
   }
 
@@ -36,8 +36,9 @@ class QueryHistory {
     if (history.length > this.max) {
       history.pop();
     }
+    console.log(this.storageKey);
     localStorage[this.storageKey] = JSON.stringify(history);
-    this.sort(history);
+    this.sort(this.storageKey, history);
   }
 
   remove(entry) {
@@ -47,7 +48,7 @@ class QueryHistory {
       history.splice(historyIndex, 1);
     }
     localStorage[this.storageKey] = JSON.stringify(history);
-    this.sort(history);
+    this.sort(this.storageKey, history);
   }
 
   clear() {
@@ -55,8 +56,11 @@ class QueryHistory {
     this.list = [];
   }
 
-  sort(history) {
-    history.sort((a, b) => (a.query > b.query) ? 1 : ((b.query > a.query) ? -1 : 0));
+  sort(storageKey, history) {
+    //sort only saved query not history
+    if (storageKey === "insextQueryHistory") {
+      history.sort((a, b) => (a.query > b.query) ? 1 : ((b.query > a.query) ? -1 : 0));
+    }
     this.list = history;
   }
 }
