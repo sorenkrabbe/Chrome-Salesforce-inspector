@@ -36,7 +36,6 @@ class QueryHistory {
     if (history.length > this.max) {
       history.pop();
     }
-    console.log(this.storageKey);
     localStorage[this.storageKey] = JSON.stringify(history);
     this.sort(this.storageKey, history);
   }
@@ -58,7 +57,7 @@ class QueryHistory {
 
   sort(storageKey, history) {
     //sort only saved query not history
-    if (storageKey === "insextQueryHistory") {
+    if (storageKey === "insextSavedQueryHistory") {
       history.sort((a, b) => (a.query > b.query) ? 1 : ((b.query > a.query) ? -1 : 0));
     }
     this.list = history;
