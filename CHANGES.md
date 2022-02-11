@@ -3,6 +3,7 @@ Version 1.13
 
 General
 -------
+* Fix table header on export [ISSUE 10](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/10)
 * Update to Salesforce API v 53.0 (Winter '22)
 * Add label to saved query and sort list.
 * Remove extra comma when autocomplete query in data export, or select a field from suggested fields juste before 'FROM' keyword.
