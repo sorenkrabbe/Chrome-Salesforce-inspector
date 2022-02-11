@@ -221,9 +221,9 @@ select:focus {
   outline: none;
   z-index: 1;
 }
-.button-group button:active:not(:first-child), 
+.button-group button:active:not(:first-child),
 .button-group button:focus:not(:first-child),
-.button-group input:active:not(:first-child), 
+.button-group input:active:not(:first-child),
 .button-group input:focus:not(:first-child),
 .button-group select:focus:not(:first-child),
 .button-group select:focus:not(:first-child) {
@@ -527,4 +527,11 @@ button.toggle .button-icon {
 }
 .fieldName.complexvalue .autocomplete-icon {
   -webkit-mask-image: url('chrome-extension://__MSG_@@extension_id__/images/advanced_function.svg');
+}
+
+.header{
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
