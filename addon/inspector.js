@@ -1,4 +1,4 @@
-export let apiVersion = "53.0";
+export let apiVersion = "54.0";
 export let sfConn = {
 
   async getSession(sfHost) {

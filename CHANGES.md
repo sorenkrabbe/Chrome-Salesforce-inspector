@@ -3,6 +3,7 @@ Version 1.13
 
 General
 -------
+* Update to Salesforce API v 54.0 (Spring '22)
 * Sticked table header to the top on export [ISSUE 10](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/10)
 * Update to Salesforce API v 53.0 (Winter '22)
 * Add label to saved query and sort list.
