@@ -8,9 +8,9 @@
     "chrome-release-build": "node scripts/release-build.js chrome"
   },
   "devDependencies": {
-    "eslint": "^6.3.0",
-    "fs-extra": "2.0.0",
-    "replace-in-file": "2.2.2",
-    "zip-dir": "1.0.2"
+    "eslint": "^8.11.0",
+    "fs-extra": "10.0.1",
+    "replace-in-file": "6.3.2",
+    "zip-dir": "2.0.0"
   }
 }
