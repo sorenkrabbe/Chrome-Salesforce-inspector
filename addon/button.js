@@ -8,7 +8,8 @@
 // location.host.endsWith("visualforce.com") = Visualforce page
 if (document.querySelector("body.sfdcBody, body.ApexCSIPage, #auraLoadingBox") || location.host.endsWith("visualforce.com")) {
   // We are in a Salesforce org
-  chrome.runtime.sendMessage({message: "getSfHost", url: location.href}, sfHost => {
+  // passing in location.href resulted in wrong cookies being retrieved for .mil domains.  location.hostname works for all salesforce domains.
+   chrome.runtime.sendMessage({message: "getSfHost", url: location.hostname}, sfHost => {
     if (sfHost) {
       initButton(sfHost, false);
     }

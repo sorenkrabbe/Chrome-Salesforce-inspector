@@ -1,3 +1,21 @@
+Version 1.13
+===========
+
+General
+-------
+* Update to Salesforce API v 54.0
+* Update to React v 17.0.2
+* Update to ReactDOM v 17.0.2
+* Update to eslint v 8.11.0
+* Update to replace-in-file v 6.3.2
+* Update to fs-extra v 10.0.1
+* Update to zip-dir v 2.0.0
+* Merge pull request from https://github.com/sorenkrabbe/Chrome-Salesforce-inspector/pull/193, with fixing the UI to work
+* Merge pull request from https://github.com/sorenkrabbe/Chrome-Salesforce-inspector/pull/185
+* Merge pull request from https://github.com/sorenkrabbe/Chrome-Salesforce-inspector/pull/197
+* Merge pull request from https://github.com/sorenkrabbe/Chrome-Salesforce-inspector/pull/207
+* Pop-up has fixed height and all the buttons are visible. Currently only link to Salesforce home.
+
 Version 1.12
 ===========
 

@@ -11,23 +11,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // http://salesforce.stackexchange.com/questions/23277/different-session-ids-in-different-contexts
     // There is no straight forward way to unambiguously understand if the user authenticated against salesforce.com or cloudforce.com
     // (and thereby the domain of the relevant cookie) cookie domains are therefore tried in sequence.
-    chrome.cookies.get({url: request.url, name: "sid", storeId: sender.tab.cookieStoreId}, cookie => {
+    let url = stringToUrl(request.url)
+    chrome.cookies.get({url: url.href, name: "sid", storeId: sender.tab.cookieStoreId}, cookie => {
       if (!cookie) {
         sendResponse(null);
         return;
       }
       let [orgId] = cookie.value.split("!");
-      chrome.cookies.getAll({name: "sid", domain: "salesforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
+      chrome.cookies.getAll({name: "sid", domain: "salesforce.mil", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
         let sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
         if (sessionCookie) {
           sendResponse(sessionCookie.domain);
         } else {
-          chrome.cookies.getAll({name: "sid", domain: "cloudforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
+          chrome.cookies.getAll({name: "sid", domain: "salesforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
             sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
             if (sessionCookie) {
               sendResponse(sessionCookie.domain);
             } else {
-              sendResponse(null);
+              chrome.cookies.getAll({name: "sid", domain: "cloudforce.mil", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
+                let sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
+                if (sessionCookie) {
+                  sendResponse(sessionCookie.domain);
+                } else {
+                  chrome.cookies.getAll({name: "sid", domain: "cloudforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
+                    sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
+                    if (sessionCookie) {
+                      sendResponse(sessionCookie.domain);
+                    } else {
+                      sendResponse(null);
+                    }
+                  });
+                }
+              });
             }
           });
         }
@@ -48,3 +63,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   return false;
 });
+function stringToUrl(input) {
+  // Start with treating the provided value as a URL
+  try {
+    return new URL(input);
+  } catch {}
+  // If that fails, try assuming the provided input is an HTTP host
+  try {
+    return new URL("https://" + input);
+  } catch {}
+  // If that fails ¯\_(ツ)_/¯
+  return null;
+}

@@ -175,16 +175,39 @@ function renderCell(rt, cell, td) {
           args.set("recordId", recordId);
         }
         aShow.href = "inspect.html?" + args;
+        aShow.target = "_blank";
         aShow.textContent = "Show all data";
+        aShow.className = "view-inspector";
+        let aShowIcon = document.createElement("div");
+        aShowIcon.className = "icon"
         pop.appendChild(aShow);
+        aShow.prepend(aShowIcon);
       }
       // If the recordId ends with 0000000000AAA it is a dummy ID such as the ID for the master record type 012000000000000AAA
       if (recordId && isRecordId(recordId) && !recordId.endsWith("0000000000AAA")) {
         let aView = document.createElement("a");
         aView.href = "https://" + rt.sfHost + "/" + recordId;
+        aView.target = "_blank";
         aView.textContent = "View in Salesforce";
+        aView.className = "view-salesforce";
+        let aviewIcon = document.createElement("div");
+        aviewIcon.className = "icon";
         pop.appendChild(aView);
+        aView.prepend(aviewIcon);
       }
+      //copy to clipboard
+      let aCopy = document.createElement("a");
+      aCopy.className = "copy-id";
+      aCopy.textContent = "Copy Id";
+      aCopy.id = recordId;
+      let acopyIcon = document.createElement("div");
+      acopyIcon.className = "icon";
+      pop.appendChild(aCopy);
+      aCopy.prepend(acopyIcon);
+      aCopy.addEventListener("click", e => {
+        navigator.clipboard.writeText(e.target.id);
+        td.removeChild(pop);
+      });
       function closer(ev) {
         if (ev != e && ev.target.closest(".pop-menu") != pop) {
           removeEventListener("click", closer);

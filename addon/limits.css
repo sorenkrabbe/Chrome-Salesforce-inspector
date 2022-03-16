@@ -4,6 +4,8 @@
 figure {
   display: table;
   float: left;
+  padding: 0.175rem;
+  font-size: .73rem;
 }
 figcaption {
   text-align: center;
@@ -83,14 +85,27 @@ figcaption > div {
 }
 body {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 11px;
+  font-size: .8125rem;
   margin: 0;
 }
+#user-info {
+  background: #f7f9fb;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  flex-wrap: wrap;
+}
+#user-info h1 {
+  padding: 0 6px 0 10px;
+}
+#user-info span{
+  font-size: 1.2em;
+}
 .sf-link {
-  margin-right: 1em;
   background-color: rgb(6, 28, 63);
   border-radius: 3px;
-  line-height: 2em;
+  line-height: 1.8em;
   text-decoration: none;
   display: inline-block;
   padding: 2px;
@@ -98,8 +113,8 @@ body {
   padding-right: 1em;
 }
 .sf-link svg {
-  width: 2em;
-  height: 2em;
+  width: 1.8em;;
+  height: 1.8em;;
   display: block;
   margin-left: 1px;
   margin-right: 1em;

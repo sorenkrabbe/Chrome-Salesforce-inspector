@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-labelledby="title"
+ aria-describedby="desc" role="img" xmlns:xlink="http://www.w3.org/1999/xlink">
+   <title>Copy</title>
+   <desc>A solid styled icon from Orion Icon Library.</desc>
+   <path data-name="layer2"
+   fill="#202020" d="M14 14h50v50H14z"></path>
+   <path data-name="layer1" fill="#202020" d="M50 0H0v50h10V10h40V0z"></path>
+ </svg>
