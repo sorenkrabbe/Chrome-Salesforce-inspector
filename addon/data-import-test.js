@@ -40,7 +40,7 @@ export async function dataImportTest(test) {
   // Autocomplete lists
   assert(vm.sobjectList().indexOf("Inspector_Test__c") > -1);
   assertEquals(["Id", "Name"], vm.idLookupList());
-  assertEquals(["Id", "OwnerId", "Owner:Group:Id", "Owner:Group:Name", "Owner:User:Id", "Owner:User:Username", "Owner:User:Email", "Owner:User:FederationIdentifier", "Name", "Checkbox__c", "Number__c", "Lookup__c", "Lookup__r:Inspector_Test__c:Id", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"].sort(), vm.columnList().sort());
+  assertEquals(["Id", "OwnerId", "Owner:Group:Id", "Owner:Group:Name", "Owner:User:Id", "Owner:User:Username", "Owner:User:Email", "Owner:User:EmployeeNumber", "Owner:User:FederationIdentifier", "Name", "Checkbox__c", "Number__c", "Lookup__c", "Lookup__r:Inspector_Test__c:Id", "Lookup__r:Inspector_Test__c:Name", "__Status", "__Id", "__Action", "__Errors"].sort(), vm.columnList().sort());
 
   // See user info
   assert(vm.userInfo.indexOf(" / ") > -1);
