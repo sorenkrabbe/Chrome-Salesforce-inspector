@@ -3,18 +3,21 @@ Version 1.13
 
 General
 -------
+* [Add inactive users to search result](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/21)
+  <img alt="Inspector menu" src="./docs/screenshots/issue21.png" height="100">
+
 * Update to Salesforce API v 55.0 (Summer '22)
 * Update to Salesforce API v 54.0 (Spring '22)
-* Sticked table header to the top on export [ISSUE 10](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/10)
+* [Sticked table header to the top on export](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/10)
 * Update to Salesforce API v 53.0 (Winter '22)
 * Add label to saved query and sort list.
 * Remove extra comma when autocomplete query in data export, or select a field from suggested fields juste before 'FROM' keyword.
-<img alt="Inspector menu" src="https://raw.githubusercontent.com/tprouvot/Chrome-Salesforce-inspector/master/docs/screenshots/7_latest_comma.png" height="100">
+<img alt="Inspector menu" src="./docs/screenshots/7_latest_comma.png" height="100">
 
 * Add "Copy Id" option when clicking on a Sobject field or Id in data export page.
-<img alt="Inspector menu" src="https://raw.githubusercontent.com/tprouvot/Chrome-Salesforce-inspector/master/docs/screenshots/8_copy_id.png" height="100">
+<img alt="Inspector menu" src="./docs/screenshots/8_copy_id.png" height="100">
 
-* Integrate UI updates from Garywoo's fork (https://github.com/Garywoo/Chrome-Salesforce-inspector).
+* Integrate UI updates from [Garywoo's fork](https://github.com/Garywoo/Chrome-Salesforce-inspector)
 
 Version 1.12
 ===========
@@ -122,6 +125,7 @@ Version 1.3
 
 General
 -------
+* Rewritten the implementation of Data Export and Data Import, in order to comply with the updated version of Mozilla's add-ons policy.
 * Rewritten the implementation of Data Export and Data Import, in order to comply with the updated version of Mozilla's add-ons policy.
 
 Version 1.2
