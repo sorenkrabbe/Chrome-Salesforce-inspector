@@ -380,7 +380,7 @@ class AllDataBoxUsers extends React.PureComponent {
     //TODO: Better search query. SOSL?
     const fullQuerySelect = "select Id, Name, Email, Username, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive, ProfileId, Profile.Name";
     const minimalQuerySelect = "select Id, Name, Email, Username, UserRole.Name, Alias, LocaleSidKey, LanguageLocaleKey, IsActive";
-    const queryFrom = "from User where isactive=true and (username like '%" + userQuery + "%' or name like '%" + userQuery + "%') order by LastLoginDate limit 100";
+    const queryFrom = "from User where (username like '%" + userQuery + "%' or name like '%" + userQuery + "%') order by IsActive DESC, LastLoginDate limit 100";
     const compositeQuery = {
       "compositeRequest": [
         {
