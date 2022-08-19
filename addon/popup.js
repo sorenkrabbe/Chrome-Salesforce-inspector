@@ -728,6 +728,10 @@ class UserDetails extends React.PureComponent {
                 h("td", { className: "oneliner" }, user.Username)
               ),
               h("tr", {},
+                h("th", {}, "Id:"),
+                h("td", { className: "oneliner" }, user.Id)
+              ),
+              h("tr", {},
                 h("th", {}, "E-mail:"),
                 h("td", { className: "oneliner" }, user.Email)
               ),
