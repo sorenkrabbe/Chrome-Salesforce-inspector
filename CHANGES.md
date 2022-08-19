@@ -5,7 +5,7 @@ General
 -------
 * Add User Id to pop-up
 
-<img alt="Inspector menu" src="./docs/screenshots/add-user-id.png" height="100">
+<img alt="Inspector menu" src="./docs/screenshots/add-user-id.png" height="200">
 
 * Support Enhanced Domain [issue #222](https://github.com/sorenkrabbe/Chrome-Salesforce-inspector/issues/222) from [PR223](https://github.com/sorenkrabbe/Chrome-Salesforce-inspector/pull/223)
 * [Add inactive users to search result](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/21)
