@@ -3,6 +3,13 @@ Version 1.13
 
 General
 =======
+* Update to Salesforce API v 56.0 (Winter'23)
+
+Version 1.13
+===========
+
+General
+=======
 * Update to Salesforce API v 55.0 (Summer'22)
 
 Version 1.12
