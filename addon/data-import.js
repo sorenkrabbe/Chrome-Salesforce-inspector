@@ -136,6 +136,15 @@ class Model {
     copyToClipboard(importOptions.toString());
   }
 
+  skipAllUnknownFields() {
+    for (let column of this.importData.importTable.header) {
+      if (column.columnUnknownField()) {
+        column.columnSkip();
+      }
+    }
+    this.didUpdate();
+  }
+
   invalidInput() {
     // We should try to allow imports to succeed even if our validation logic does not exactly match the one in Salesforce.
     // We only hard-fail on errors that prevent us from building the API request.
@@ -269,6 +278,17 @@ class Model {
 
   canCopy() {
     return this.importData.taggedRows != null;
+  }
+
+  canSkipAllUnknownFields() {
+    if (this.importData.importTable && this.importData.importTable.header) {
+      for (let column of this.importData.importTable.header) {
+        if (!column.columnIgnore() && column.columnUnknownField()) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   copyResult(separator) {
@@ -471,6 +491,9 @@ class Model {
           return "Error: Unknown field";
         }
         return "";
+      },
+      columnUnknownField() {
+        return columnVm.columnError() === "Error: Unknown field";
       }
     };
     return columnVm;
@@ -656,6 +679,7 @@ class App extends React.Component {
     this.onCopyAsExcelClick = this.onCopyAsExcelClick.bind(this);
     this.onCopyAsCsvClick = this.onCopyAsCsvClick.bind(this);
     this.onCopyOptionsClick = this.onCopyOptionsClick.bind(this);
+    this.onSkipAllUnknownFieldsClick = this.onSkipAllUnknownFieldsClick.bind(this);
     this.onConfirmPopupYesClick = this.onConfirmPopupYesClick.bind(this);
     this.onConfirmPopupNoClick = this.onConfirmPopupNoClick.bind(this);
     this.unloadListener = null;
@@ -745,6 +769,11 @@ class App extends React.Component {
     e.preventDefault();
     let {model} = this.props;
     model.copyOptions();
+  }
+  onSkipAllUnknownFieldsClick(e) {
+    e.preventDefault();
+    let {model} = this.props;
+    model.skipAllUnknownFields();
   }
   onConfirmPopupYesClick(e) {
     e.preventDefault();
@@ -897,7 +926,8 @@ class App extends React.Component {
         h("button", {disabled: !model.importCounts().Failed > 0, onClick: this.onRetryFailedClick, className: "button-space"}, "Retry failed"),
         h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsExcelClick, title: "Copy import result to clipboard for pasting into Excel or similar"}, "Copy (Excel format)"),
         h("button", {disabled: !model.canCopy(), onClick: this.onCopyAsCsvClick, className: "button-space", title: "Copy import result to clipboard for saving as a CSV file"}, "Copy (CSV)"),
-        h("button", {onClick: this.onCopyOptionsClick, title: "Save these import options by pasting them into Excel in the top left cell, just above the header row"}, "Copy options")
+        h("button", {onClick: this.onCopyOptionsClick, title: "Save these import options by pasting them into Excel in the top left cell, just above the header row"}, "Copy options"),
+        h("button", {onClick: this.onSkipAllUnknownFieldsClick, disabled: !model.canSkipAllUnknownFields() || model.isWorking() || model.importCounts().Queued == 0}, "Skip all unknown fields"),
       ),
       h("div", {hidden: !model.showHelp},
         h("p", {}, "Use for quick one-off data imports."),
