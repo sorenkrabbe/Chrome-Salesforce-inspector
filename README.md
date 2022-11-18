@@ -35,6 +35,13 @@ All Salesforce API calls from the Inspector re-uses the access token/session use
 
 To validate the accuracy of this description, inspect the source code, monitor the network traffic in your browser or take my word.
 
+Installation
+-----
+1. Open `chrome://extensions/`.
+2. Enable `Developer mode`.
+3. Click `Load unpacked extension...`.
+4. Select the `addon` subdirectory of this repository.
+
 Troubleshooting
 -----
 * If Salesforce Inspector is not available after installation, the most likely issue is that your browser is not up to date. See [instructions for Google Chrome](https://productforums.google.com/forum/#!topic/chrome/YK1-o4KoSjc).
