@@ -17,7 +17,7 @@ export let sfConn = {
           this.sessionId = access;
           localStorage.setItem(sfHost + "_" + paramKey, access);
         }
-      } else if (localStorage.getItem(sfHost + "_" + paramKey) === null) {
+      } else if (localStorage.getItem(sfHost + "_" + paramKey) != null) {
         let data = localStorage.getItem(sfHost + "_" + paramKey);
         this.sessionId = data;
       }
