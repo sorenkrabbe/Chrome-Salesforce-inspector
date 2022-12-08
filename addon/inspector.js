@@ -133,7 +133,6 @@ export let sfConn = {
   async soap(wsdl, method, args, { headers } = {}) {
     if (!this.instanceHostname || !this.sessionId) {
       throw new Error("Session not found");
-
     }
 
     let xhr = new XMLHttpRequest();

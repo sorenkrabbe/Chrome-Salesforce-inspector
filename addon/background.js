@@ -11,19 +11,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // http://salesforce.stackexchange.com/questions/23277/different-session-ids-in-different-contexts
     // There is no straight forward way to unambiguously understand if the user authenticated against salesforce.com or cloudforce.com
     // (and thereby the domain of the relevant cookie) cookie domains are therefore tried in sequence.
-    console.log("getSfHost");
-    chrome.cookies.get({ url: request.url, name: "sid", storeId: sender.tab.cookieStoreId }, cookie => {
+    chrome.cookies.get({url: request.url, name: "sid", storeId: sender.tab.cookieStoreId}, cookie => {
       if (!cookie) {
         sendResponse(null);
         return;
       }
       let [orgId] = cookie.value.split("!");
-      chrome.cookies.getAll({ name: "sid", domain: "salesforce.com", secure: true, storeId: sender.tab.cookieStoreId }, cookies => {
+      chrome.cookies.getAll({name: "sid", domain: "salesforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
         let sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
         if (sessionCookie) {
           sendResponse(sessionCookie.domain);
         } else {
-          chrome.cookies.getAll({ name: "sid", domain: "cloudforce.com", secure: true, storeId: sender.tab.cookieStoreId }, cookies => {
+          chrome.cookies.getAll({name: "sid", domain: "cloudforce.com", secure: true, storeId: sender.tab.cookieStoreId}, cookies => {
             sessionCookie = cookies.find(c => c.value.startsWith(orgId + "!"));
             if (sessionCookie) {
               sendResponse(sessionCookie.domain);
@@ -37,17 +36,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Tell Chrome that we want to call sendResponse asynchronously.
   }
   if (request.message == "getSession") {
-    console.log("getSession");
-    chrome.cookies.get({ url: "https://" + request.sfHost, name: "sid", storeId: sender.tab.cookieStoreId }, sessionCookie => {
-      let url = new URL(window.location.href);
-      let c = url.searchParams.get("access_token");
-
-      console.log(c);
+    chrome.cookies.get({url: "https://" + request.sfHost, name: "sid", storeId: sender.tab.cookieStoreId}, sessionCookie => {
       if (!sessionCookie) {
         sendResponse(null);
         return;
       }
-      let session = { key: sessionCookie.value, hostname: sessionCookie.domain };
+      let session = {key: sessionCookie.value, hostname: sessionCookie.domain};
       sendResponse(session);
     });
     return true; // Tell Chrome that we want to call sendResponse asynchronously.
