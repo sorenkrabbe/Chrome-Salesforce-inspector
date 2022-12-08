@@ -50,10 +50,11 @@ To secure the extension usage, you can use a auth flow to get an access token li
 
 Installation
 -----
-1. Open `chrome://extensions/`.
-2. Enable `Developer mode`.
-3. Click `Load unpacked extension...`.
-4. Select the `addon` subdirectory of this repository.
+1. Download or clone the repo locally.
+2. Open `chrome://extensions/`.
+3. Enable `Developer mode`.
+4. Click `Load unpacked extension...`.
+5. Select the `addon` subdirectory of this repository.
 
 Troubleshooting
 -----
