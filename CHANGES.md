@@ -3,6 +3,7 @@ Version 1.14
 
 General
 -------
+* [Switch background color on import page to alert users that it's a production environnement](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/20)
 * Implement Auth2 flow to generate access token for connected App
 
 Version 1.13
@@ -10,7 +11,7 @@ Version 1.13
 
 General
 -------
-* Automatically remove spaces from column name in import
+* [Automatically remove spaces from column name in import](https://github.com/tprouvot/Chrome-Salesforce-inspector/issues/23)
 * Update to Salesforce API v 56.0 (Winter '23)
 * Add "Skip all unknown fields" to import page
 * Add User Id to pop-up
