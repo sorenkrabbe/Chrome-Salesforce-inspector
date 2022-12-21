@@ -116,6 +116,11 @@ h1 {
 .query-history {
   width: 9em;
 }
+.query-name {
+  width: 8em;
+  margin-top: 1px;
+  margin-left: 4px;
+}
 #export-help-btn {
   float: right;
   margin-top: 3px;

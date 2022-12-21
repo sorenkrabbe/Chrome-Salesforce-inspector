@@ -27,7 +27,7 @@ class QueryHistory {
 
   add(entry) {
     let history = this._get();
-    let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
+    let historyIndex = history.findIndex(e => e.query == entry.query && e.queryName == entry.queryName && e.useToolingApi == entry.useToolingApi);
     if (historyIndex > -1) {
       history.splice(historyIndex, 1);
     }
@@ -41,7 +41,7 @@ class QueryHistory {
 
   remove(entry) {
     let history = this._get();
-    let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
+    let historyIndex = history.findIndex(e => e.query == entry.query && e.queryName == entry.queryName && e.useToolingApi == entry.useToolingApi);
     if (historyIndex > -1) {
       history.splice(historyIndex, 1);
     }
@@ -61,6 +61,8 @@ class Model {
     this.sfHost = sfHost;
     this.queryInput = null;
     this.initialQuery = "";
+    this.queryNameInput = null;
+    this.initialQueryName = "";
     this.describeInfo = new DescribeInfo(this.spinFor.bind(this), () => {
       this.queryAutocompleteHandler({newDescribe: true});
       this.didUpdate();
@@ -122,6 +124,11 @@ class Model {
     queryInput.value = this.initialQuery;
     this.initialQuery = null;
   }
+  setQueryNameInput(queryNameInput) {
+    this.queryNameInput = queryNameInput;
+    queryNameInput.value = this.initialQueryName;
+    this.initialQueryName = null;
+  }
   toggleHelp() {
     this.showHelp = !this.showHelp;
   }
@@ -140,6 +147,7 @@ class Model {
   selectHistoryEntry() {
     if (this.selectedHistoryEntry != null) {
       this.queryInput.value = this.selectedHistoryEntry.query;
+      this.queryNameInput.value = this.selectedHistoryEntry.queryName || "";
       this.queryTooling = this.selectedHistoryEntry.useToolingApi;
       this.queryAutocompleteHandler();
       this.selectedHistoryEntry = null;
@@ -151,6 +159,7 @@ class Model {
   selectSavedEntry() {
     if (this.selectedSavedEntry != null) {
       this.queryInput.value = this.selectedSavedEntry.query;
+      this.queryNameInput.value = this.selectedSavedEntry.queryName;
       this.queryTooling = this.selectedSavedEntry.useToolingApi;
       this.queryAutocompleteHandler();
       this.selectedSavedEntry = null;
@@ -160,10 +169,13 @@ class Model {
     this.savedHistory.clear();
   }
   addToHistory() {
-    this.savedHistory.add({query: this.queryInput.value, useToolingApi: this.queryTooling});
+    let queryName = this.queryNameInput.value == "" ? this.queryInput.value : this.queryNameInput.value;
+    this.savedHistory.add({query: this.queryInput.value, queryName, useToolingApi: this.queryTooling});
   }
   removeFromHistory() {
-    this.savedHistory.remove({query: this.queryInput.value, useToolingApi: this.queryTooling});
+    let queryName = this.queryNameInput.value == "" ? this.queryInput.value : this.queryNameInput.value;
+    this.savedHistory.remove({query: this.queryInput.value, queryName, useToolingApi: this.queryTooling});
+    this.queryNameInput.value = "";
   }
   autocompleteReload() {
     this.describeInfo.reloadAll();
@@ -955,8 +967,10 @@ class App extends React.Component {
   componentDidMount() {
     let {model} = this.props;
     let queryInput = this.refs.query;
+    let queryNameInput = this.refs["query-name"];
 
     model.setQueryInput(queryInput);
+    model.setQueryNameInput(queryNameInput);
 
     function queryAutocompleteEvent() {
       model.queryAutocompleteHandler();
@@ -1051,8 +1065,9 @@ class App extends React.Component {
         h("label", {},
           h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
             h("option", {value: JSON.stringify(null)}, "Saved queries"),
-            model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+            model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.queryName.substring(0, 300)))
           ),
+          h("input", {id: "query-name", ref: "query-name", placeholder: "Name this query", title: "Defaults to query string", className: "query-name"}),
           h("a", {href: "about:blank", onClick: this.onAddToHistory, title: "Add query to saved history", className: "char-btn"}, "+"),
           h("a", {href: "about:blank", onClick: this.onRemoveFromHistory, title: "Remove query from saved history", className: "char-btn"}, "X"),
           h("a", {href: "about:blank", onClick: this.onClearSavedHistory, title: "Clear saved history", className: "char-btn"}, "XX")
