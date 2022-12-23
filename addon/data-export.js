@@ -27,7 +27,7 @@ class QueryHistory {
 
   add(entry) {
     let history = this._get();
-    let historyIndex = history.findIndex(e => e.query == entry.query && e.useToolingApi == entry.useToolingApi);
+    let historyIndex = history.findIndex(e => (e.query == entry.query && e.useToolingApi == entry.useToolingApi) || (e.title== entry.title && entry.title));
     if (historyIndex > -1) {
       history.splice(historyIndex, 1);
     }
@@ -81,7 +81,7 @@ class Model {
     this.exportedData = null;
     this.queryHistory = new QueryHistory("insextQueryHistory", 20);
     this.selectedHistoryEntry = null;
-    this.savedHistory = new QueryHistory("insextSavedQueryHistory", 50);
+      this.savedHistory = new QueryHistory("insextSavedQueryHistory", 50);
     this.selectedSavedEntry = null;
     this.expandAutocomplete = false;
     this.resultsFilter = "";
@@ -160,7 +160,7 @@ class Model {
     this.savedHistory.clear();
   }
   addToHistory() {
-    this.savedHistory.add({query: this.queryInput.value, useToolingApi: this.queryTooling});
+    this.savedHistory.add({query: this.queryInput.value, useToolingApi: this.queryTooling, title: prompt('Title for your query (let empty too use the query as title)?','')});
   }
   removeFromHistory() {
     this.savedHistory.remove({query: this.queryInput.value, useToolingApi: this.queryTooling});
@@ -1051,7 +1051,7 @@ class App extends React.Component {
         h("label", {},
           h("select", {value: JSON.stringify(model.selectedSavedEntry), onChange: this.onSelectSavedEntry, className: "query-history"},
             h("option", {value: JSON.stringify(null)}, "Saved queries"),
-            model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.query.substring(0, 300)))
+            model.savedHistory.list.map(q => h("option", {key: JSON.stringify(q), value: JSON.stringify(q)}, q.title?q.title:q.query.substring(0, 300)))
           ),
           h("a", {href: "about:blank", onClick: this.onAddToHistory, title: "Add query to saved history", className: "char-btn"}, "+"),
           h("a", {href: "about:blank", onClick: this.onRemoveFromHistory, title: "Remove query from saved history", className: "char-btn"}, "X"),
