@@ -1,3 +1,11 @@
+Version 1.15
+===========
+
+General
+=======
+* Update to Salesforce API v 59.0 (Winter'24)
+* Update packages
+
 Version 1.14
 ===========
 
